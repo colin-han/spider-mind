@@ -1,0 +1,15 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔍 运行 pre-commit 检查..."
+
+# 运行 lint-staged 检查修改的文件
+yarn lint-staged
+
+# 检查 TypeScript 类型
+echo "🔎 检查 TypeScript 类型..."
+yarn tsc --noEmit
+
+# 运行单元测试（只针对修改的文件相关测试）
+echo "🧪 运行单元测试..."
+yarn test:unit --run
