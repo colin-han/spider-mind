@@ -22,7 +22,7 @@ Object.defineProperty(window, 'matchMedia', {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
-  }))
+  })),
 })
 
 // 模拟ResizeObserver
@@ -40,7 +40,7 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
 }))
 
 // 模拟requestAnimationFrame
-global.requestAnimationFrame = vi.fn((cb) => {
+global.requestAnimationFrame = vi.fn(cb => {
   setTimeout(cb, 0)
   return 1
 }) as unknown as typeof requestAnimationFrame

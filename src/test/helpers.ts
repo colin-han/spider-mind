@@ -15,16 +15,16 @@ export class TestDataFactory {
             id: 'node-1',
             type: 'mindMapNode',
             position: { x: 100, y: 100 },
-            data: { content: '中心主题' }
-          }
+            data: { content: '中心主题' },
+          },
         ],
-        edges: []
+        edges: [],
       }),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       user_id: 'test-user-1',
       is_public: false,
-      ...overrides
+      ...overrides,
     }
   }
 
@@ -35,9 +35,9 @@ export class TestDataFactory {
       position: { x: 100, y: 100 },
       data: {
         content: '测试节点',
-        isEditing: false
+        isEditing: false,
       },
-      ...overrides
+      ...overrides,
     }
   }
 
@@ -47,7 +47,7 @@ export class TestDataFactory {
       source: sourceId,
       target: targetId,
       type: 'smoothstep',
-      ...overrides
+      ...overrides,
     }
   }
 
@@ -59,7 +59,7 @@ export class TestDataFactory {
       avatar_url: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      ...overrides
+      ...overrides,
     }
   }
 }
@@ -71,7 +71,9 @@ export class MockSupabaseService {
       getMindMaps: vi.fn(() => Promise.resolve([TestDataFactory.createMindMap()])),
       getMindMapById: vi.fn((id: string) => Promise.resolve(TestDataFactory.createMindMap({ id }))),
       createMindMap: vi.fn((data: any) => Promise.resolve(TestDataFactory.createMindMap(data))),
-      updateMindMap: vi.fn((id: string, data: any) => Promise.resolve(TestDataFactory.createMindMap({ id, ...data }))),
+      updateMindMap: vi.fn((id: string, data: any) =>
+        Promise.resolve(TestDataFactory.createMindMap({ id, ...data }))
+      ),
       deleteMindMap: vi.fn(() => Promise.resolve(true)),
       searchMindMaps: vi.fn(() => Promise.resolve([])),
     }
@@ -91,25 +93,34 @@ export class MockSupabaseService {
 export class MockAIService {
   static mockClaude() {
     return {
-      generateSuggestions: vi.fn(() => Promise.resolve([
-        {
-          type: 'expand',
-          title: '添加子主题',
-          description: '为当前节点添加相关子主题',
-          content: '子主题1\n子主题2\n子主题3'
-        }
-      ])),
-      analyzeStructure: vi.fn(() => Promise.resolve({
-        analysis: '思维导图结构良好',
-        suggestions: ['添加更多细节', '完善逻辑关系']
-      })),
+      generateSuggestions: vi.fn(() =>
+        Promise.resolve([
+          {
+            type: 'expand',
+            title: '添加子主题',
+            description: '为当前节点添加相关子主题',
+            content: '子主题1\n子主题2\n子主题3',
+          },
+        ])
+      ),
+      analyzeStructure: vi.fn(() =>
+        Promise.resolve({
+          analysis: '思维导图结构良好',
+          suggestions: ['添加更多细节', '完善逻辑关系'],
+        })
+      ),
     }
   }
 
   static mockOpenAI() {
     return {
       generateEmbeddings: vi.fn(() => Promise.resolve([0.1, 0.2, 0.3])),
-      batchGenerateEmbeddings: vi.fn(() => Promise.resolve([[0.1, 0.2], [0.3, 0.4]])),
+      batchGenerateEmbeddings: vi.fn(() =>
+        Promise.resolve([
+          [0.1, 0.2],
+          [0.3, 0.4],
+        ])
+      ),
     }
   }
 }
@@ -131,20 +142,20 @@ export const mockUserInteraction = {
     element.click()
     return waitForAsync()
   },
-  
+
   doubleClick: (element: HTMLElement) => {
     const event = new MouseEvent('dblclick', { bubbles: true })
     element.dispatchEvent(event)
     return waitForAsync()
   },
-  
+
   type: (element: HTMLInputElement, text: string) => {
     element.focus()
     element.value = text
     const event = new Event('input', { bubbles: true })
     element.dispatchEvent(event)
     return waitForAsync()
-  }
+  },
 }
 
 // 测试工具导出

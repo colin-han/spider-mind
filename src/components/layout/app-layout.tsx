@@ -12,9 +12,9 @@ export interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const [mindMapData, setMindMapData] = useState<{ nodes: Node[], edges: Edge[] }>({
+  const [mindMapData, setMindMapData] = useState<{ nodes: Node[]; edges: Edge[] }>({
     nodes: [],
-    edges: []
+    edges: [],
   })
   const [selectedNodeIds] = useState<string[]>([])
   const [zoomLevel, setZoomLevel] = useState(100)
@@ -23,7 +23,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [nodeCount, setNodeCount] = useState(0)
   const [edgeCount, setEdgeCount] = useState(0)
 
-  const handleMindMapSave = (data: { nodes: Node[], edges: Edge[] }) => {
+  const handleMindMapSave = (data: { nodes: Node[]; edges: Edge[] }) => {
     setMindMapData(data)
     setNodeCount(data.nodes.length)
     setEdgeCount(data.edges.length)
@@ -71,7 +71,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* 思维导图区域 */}
         <div className="flex-1 relative">
           {children || (
-            <MindMap 
+            <MindMap
               onSave={handleMindMapSave}
               className="w-full h-full"
               initialData={mindMapData}

@@ -1,15 +1,15 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { 
-  FileText, 
-  Save, 
-  Download, 
-  Upload, 
-  Undo2, 
-  Redo2, 
-  Copy, 
-  Clipboard, 
+import {
+  FileText,
+  Save,
+  Download,
+  Upload,
+  Undo2,
+  Redo2,
+  Copy,
+  Clipboard,
   Search,
   ZoomIn,
   ZoomOut,
@@ -22,7 +22,7 @@ import {
   Link,
   Palette,
   Type,
-  Sparkles
+  Sparkles,
 } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 
@@ -41,13 +41,13 @@ export function TopToolbar({
   onImport,
   onToggleRightPanel,
   showRightPanel,
-  hasSelection
+  hasSelection,
 }: TopToolbarProps) {
   const handleImportClick = () => {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.json,.xmind,.mm'
-    input.onchange = (e) => {
+    input.onchange = e => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (file) {
         onImport(file)
@@ -78,11 +78,21 @@ export function TopToolbar({
           <Save className="w-4 h-4" />
           保存
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => onExport('json')} className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onExport('json')}
+          className="flex items-center gap-1"
+        >
           <Download className="w-4 h-4" />
           导出
         </Button>
-        <Button variant="ghost" size="sm" onClick={handleImportClick} className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleImportClick}
+          className="flex items-center gap-1"
+        >
           <Upload className="w-4 h-4" />
           导入
         </Button>
@@ -98,9 +108,9 @@ export function TopToolbar({
         <Button variant="ghost" size="sm" className="flex items-center gap-1">
           <Redo2 className="w-4 h-4" />
         </Button>
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           disabled={!hasSelection}
           className="flex items-center gap-1"
         >
@@ -147,7 +157,11 @@ export function TopToolbar({
 
       {/* AI助手 */}
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="sm" className="flex items-center gap-1 text-purple-600 hover:text-purple-700">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="flex items-center gap-1 text-purple-600 hover:text-purple-700"
+        >
           <Sparkles className="w-4 h-4" />
           AI助手
         </Button>
@@ -155,13 +169,13 @@ export function TopToolbar({
 
       {/* 右侧控制区 */}
       <div className="flex-1" />
-      
+
       <div className="flex items-center gap-1">
         {/* 搜索 */}
         <Button variant="ghost" size="sm" className="flex items-center gap-1">
           <Search className="w-4 h-4" />
         </Button>
-        
+
         {/* 视图控制 */}
         <Button variant="ghost" size="sm">
           <ZoomIn className="w-4 h-4" />
@@ -176,15 +190,19 @@ export function TopToolbar({
         <Separator orientation="vertical" className="h-6" />
 
         {/* 面板控制 */}
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           size="sm"
           onClick={onToggleRightPanel}
           className="flex items-center gap-1"
         >
-          {showRightPanel ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+          {showRightPanel ? (
+            <PanelRightClose className="w-4 h-4" />
+          ) : (
+            <PanelRightOpen className="w-4 h-4" />
+          )}
         </Button>
-        
+
         <Button variant="ghost" size="sm">
           <Settings className="w-4 h-4" />
         </Button>

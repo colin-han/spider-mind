@@ -1,14 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { 
-  ZoomIn, 
-  ZoomOut, 
-  RotateCcw,
-  Maximize2,
-  Palette,
-  BarChart3
-} from 'lucide-react'
+import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Palette, BarChart3 } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 
 export interface BottomStatusBarProps {
@@ -26,16 +19,16 @@ export function BottomStatusBar({
   nodeCount,
   edgeCount,
   activeTheme,
-  onThemeChange
+  onThemeChange,
 }: BottomStatusBarProps) {
   const quickZoomLevels = [25, 50, 75, 100, 125, 150, 200]
-  
+
   const themes = [
     { name: 'default', label: '默认', color: 'bg-blue-500' },
     { name: 'business', label: '商务', color: 'bg-gray-600' },
     { name: 'fresh', label: '清新', color: 'bg-green-500' },
     { name: 'warm', label: '暖色', color: 'bg-orange-500' },
-    { name: 'cool', label: '冷色', color: 'bg-cyan-500' }
+    { name: 'cool', label: '冷色', color: 'bg-cyan-500' },
   ]
 
   const handleZoomIn = () => {
@@ -80,7 +73,7 @@ export function BottomStatusBar({
       <div className="flex items-center gap-2">
         <Palette className="w-3 h-3 text-gray-500" />
         <div className="flex items-center gap-1">
-          {themes.map((theme) => (
+          {themes.map(theme => (
             <button
               key={theme.name}
               className={`w-4 h-4 rounded-full ${theme.color} hover:scale-110 transition-transform ${
@@ -95,12 +88,12 @@ export function BottomStatusBar({
 
       {/* 右侧：缩放控制 */}
       <div className="flex-1" />
-      
+
       <div className="flex items-center gap-2">
         {/* 缩放按钮 */}
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           className="h-6 px-2"
           onClick={handleZoomOut}
           disabled={zoomLevel <= quickZoomLevels[0]}
@@ -112,10 +105,10 @@ export function BottomStatusBar({
         <div className="flex items-center gap-1">
           <select
             value={zoomLevel}
-            onChange={(e) => onZoomChange(Number(e.target.value))}
+            onChange={e => onZoomChange(Number(e.target.value))}
             className="bg-transparent border-none text-sm focus:outline-none cursor-pointer"
           >
-            {quickZoomLevels.map((level) => (
+            {quickZoomLevels.map(level => (
               <option key={level} value={level}>
                 {level}%
               </option>
@@ -123,9 +116,9 @@ export function BottomStatusBar({
           </select>
         </div>
 
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           className="h-6 px-2"
           onClick={handleZoomIn}
           disabled={zoomLevel >= quickZoomLevels[quickZoomLevels.length - 1]}
@@ -136,9 +129,9 @@ export function BottomStatusBar({
         <Separator orientation="vertical" className="h-4" />
 
         {/* 视图控制 */}
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           className="h-6 px-2"
           onClick={handleFitToWindow}
           title="适应窗口"
@@ -146,9 +139,9 @@ export function BottomStatusBar({
           <Maximize2 className="w-3 h-3" />
         </Button>
 
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           className="h-6 px-2"
           onClick={handleResetZoom}
           title="重置缩放"

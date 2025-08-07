@@ -25,11 +25,7 @@ export class MindMapService {
 
   // 获取单个思维导图
   static async getMindMap(id: string): Promise<MindMap | null> {
-    const { data, error } = await supabase
-      .from('mind_maps')
-      .select('*')
-      .eq('id', id)
-      .single()
+    const { data, error } = await supabase.from('mind_maps').select('*').eq('id', id).single()
 
     if (error) {
       if (error.code === 'PGRST116') return null // 未找到
@@ -40,11 +36,7 @@ export class MindMapService {
 
   // 创建新的思维导图
   static async createMindMap(mindMap: MindMapInsert): Promise<MindMap> {
-    const { data, error } = await supabase
-      .from('mind_maps')
-      .insert(mindMap)
-      .select()
-      .single()
+    const { data, error } = await supabase.from('mind_maps').insert(mindMap).select().single()
 
     if (error) throw error
     return data
@@ -65,10 +57,7 @@ export class MindMapService {
 
   // 删除思维导图
   static async deleteMindMap(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('mind_maps')
-      .delete()
-      .eq('id', id)
+    const { error } = await supabase.from('mind_maps').delete().eq('id', id)
 
     if (error) throw error
   }
@@ -89,9 +78,9 @@ export class MindMapService {
   static async upsertNodes(nodes: MindMapNodeInsert[]): Promise<MindMapNode[]> {
     const { data, error } = await supabase
       .from('mind_map_nodes')
-      .upsert(nodes, { 
+      .upsert(nodes, {
         onConflict: 'mind_map_id,node_id',
-        ignoreDuplicates: false 
+        ignoreDuplicates: false,
       })
       .select()
 
@@ -112,7 +101,7 @@ export class MindMapService {
 
   // 通过向量搜索思维导图
   static async searchMindMapsBySimilarity(
-    queryEmbedding: number[], 
+    queryEmbedding: number[],
     options: {
       threshold?: number
       limit?: number
@@ -125,7 +114,7 @@ export class MindMapService {
       query_embedding: queryEmbedding,
       match_threshold: threshold,
       match_count: limit,
-      user_id_filter: userId || null
+      user_id_filter: userId || null,
     })
 
     if (error) throw error
@@ -134,7 +123,7 @@ export class MindMapService {
 
   // 通过向量搜索节点
   static async searchNodesBySimilarity(
-    queryEmbedding: number[], 
+    queryEmbedding: number[],
     options: {
       threshold?: number
       limit?: number
@@ -147,7 +136,7 @@ export class MindMapService {
       query_embedding: queryEmbedding,
       match_threshold: threshold,
       match_count: limit,
-      user_id_filter: userId || null
+      user_id_filter: userId || null,
     })
 
     if (error) throw error
@@ -159,11 +148,7 @@ export class MindMapService {
 export class ProfileService {
   // 获取用户配置
   static async getProfile(userId: string): Promise<Profile | null> {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
 
     if (error) {
       if (error.code === 'PGRST116') return null
@@ -173,10 +158,7 @@ export class ProfileService {
   }
 
   // 更新用户配置
-  static async updateProfile(
-    userId: string, 
-    updates: Partial<Profile>
-  ): Promise<Profile> {
+  static async updateProfile(userId: string, updates: Partial<Profile>): Promise<Profile> {
     const { data, error } = await supabase
       .from('profiles')
       .update(updates)
@@ -193,7 +175,10 @@ export class ProfileService {
 export class AuthService {
   // 获取当前用户
   static async getCurrentUser() {
-    const { data: { user }, error } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser()
     if (error) throw error
     return user
   }
@@ -202,7 +187,7 @@ export class AuthService {
   static async signIn(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      password
+      password,
     })
     if (error) throw error
     return data
@@ -215,9 +200,9 @@ export class AuthService {
       password,
       options: {
         data: {
-          full_name: fullName
-        }
-      }
+          full_name: fullName,
+        },
+      },
     })
     if (error) throw error
     return data

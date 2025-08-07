@@ -35,7 +35,7 @@ export function MindMapNode({ id, data, selected }: NodeProps) {
     if (content !== nodeData.content) {
       // 暂时通过 window 对象传递，实际项目中会用更好的方式
       const event = new CustomEvent('nodeContentUpdate', {
-        detail: { nodeId: id, content }
+        detail: { nodeId: id, content },
       })
       window.dispatchEvent(event)
     }
@@ -73,13 +73,10 @@ export function MindMapNode({ id, data, selected }: NodeProps) {
         className="w-3 h-3 !bg-blue-500 border-2 border-white"
       />
 
-      <Card 
+      <Card
         className={`
           min-w-[120px] max-w-[300px] p-3 cursor-pointer transition-all duration-200
-          ${selected 
-            ? 'ring-2 ring-blue-500 shadow-lg' 
-            : 'hover:shadow-md'
-          }
+          ${selected ? 'ring-2 ring-blue-500 shadow-lg' : 'hover:shadow-md'}
           ${isEditing ? 'ring-2 ring-orange-500' : ''}
         `}
         onDoubleClick={handleDoubleClick}
@@ -88,15 +85,13 @@ export function MindMapNode({ id, data, selected }: NodeProps) {
           <Input
             ref={inputRef}
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={e => setContent(e.target.value)}
             onBlur={handleInputBlur}
             onKeyDown={handleInputKeyDown}
             className="border-none p-0 h-auto text-center font-medium"
           />
         ) : (
-          <div className="text-center font-medium text-sm text-gray-800 break-words">
-            {content}
-          </div>
+          <div className="text-center font-medium text-sm text-gray-800 break-words">{content}</div>
         )}
       </Card>
 

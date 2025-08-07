@@ -4,12 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Type, 
-  Palette, 
-  Brush, 
-  Layout
-} from 'lucide-react'
+import { Type, Palette, Brush, Layout } from 'lucide-react'
 
 export interface RightPanelProps {
   selectedNodeIds: string[]
@@ -17,11 +12,7 @@ export interface RightPanelProps {
   onThemeChange: (theme: string) => void
 }
 
-export function RightPanel({
-  selectedNodeIds,
-  activeTheme,
-  onThemeChange
-}: RightPanelProps) {
+export function RightPanel({ selectedNodeIds, activeTheme, onThemeChange }: RightPanelProps) {
   const [activeTab, setActiveTab] = useState('format')
 
   return (
@@ -91,19 +82,33 @@ function FormatPanel({ selectedNodeIds }: { selectedNodeIds: string[] }) {
             <div>
               <label className="text-xs text-gray-600 mb-1 block">字体大小</label>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">12</Button>
-                <Button variant="outline" size="sm">14</Button>
-                <Button variant="outline" size="sm">16</Button>
-                <Button variant="outline" size="sm">18</Button>
+                <Button variant="outline" size="sm">
+                  12
+                </Button>
+                <Button variant="outline" size="sm">
+                  14
+                </Button>
+                <Button variant="outline" size="sm">
+                  16
+                </Button>
+                <Button variant="outline" size="sm">
+                  18
+                </Button>
               </div>
             </div>
-            
+
             <div>
               <label className="text-xs text-gray-600 mb-1 block">字体样式</label>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">B</Button>
-                <Button variant="outline" size="sm">I</Button>
-                <Button variant="outline" size="sm">U</Button>
+                <Button variant="outline" size="sm">
+                  B
+                </Button>
+                <Button variant="outline" size="sm">
+                  I
+                </Button>
+                <Button variant="outline" size="sm">
+                  U
+                </Button>
               </div>
             </div>
           </div>
@@ -113,9 +118,15 @@ function FormatPanel({ selectedNodeIds }: { selectedNodeIds: string[] }) {
       <Card className="p-3">
         <h3 className="font-medium mb-3">节点形状</h3>
         <div className="grid grid-cols-3 gap-2">
-          <Button variant="outline" size="sm" className="h-8">矩形</Button>
-          <Button variant="outline" size="sm" className="h-8">圆形</Button>
-          <Button variant="outline" size="sm" className="h-8">菱形</Button>
+          <Button variant="outline" size="sm" className="h-8">
+            矩形
+          </Button>
+          <Button variant="outline" size="sm" className="h-8">
+            圆形
+          </Button>
+          <Button variant="outline" size="sm" className="h-8">
+            菱形
+          </Button>
         </div>
       </Card>
     </>
@@ -125,9 +136,21 @@ function FormatPanel({ selectedNodeIds }: { selectedNodeIds: string[] }) {
 // 颜色面板组件
 function ColorPanel() {
   const colors = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
-    '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43',
-    '#C44569', '#F8B500', '#6C5CE7', '#A29BFE', '#FD79A8'
+    '#FF6B6B',
+    '#4ECDC4',
+    '#45B7D1',
+    '#96CEB4',
+    '#FECA57',
+    '#FF9FF3',
+    '#54A0FF',
+    '#5F27CD',
+    '#00D2D3',
+    '#FF9F43',
+    '#C44569',
+    '#F8B500',
+    '#6C5CE7',
+    '#A29BFE',
+    '#FD79A8',
   ]
 
   return (
@@ -163,14 +186,14 @@ function ColorPanel() {
   )
 }
 
-// 样式面板组件  
+// 样式面板组件
 function StylePanel() {
   const themes = [
     { name: '默认', preview: 'bg-gradient-to-r from-blue-500 to-purple-600' },
     { name: '商务', preview: 'bg-gradient-to-r from-gray-500 to-blue-600' },
     { name: '清新', preview: 'bg-gradient-to-r from-green-400 to-blue-500' },
     { name: '暖色', preview: 'bg-gradient-to-r from-orange-400 to-pink-400' },
-    { name: '冷色', preview: 'bg-gradient-to-r from-cyan-500 to-blue-500' }
+    { name: '冷色', preview: 'bg-gradient-to-r from-cyan-500 to-blue-500' },
   ]
 
   return (
@@ -194,9 +217,15 @@ function StylePanel() {
       <Card className="p-3">
         <h3 className="font-medium mb-3">边框样式</h3>
         <div className="space-y-2">
-          <Button variant="outline" className="w-full justify-start">实线</Button>
-          <Button variant="outline" className="w-full justify-start">虚线</Button>
-          <Button variant="outline" className="w-full justify-start">点线</Button>
+          <Button variant="outline" className="w-full justify-start">
+            实线
+          </Button>
+          <Button variant="outline" className="w-full justify-start">
+            虚线
+          </Button>
+          <Button variant="outline" className="w-full justify-start">
+            点线
+          </Button>
         </div>
       </Card>
     </>
@@ -210,20 +239,36 @@ function LayoutPanel() {
       <Card className="p-3">
         <h3 className="font-medium mb-3">布局方式</h3>
         <div className="space-y-2">
-          <Button variant="outline" className="w-full justify-start">向右分布</Button>
-          <Button variant="outline" className="w-full justify-start">向下分布</Button>
-          <Button variant="outline" className="w-full justify-start">鱼骨图</Button>
-          <Button variant="outline" className="w-full justify-start">组织架构</Button>
+          <Button variant="outline" className="w-full justify-start">
+            向右分布
+          </Button>
+          <Button variant="outline" className="w-full justify-start">
+            向下分布
+          </Button>
+          <Button variant="outline" className="w-full justify-start">
+            鱼骨图
+          </Button>
+          <Button variant="outline" className="w-full justify-start">
+            组织架构
+          </Button>
         </div>
       </Card>
 
       <Card className="p-3">
         <h3 className="font-medium mb-3">对齐方式</h3>
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" size="sm">左对齐</Button>
-          <Button variant="outline" size="sm">居中</Button>
-          <Button variant="outline" size="sm">右对齐</Button>
-          <Button variant="outline" size="sm">分散</Button>
+          <Button variant="outline" size="sm">
+            左对齐
+          </Button>
+          <Button variant="outline" size="sm">
+            居中
+          </Button>
+          <Button variant="outline" size="sm">
+            右对齐
+          </Button>
+          <Button variant="outline" size="sm">
+            分散
+          </Button>
         </div>
       </Card>
     </>

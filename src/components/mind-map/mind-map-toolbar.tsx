@@ -2,15 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { 
-  Plus, 
-  Trash2, 
-  Save, 
-  Sparkles,
-  Search,
-  Download,
-  Upload
-} from 'lucide-react'
+import { Plus, Trash2, Save, Sparkles, Search, Download, Upload } from 'lucide-react'
 
 export interface MindMapToolbarProps {
   onAddNode: () => void
@@ -31,17 +23,12 @@ export function MindMapToolbar({
   onSearch,
   onExport,
   onImport,
-  hasSelection
+  hasSelection,
 }: MindMapToolbarProps) {
   return (
     <Card className="absolute top-4 left-4 z-10 p-2">
       <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onAddNode}
-          className="flex items-center gap-1"
-        >
+        <Button variant="outline" size="sm" onClick={onAddNode} className="flex items-center gap-1">
           <Plus className="w-4 h-4" />
           添加节点
         </Button>
@@ -71,12 +58,7 @@ export function MindMapToolbar({
           </Button>
         )}
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onSearch}
-          className="flex items-center gap-1"
-        >
+        <Button variant="outline" size="sm" onClick={onSearch} className="flex items-center gap-1">
           <Search className="w-4 h-4" />
           搜索
         </Button>
@@ -93,22 +75,12 @@ export function MindMapToolbar({
           保存
         </Button>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onExport}
-          className="flex items-center gap-1"
-        >
+        <Button variant="outline" size="sm" onClick={onExport} className="flex items-center gap-1">
           <Download className="w-4 h-4" />
           导出
         </Button>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onImport}
-          className="flex items-center gap-1"
-        >
+        <Button variant="outline" size="sm" onClick={onImport} className="flex items-center gap-1">
           <Upload className="w-4 h-4" />
           导入
         </Button>

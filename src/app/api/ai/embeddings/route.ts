@@ -7,14 +7,11 @@ export async function POST(request: NextRequest) {
     const { texts, single } = body
 
     if (!texts) {
-      return NextResponse.json(
-        { error: '缺少文本参数' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '缺少文本参数' }, { status: 400 })
     }
 
     let embeddings
-    
+
     if (single || typeof texts === 'string') {
       // 单个文本
       const text = Array.isArray(texts) ? texts[0] : texts
@@ -26,7 +23,6 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ embeddings })
-
   } catch (error) {
     console.error('嵌入向量生成错误:', error)
     return NextResponse.json(

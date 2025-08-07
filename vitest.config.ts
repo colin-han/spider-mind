@@ -17,13 +17,13 @@ export default defineConfig({
         '**/*.config.*',
         'dist/',
         '.next/',
-        'coverage/'
-      ]
-    }
+        'coverage/',
+      ],
+    },
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src')
-    }
-  }
+      '@': resolve(__dirname, './src'),
+    },
+  },
 })

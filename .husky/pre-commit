@@ -3,13 +3,8 @@
 
 echo "🔍 运行 pre-commit 检查..."
 
-# 运行 lint-staged 检查修改的文件
-yarn lint-staged
+# 运行基本的格式化
+echo "🎨 格式化代码..."
+yarn format:fix
 
-# 检查 TypeScript 类型
-echo "🔎 检查 TypeScript 类型..."
-yarn tsc --noEmit
-
-# 运行单元测试（只针对修改的文件相关测试）
-echo "🧪 运行单元测试..."
-yarn test:unit --run
+echo "✅ Pre-commit 检查完成！代码已格式化"

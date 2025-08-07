@@ -4,14 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
-import { 
-  Sparkles, 
-  Lightbulb, 
-  Search,
-  Plus,
-  Loader2,
-  X
-} from 'lucide-react'
+import { Sparkles, Lightbulb, Search, Plus, Loader2, X } from 'lucide-react'
 
 interface AIAssistantProps {
   selectedNode?: {
@@ -35,11 +28,11 @@ interface AISuggestion {
   connections?: string[]
 }
 
-export function AIAssistant({ 
-  selectedNode, 
-  allNodes, 
-  onSuggestionApply, 
-  onClose 
+export function AIAssistant({
+  selectedNode,
+  allNodes,
+  onSuggestionApply,
+  onClose,
 }: AIAssistantProps) {
   const [loading, setLoading] = useState(false)
   const [suggestions, setSuggestions] = useState<AISuggestion[]>([])
@@ -59,9 +52,9 @@ export function AIAssistant({
           context: {
             selectedNode,
             allNodes,
-            userInput
-          }
-        })
+            userInput,
+          },
+        }),
       })
 
       if (!response.ok) {
@@ -72,12 +65,14 @@ export function AIAssistant({
       setSuggestions(data.suggestions || [])
     } catch (error) {
       console.error('AI助手错误:', error)
-      setSuggestions([{
-        type: 'node',
-        title: '请求失败',
-        description: 'AI助手暂时不可用，请稍后重试',
-        content: '错误'
-      }])
+      setSuggestions([
+        {
+          type: 'node',
+          title: '请求失败',
+          description: 'AI助手暂时不可用，请稍后重试',
+          content: '错误',
+        },
+      ])
     } finally {
       setLoading(false)
     }
@@ -89,22 +84,22 @@ export function AIAssistant({
       label: '扩展节点',
       icon: Plus,
       description: selectedNode ? `扩展"${selectedNode.content}"` : '选择一个节点来扩展',
-      disabled: !selectedNode
+      disabled: !selectedNode,
     },
     {
       key: 'suggest',
       label: '智能建议',
       icon: Lightbulb,
       description: '基于当前思维导图提供建议',
-      disabled: false
+      disabled: false,
     },
     {
       key: 'analyze',
       label: '结构分析',
       icon: Search,
       description: '分析思维导图的结构和内容',
-      disabled: false
-    }
+      disabled: false,
+    },
   ] as const
 
   return (
@@ -121,12 +116,12 @@ export function AIAssistant({
 
       {/* 选项卡 */}
       <div className="grid grid-cols-3 gap-1 mb-4">
-        {tabs.map((tab) => {
+        {tabs.map(tab => {
           const Icon = tab.icon
           return (
             <Button
               key={tab.key}
-              variant={activeTab === tab.key ? "default" : "outline"}
+              variant={activeTab === tab.key ? 'default' : 'outline'}
               size="sm"
               disabled={tab.disabled}
               onClick={() => setActiveTab(tab.key)}
@@ -150,7 +145,7 @@ export function AIAssistant({
           <Textarea
             placeholder="描述你想要的建议或改进方向..."
             value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
+            onChange={e => setUserInput(e.target.value)}
             className="text-sm"
             rows={2}
           />

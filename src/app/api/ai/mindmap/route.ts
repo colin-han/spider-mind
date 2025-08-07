@@ -7,19 +7,15 @@ export async function POST(request: NextRequest) {
     const { action, context } = body
 
     if (!action || !context) {
-      return NextResponse.json(
-        { error: '缺少必要参数: action 和 context' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '缺少必要参数: action 和 context' }, { status: 400 })
     }
 
     const suggestions = await ClaudeService.processMindMapRequest({
       action,
-      context
+      context,
     })
 
     return NextResponse.json({ suggestions })
-
   } catch (error) {
     console.error('AI处理错误:', error)
     return NextResponse.json(
