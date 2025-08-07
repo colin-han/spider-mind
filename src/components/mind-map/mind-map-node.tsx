@@ -52,27 +52,20 @@ export function MindMapNode({ id, data, selected }: NodeProps) {
 
   return (
     <>
-      <Handle
-        type="target"
-        position={Position.Top}
-        className="w-3 h-3 !bg-blue-500 border-2 border-white"
-      />
+      {/* 隐藏的连接点，用于自动连线，但不显示手动连接的圆点 */}
       <Handle
         type="target"
         position={Position.Left}
-        className="w-3 h-3 !bg-blue-500 border-2 border-white"
+        id="left"
+        className="!opacity-0 !pointer-events-none"
       />
       <Handle
-        type="target"
+        type="source"
         position={Position.Right}
-        className="w-3 h-3 !bg-blue-500 border-2 border-white"
+        id="right"
+        className="!opacity-0 !pointer-events-none"
       />
-      <Handle
-        type="target"
-        position={Position.Bottom}
-        className="w-3 h-3 !bg-blue-500 border-2 border-white"
-      />
-
+      
       <Card
         className={`
           min-w-[120px] max-w-[300px] p-3 cursor-pointer transition-all duration-200
@@ -94,27 +87,6 @@ export function MindMapNode({ id, data, selected }: NodeProps) {
           <div className="text-center font-medium text-sm text-gray-800 break-words">{content}</div>
         )}
       </Card>
-
-      <Handle
-        type="source"
-        position={Position.Top}
-        className="w-3 h-3 !bg-green-500 border-2 border-white"
-      />
-      <Handle
-        type="source"
-        position={Position.Left}
-        className="w-3 h-3 !bg-green-500 border-2 border-white"
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="w-3 h-3 !bg-green-500 border-2 border-white"
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="w-3 h-3 !bg-green-500 border-2 border-white"
-      />
     </>
   )
 }

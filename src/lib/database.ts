@@ -79,7 +79,7 @@ export class MindMapService {
     const { data, error } = await supabase
       .from('mind_map_nodes')
       .upsert(nodes, {
-        onConflict: 'mind_map_id,node_id',
+        onConflict: 'id',
         ignoreDuplicates: false,
       })
       .select()
@@ -94,9 +94,41 @@ export class MindMapService {
       .from('mind_map_nodes')
       .delete()
       .eq('mind_map_id', mindMapId)
-      .in('node_id', nodeIds)
+      .in('id', nodeIds)
 
     if (error) throw error
+  }
+
+  // 获取节点的子节点
+  static async getChildNodes(mindMapId: string, parentNodeId: string | null): Promise<MindMapNode[]> {
+    const query = supabase
+      .from('mind_map_nodes')
+      .select('*')
+      .eq('mind_map_id', mindMapId)
+      .order('sort_order', { ascending: true })
+
+    if (parentNodeId === null) {
+      query.is('parent_node_id', null)
+    } else {
+      query.eq('parent_node_id', parentNodeId)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+    return data || []
+  }
+
+  // 获取指定层级的所有节点
+  static async getNodesByLevel(mindMapId: string, level: number): Promise<MindMapNode[]> {
+    const { data, error } = await supabase
+      .from('mind_map_nodes')
+      .select('*')
+      .eq('mind_map_id', mindMapId)
+      .eq('node_level', level)
+      .order('sort_order', { ascending: true })
+
+    if (error) throw error
+    return data || []
   }
 
   // 通过向量搜索思维导图

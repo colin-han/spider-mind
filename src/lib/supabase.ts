@@ -61,10 +61,10 @@ export type Database = {
         Row: {
           id: string
           mind_map_id: string
-          node_id: string
           content: string
-          position_x: number
-          position_y: number
+          parent_node_id: string | null
+          sort_order: number
+          node_level: number
           node_type: string
           style: object | null
           created_at: string
@@ -74,18 +74,19 @@ export type Database = {
         Insert: {
           id?: string
           mind_map_id: string
-          node_id: string
           content: string
-          position_x: number
-          position_y: number
+          parent_node_id?: string | null
+          sort_order?: number
+          node_level?: number
           node_type?: string
           style?: object | null
           embedding?: number[]
         }
         Update: {
           content?: string
-          position_x?: number
-          position_y?: number
+          parent_node_id?: string | null
+          sort_order?: number
+          node_level?: number
           node_type?: string
           style?: object | null
           updated_at?: string

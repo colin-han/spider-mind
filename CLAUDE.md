@@ -68,7 +68,6 @@ AI请求通过以下API路由处理：
 - `profiles` - 用户配置  
 - `mind_maps` - 思维导图主表（包含embedding列）
 - `mind_map_nodes` - 节点详细表（支持节点级向量搜索）
-- `mind_map_shares` - 分享链接管理
 
 ### 思维导图组件架构 (`src/components/mind-map/`)
 基于ReactFlow构建的思维导图编辑器：
@@ -85,9 +84,11 @@ AI请求通过以下API路由处理：
 - AI建议以JSON格式返回，包含type、title、description、content等字段
 
 ### 思维导图节点管理
+- 节点使用UUID作为统一ID，同时用作ReactFlow节点ID和数据库主键
 - 节点数据存储在ReactFlow的`data`属性中，包含`content`和`isEditing`
 - 节点编辑通过自定义事件(`nodeContentUpdate`)在组件间通信
-- 新节点ID使用时间戳生成：`node_${Date.now()}` 或 `ai_node_${Date.now()}`
+- 支持树形结构：`parent_node_id`建立父子关系，`sort_order`控制同级排序，`node_level`表示层级
+- 为自动布局算法提供完整的结构化数据支持
 
 ### 数据库向量搜索
 - 使用pgvector的余弦相似度搜索(`<=>`)
@@ -111,3 +112,16 @@ AI请求通过以下API路由处理：
 - 行级安全策略(RLS)
 - 自动更新触发器
 - 向量搜索函数
+
+## 开发原则
+
+### 核心原则
+1. **需求驱动开发**: 在没有收到明确需求之前，不要猜测、过度设计或引入不必要的功能
+2. **MVP优先**: 在MVP0实现之前，不需要记录数据库migration，专注核心功能实现
+3. **简洁架构**: 在确保架构清晰明确的前提下，尽可能避免引入过度设计导致代码复杂化
+
+### 实施指导
+- 优先实现用户明确要求的功能
+- 避免提前优化和过度抽象
+- 保持代码简洁可读，架构清晰
+- 重构时考虑实际需求而非理论完美

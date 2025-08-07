@@ -26,43 +26,39 @@ CREATE TABLE mind_maps (
 
 -- 思维导图节点表（用于更细粒度的搜索和AI功能）
 CREATE TABLE mind_map_nodes (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY, -- 统一ID，也是ReactFlow节点ID
     mind_map_id UUID REFERENCES mind_maps(id) ON DELETE CASCADE NOT NULL,
-    node_id TEXT NOT NULL, -- ReactFlow节点ID
     content TEXT NOT NULL,
-    position_x REAL NOT NULL,
-    position_y REAL NOT NULL,
+    parent_node_id UUID REFERENCES mind_map_nodes(id) ON DELETE CASCADE, -- 父节点ID
+    sort_order INTEGER NOT NULL DEFAULT 0, -- 兄弟节点间排序
+    node_level INTEGER NOT NULL DEFAULT 0, -- 节点层级
     node_type TEXT DEFAULT 'mindMapNode',
     style JSONB DEFAULT '{}',
     embedding VECTOR(1536), -- 节点级别的向量嵌入
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
-    UNIQUE(mind_map_id, node_id)
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
--- 思维导图分享表
-CREATE TABLE mind_map_shares (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    mind_map_id UUID REFERENCES mind_maps(id) ON DELETE CASCADE NOT NULL,
-    share_code TEXT UNIQUE NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    expires_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
-);
 
 -- 创建索引以优化查询性能
 CREATE INDEX idx_mind_maps_user_id ON mind_maps(user_id);
 CREATE INDEX idx_mind_maps_created_at ON mind_maps(created_at);
 CREATE INDEX idx_mind_maps_is_public ON mind_maps(is_public);
 CREATE INDEX idx_mind_map_nodes_mind_map_id ON mind_map_nodes(mind_map_id);
+CREATE INDEX idx_mind_map_nodes_parent ON mind_map_nodes(parent_node_id);
+CREATE INDEX idx_mind_map_nodes_level ON mind_map_nodes(mind_map_id, node_level);
+CREATE INDEX idx_mind_map_nodes_sort ON mind_map_nodes(mind_map_id, parent_node_id, sort_order);
 CREATE INDEX idx_mind_map_nodes_embedding ON mind_map_nodes USING ivfflat (embedding vector_cosine_ops);
 CREATE INDEX idx_mind_maps_embedding ON mind_maps USING ivfflat (embedding vector_cosine_ops);
+
+-- 添加约束确保数据完整性
+ALTER TABLE mind_map_nodes ADD CONSTRAINT uq_mindmap_parent_sort 
+    UNIQUE (mind_map_id, parent_node_id, sort_order);
 
 -- RLS (行级安全) 策略
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mind_maps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mind_map_nodes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mind_map_shares ENABLE ROW LEVEL SECURITY;
 
 -- 用户只能查看和修改自己的profile
 CREATE POLICY "Users can view own profile" ON profiles
@@ -100,15 +96,6 @@ CREATE POLICY "Users can manage nodes of own mind maps" ON mind_map_nodes
         )
     );
 
--- 分享策略
-CREATE POLICY "Users can manage shares of own mind maps" ON mind_map_shares
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM mind_maps 
-            WHERE mind_maps.id = mind_map_shares.mind_map_id 
-            AND mind_maps.user_id = auth.uid()
-        )
-    );
 
 -- 创建触发器自动更新updated_at字段
 CREATE OR REPLACE FUNCTION update_updated_at_column()

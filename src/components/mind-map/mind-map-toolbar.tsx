@@ -13,6 +13,7 @@ export interface MindMapToolbarProps {
   onExport?: () => void
   onImport?: () => void
   hasSelection: boolean
+  selectedNodeCount: number
 }
 
 export function MindMapToolbar({
@@ -24,13 +25,16 @@ export function MindMapToolbar({
   onExport,
   onImport,
   hasSelection,
+  selectedNodeCount,
 }: MindMapToolbarProps) {
+  // 动态按钮文案
+  const addNodeText = selectedNodeCount === 1 ? '添加子节点' : '添加节点'
   return (
     <Card className="absolute top-4 left-4 z-10 p-2">
       <div className="flex gap-2">
         <Button variant="outline" size="sm" onClick={onAddNode} className="flex items-center gap-1">
           <Plus className="w-4 h-4" />
-          添加节点
+          {addNodeText}
         </Button>
 
         <Button
