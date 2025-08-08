@@ -5,8 +5,12 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowLeft, Save, Settings, Share } from 'lucide-react'
+import { ProtectedRoute } from '@/components/auth/protected-route'
+import { UserMenu } from '@/components/auth/user-menu'
+import { useAuth } from '@/contexts/auth-context'
+import { ArrowLeft, Save, Settings, Share, Sparkles } from 'lucide-react'
 import { MindMap } from '@/components/mind-map/mind-map'
+import { AIAssistant } from '@/components/ai/ai-assistant'
 
 interface MindMapData {
   id: string
@@ -23,12 +27,14 @@ export default function MindMapDetailPage() {
   const params = useParams()
   const router = useRouter()
   const mindMapId = params.id as string
-  
+  const { user } = useAuth()
+
   const [mindMapData, setMindMapData] = useState<MindMapData | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [title, setTitle] = useState('')
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [showAIAssistant, setShowAIAssistant] = useState(false)
 
   // 加载思维导图数据
   useEffect(() => {
@@ -36,7 +42,7 @@ export default function MindMapDetailPage() {
       try {
         const response = await fetch(`/api/mindmaps/${mindMapId}`)
         const result = await response.json()
-        
+
         if (result.success) {
           setMindMapData(result.data)
           setTitle(result.data.title)
@@ -70,22 +76,22 @@ export default function MindMapDetailPage() {
         },
         body: JSON.stringify({
           title,
-          content: newContent || mindMapData.content
-        })
+          content: newContent || mindMapData.content,
+        }),
       })
 
       const result = await response.json()
       if (result.success) {
         setLastSaved(new Date())
-        
+
         // 如果有新内容，更新本地状态
         if (newContent) {
-          setMindMapData(prev => prev ? { ...prev, content: newContent } : null)
+          setMindMapData(prev => (prev ? { ...prev, content: newContent } : null))
         }
 
         // 如果标题改变了，更新
         if (title !== mindMapData.title) {
-          setMindMapData(prev => prev ? { ...prev, title } : null)
+          setMindMapData(prev => (prev ? { ...prev, title } : null))
         }
       }
     } catch (error) {
@@ -105,6 +111,15 @@ export default function MindMapDetailPage() {
     if (title !== mindMapData?.title) {
       await saveMindMap()
     }
+  }
+
+  // 处理AI建议应用
+  const handleAISuggestionApply = async (suggestion: any) => {
+    // 这里可以实现AI建议的应用逻辑
+    console.log('Applying AI suggestion:', suggestion)
+    
+    // 简化实现：关闭AI助手
+    setShowAIAssistant(false)
   }
 
   if (loading) {
@@ -142,10 +157,10 @@ export default function MindMapDetailPage() {
               返回
             </Button>
           </Link>
-          
+
           <Input
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={e => setTitle(e.target.value)}
             onBlur={handleTitleChange}
             className="text-lg font-medium border-none shadow-none focus:ring-0 px-0"
             placeholder="思维导图标题..."
@@ -154,17 +169,10 @@ export default function MindMapDetailPage() {
 
         <div className="flex items-center gap-2">
           {lastSaved && (
-            <span className="text-sm text-gray-500">
-              已保存 {lastSaved.toLocaleTimeString()}
-            </span>
+            <span className="text-sm text-gray-500">已保存 {lastSaved.toLocaleTimeString()}</span>
           )}
-          
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => saveMindMap()}
-            disabled={saving}
-          >
+
+          <Button variant="ghost" size="sm" onClick={() => saveMindMap()} disabled={saving}>
             <Save className="h-4 w-4 mr-2" />
             {saving ? '保存中...' : '保存'}
           </Button>
@@ -174,20 +182,52 @@ export default function MindMapDetailPage() {
             分享
           </Button>
 
-          <Button variant="ghost" size="sm">
-            <Settings className="h-4 w-4" />
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => setShowAIAssistant(!showAIAssistant)}
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            AI助手
           </Button>
+
+          <UserMenu />
         </div>
       </div>
 
       {/* 思维导图编辑器 */}
-      <div className="flex-1">
-        <MindMap 
+      <div className="flex-1 relative">
+        <MindMap
           initialNodes={mindMapData.content.nodes}
           initialEdges={mindMapData.content.edges}
           onChange={handleMindMapChange}
         />
+
+        {/* AI助手面板 */}
+        {showAIAssistant && (
+          <div className="absolute top-4 right-4 z-10">
+            <AIAssistant
+              allNodes={mindMapData.content.nodes.map((node: any) => ({
+                id: node.id,
+                content: node.data?.content || ''
+              }))}
+              onSuggestionApply={handleAISuggestionApply}
+              onClose={() => setShowAIAssistant(false)}
+            />
+          </div>
+        )}
       </div>
     </div>
   )
 }
+
+// 包装组件以提供权限保护
+function ProtectedMindMapDetailPage() {
+  return (
+    <ProtectedRoute>
+      <MindMapDetailPage />
+    </ProtectedRoute>
+  )
+}
+
+export default ProtectedMindMapDetailPage

@@ -49,7 +49,9 @@ describe('MindMaps API', () => {
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
       expect(data.data).toEqual(mockMindMaps)
-      expect(MindMapService.getUserMindMaps).toHaveBeenCalledWith('11111111-1111-1111-1111-111111111111')
+      expect(MindMapService.getUserMindMaps).toHaveBeenCalledWith(
+        '11111111-1111-1111-1111-111111111111'
+      )
     })
 
     it('应该处理数据库错误', async () => {

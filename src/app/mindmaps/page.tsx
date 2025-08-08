@@ -5,6 +5,9 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ProtectedRoute } from '@/components/auth/protected-route'
+import { UserMenu } from '@/components/auth/user-menu'
+import { useAuth } from '@/contexts/auth-context'
 import { Plus, Search, Calendar, FileText } from 'lucide-react'
 
 interface MindMap {
@@ -20,14 +23,17 @@ export default function MindMapsListPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredMindMaps, setFilteredMindMaps] = useState<MindMap[]>([])
+  const { user } = useAuth()
 
   // 加载思维导图列表
   useEffect(() => {
     const loadMindMaps = async () => {
+      if (!user) return
+      
       try {
-        const response = await fetch('/api/mindmaps')
+        const response = await fetch(`/api/mindmaps?userId=${user.id}`)
         const result = await response.json()
-        
+
         if (result.success) {
           setMindMaps(result.data)
           setFilteredMindMaps(result.data)
@@ -40,7 +46,7 @@ export default function MindMapsListPage() {
     }
 
     loadMindMaps()
-  }, [])
+  }, [user])
 
   // 搜索过滤
   useEffect(() => {
@@ -56,6 +62,8 @@ export default function MindMapsListPage() {
 
   // 创建新思维导图
   const createNewMindMap = async () => {
+    if (!user) return
+
     try {
       const response = await fetch('/api/mindmaps', {
         method: 'POST',
@@ -63,14 +71,15 @@ export default function MindMapsListPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          title: `新思维导图 ${new Date().toLocaleString()}`
-        })
+          title: `新思维导图 ${new Date().toLocaleString()}`,
+          userId: user.id,
+        }),
       })
 
       const result = await response.json()
       if (result.success) {
         // 重新加载列表
-        const listResponse = await fetch('/api/mindmaps')
+        const listResponse = await fetch(`/api/mindmaps?userId=${user.id}`)
         const listResult = await listResponse.json()
         if (listResult.success) {
           setMindMaps(listResult.data)
@@ -98,17 +107,21 @@ export default function MindMapsListPage() {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">思维导图</h1>
-          <p className="text-gray-600 mt-2">管理和创建你的思维导图</p>
+    <ProtectedRoute>
+      <div className="container mx-auto p-6">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">思维导图</h1>
+            <p className="text-gray-600 mt-2">管理和创建你的思维导图</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button onClick={createNewMindMap} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              新建思维导图
+            </Button>
+            <UserMenu />
+          </div>
         </div>
-        <Button onClick={createNewMindMap} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          新建思维导图
-        </Button>
-      </div>
 
       {/* 搜索栏 */}
       <div className="mb-6">
@@ -117,7 +130,7 @@ export default function MindMapsListPage() {
           <Input
             placeholder="搜索思维导图..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={e => setSearchQuery(e.target.value)}
             className="pl-10"
           />
         </div>
@@ -142,7 +155,7 @@ export default function MindMapsListPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredMindMaps.map((mindMap) => (
+          {filteredMindMaps.map(mindMap => (
             <Link key={mindMap.id} href={`/mindmaps/${mindMap.id}`}>
               <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
                 <CardHeader>
@@ -156,10 +169,11 @@ export default function MindMapsListPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-sm text-gray-600">
-                    {mindMap.content && typeof mindMap.content === 'object' && 'nodes' in mindMap.content ? 
-                      `${(mindMap.content.nodes as unknown[]).length} 个节点` : 
-                      '空白思维导图'
-                    }
+                    {mindMap.content &&
+                    typeof mindMap.content === 'object' &&
+                    'nodes' in mindMap.content
+                      ? `${(mindMap.content.nodes as unknown[]).length} 个节点`
+                      : '空白思维导图'}
                   </div>
                   <div className="mt-4 h-20 bg-gray-50 rounded border-2 border-dashed border-gray-200 flex items-center justify-center">
                     <span className="text-xs text-gray-500">思维导图预览</span>
@@ -174,10 +188,11 @@ export default function MindMapsListPage() {
       {/* 统计信息 */}
       <div className="mt-8 text-center text-sm text-gray-500">
         共 {mindMaps.length} 个思维导图
-        {searchQuery && filteredMindMaps.length !== mindMaps.length && 
-          `, 显示 ${filteredMindMaps.length} 个匹配结果`
-        }
+        {searchQuery &&
+          filteredMindMaps.length !== mindMaps.length &&
+          `, 显示 ${filteredMindMaps.length} 个匹配结果`}
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   )
 }
