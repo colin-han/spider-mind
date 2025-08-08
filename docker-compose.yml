@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16.2
+    container_name: spider-mind-db
+    environment:
+      POSTGRES_DB: spider_mind_dev
+      POSTGRES_USER: spider_user
+      POSTGRES_PASSWORD: spider_pass
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "15432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spider_user -d spider_mind_dev"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:

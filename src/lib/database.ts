@@ -100,7 +100,10 @@ export class MindMapService {
   }
 
   // 获取节点的子节点
-  static async getChildNodes(mindMapId: string, parentNodeId: string | null): Promise<MindMapNode[]> {
+  static async getChildNodes(
+    mindMapId: string,
+    parentNodeId: string | null
+  ): Promise<MindMapNode[]> {
     const query = supabase
       .from('mind_map_nodes')
       .select('*')

@@ -65,7 +65,7 @@ export function MindMapNode({ id, data, selected }: NodeProps) {
         id="right"
         className="!opacity-0 !pointer-events-none"
       />
-      
+
       <Card
         className={`
           min-w-[120px] max-w-[300px] p-3 cursor-pointer transition-all duration-200

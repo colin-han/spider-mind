@@ -18,12 +18,12 @@ import '@xyflow/react/dist/style.css'
 import { MindMapNode } from './mind-map-node'
 import { MindMapToolbar } from './mind-map-toolbar'
 import { AIAssistant } from '@/components/ai/ai-assistant'
-import { 
-  calculateAutoLayout, 
-  generateEdges, 
-  getNextSortOrder, 
+import {
+  calculateAutoLayout,
+  generateEdges,
+  getNextSortOrder,
   getNodeLevel,
-  type LayoutNode 
+  type LayoutNode,
 } from '@/lib/auto-layout'
 import { MindMapService } from '@/lib/database'
 
@@ -53,41 +53,43 @@ export function MindMap({ initialData, onSave, className = '' }: MindMapProps) {
   const [layoutNodes, setLayoutNodes] = useState<LayoutNode[]>([])
   const [mindMapId] = useState<string>('temp-mindmap-id') // 临时ID，后续需要从props或路由获取
 
-
   const onSelectionChange = useCallback((params: OnSelectionChangeParams) => {
     setSelectedNodes(params.nodes.map(node => node.id))
     setSelectedEdges(params.edges.map(edge => edge.id))
   }, [])
 
   // 应用自动布局
-  const applyAutoLayout = useCallback((layoutNodesList: LayoutNode[]) => {
-    const positions = calculateAutoLayout(layoutNodesList)
-    const autoEdges = generateEdges(layoutNodesList)
-    
-    // 更新ReactFlow节点
-    const reactFlowNodes: Node[] = layoutNodesList.map(layoutNode => ({
-      id: layoutNode.id,
-      type: 'mindMapNode',
-      position: positions[layoutNode.id] || { x: 0, y: 0 },
-      data: {
-        content: layoutNode.content,
-        isEditing: false,
-      },
-    }))
-    
-    // 更新ReactFlow边
-    const reactFlowEdges: Edge[] = autoEdges.map(edge => ({
-      id: edge.id,
-      source: edge.source,
-      target: edge.target,
-      sourceHandle: edge.sourceHandle,
-      targetHandle: edge.targetHandle,
-      type: 'default',
-    }))
-    
-    setNodes(reactFlowNodes)
-    setEdges(reactFlowEdges)
-  }, [setNodes, setEdges])
+  const applyAutoLayout = useCallback(
+    (layoutNodesList: LayoutNode[]) => {
+      const positions = calculateAutoLayout(layoutNodesList)
+      const autoEdges = generateEdges(layoutNodesList)
+
+      // 更新ReactFlow节点
+      const reactFlowNodes: Node[] = layoutNodesList.map(layoutNode => ({
+        id: layoutNode.id,
+        type: 'mindMapNode',
+        position: positions[layoutNode.id] || { x: 0, y: 0 },
+        data: {
+          content: layoutNode.content,
+          isEditing: false,
+        },
+      }))
+
+      // 更新ReactFlow边
+      const reactFlowEdges: Edge[] = autoEdges.map(edge => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle,
+        targetHandle: edge.targetHandle,
+        type: 'default',
+      }))
+
+      setNodes(reactFlowNodes)
+      setEdges(reactFlowEdges)
+    },
+    [setNodes, setEdges]
+  )
 
   const addNode = useCallback(async () => {
     try {
@@ -95,7 +97,7 @@ export function MindMap({ initialData, onSave, className = '' }: MindMapProps) {
       const parentNodeId = selectedNodeId
       const sortOrder = getNextSortOrder(layoutNodes, parentNodeId)
       const nodeLevel = getNodeLevel(layoutNodes, parentNodeId)
-      
+
       // 创建新的布局节点
       const newLayoutNode: LayoutNode = {
         id: crypto.randomUUID(),
@@ -104,14 +106,14 @@ export function MindMap({ initialData, onSave, className = '' }: MindMapProps) {
         node_level: nodeLevel,
         content: '新节点',
       }
-      
+
       // 更新布局节点列表
       const updatedLayoutNodes = [...layoutNodes, newLayoutNode]
       setLayoutNodes(updatedLayoutNodes)
-      
+
       // 应用自动布局
       applyAutoLayout(updatedLayoutNodes)
-      
+
       // 如果添加的是子节点，保持父节点选中状态
       if (parentNodeId) {
         // 延迟设置选中状态，确保节点已经渲染完成
@@ -124,22 +126,23 @@ export function MindMap({ initialData, onSave, className = '' }: MindMapProps) {
           setSelectedNodes([newLayoutNode.id])
         }, 100)
       }
-      
+
       // 保存到数据库
       try {
-        await MindMapService.upsertNodes([{
-          id: newLayoutNode.id,
-          mind_map_id: mindMapId,
-          content: newLayoutNode.content,
-          parent_node_id: newLayoutNode.parent_node_id,
-          sort_order: newLayoutNode.sort_order,
-          node_level: newLayoutNode.node_level,
-        }])
+        await MindMapService.upsertNodes([
+          {
+            id: newLayoutNode.id,
+            mind_map_id: mindMapId,
+            content: newLayoutNode.content,
+            parent_node_id: newLayoutNode.parent_node_id,
+            sort_order: newLayoutNode.sort_order,
+            node_level: newLayoutNode.node_level,
+          },
+        ])
       } catch (dbError) {
         console.error('保存节点到数据库失败:', dbError)
         // 可以在这里添加用户友好的错误提示
       }
-      
     } catch (error) {
       console.error('添加节点失败:', error)
     }
@@ -147,18 +150,17 @@ export function MindMap({ initialData, onSave, className = '' }: MindMapProps) {
 
   const deleteSelected = useCallback(async () => {
     if (selectedNodes.length === 0) return
-    
+
     try {
       // 从数据库删除节点
       await MindMapService.deleteNodes(mindMapId, selectedNodes)
-      
+
       // 更新布局节点数据
       const updatedLayoutNodes = layoutNodes.filter(node => !selectedNodes.includes(node.id))
       setLayoutNodes(updatedLayoutNodes)
-      
+
       // 重新应用布局
       applyAutoLayout(updatedLayoutNodes)
-      
     } catch (error) {
       console.error('删除节点失败:', error)
     }
@@ -170,25 +172,27 @@ export function MindMap({ initialData, onSave, className = '' }: MindMapProps) {
       setNodes(nds =>
         nds.map(node => (node.id === nodeId ? { ...node, data: { ...node.data, content } } : node))
       )
-      
+
       // 更新布局节点数据
-      const updatedLayoutNodes = layoutNodes.map(node => 
+      const updatedLayoutNodes = layoutNodes.map(node =>
         node.id === nodeId ? { ...node, content } : node
       )
       setLayoutNodes(updatedLayoutNodes)
-      
+
       // 保存到数据库
       try {
         const nodeToUpdate = updatedLayoutNodes.find(node => node.id === nodeId)
         if (nodeToUpdate) {
-          await MindMapService.upsertNodes([{
-            id: nodeToUpdate.id,
-            mind_map_id: mindMapId,
-            content: nodeToUpdate.content,
-            parent_node_id: nodeToUpdate.parent_node_id,
-            sort_order: nodeToUpdate.sort_order,
-            node_level: nodeToUpdate.node_level,
-          }])
+          await MindMapService.upsertNodes([
+            {
+              id: nodeToUpdate.id,
+              mind_map_id: mindMapId,
+              content: nodeToUpdate.content,
+              parent_node_id: nodeToUpdate.parent_node_id,
+              sort_order: nodeToUpdate.sort_order,
+              node_level: nodeToUpdate.node_level,
+            },
+          ])
         }
       } catch (error) {
         console.error('更新节点内容到数据库失败:', error)
@@ -196,7 +200,6 @@ export function MindMap({ initialData, onSave, className = '' }: MindMapProps) {
     },
     [setNodes, layoutNodes, mindMapId]
   )
-
 
   const handleSave = useCallback(async () => {
     try {
@@ -212,7 +215,7 @@ export function MindMap({ initialData, onSave, className = '' }: MindMapProps) {
         }))
         await MindMapService.upsertNodes(dbNodes)
       }
-      
+
       onSave?.({ nodes, edges })
     } catch (error) {
       console.error('保存思维导图失败:', error)
@@ -274,7 +277,7 @@ export function MindMap({ initialData, onSave, className = '' }: MindMapProps) {
       applyAutoLayout([rootNode])
     }
   }, [layoutNodes.length, initialData?.nodes, applyAutoLayout])
-  
+
   // 监听节点内容更新事件
   useEffect(() => {
     const handleNodeContentUpdate = (event: CustomEvent) => {
