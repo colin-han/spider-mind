@@ -1,7 +1,22 @@
 'use client'
 
-import { AppLayout } from '@/components/layout/app-layout'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
-  return <AppLayout />
+  const router = useRouter()
+
+  useEffect(() => {
+    // 重定向到思维导图列表页面
+    router.replace('/mindmaps')
+  }, [router])
+
+  return (
+    <div className="h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+        <p className="mt-4 text-gray-600">正在跳转到思维导图...</p>
+      </div>
+    </div>
+  )
 }

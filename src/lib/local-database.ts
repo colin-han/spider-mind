@@ -251,10 +251,10 @@ export class LocalMindMapService {
   static async deleteNodes(mindMapId: string, nodeIds: string[]): Promise<void> {
     const client = await pool.connect()
     try {
-      await client.query(
-        'DELETE FROM mind_map_nodes WHERE mind_map_id = $1 AND id = ANY($2)',
-        [mindMapId, nodeIds]
-      )
+      await client.query('DELETE FROM mind_map_nodes WHERE mind_map_id = $1 AND id = ANY($2)', [
+        mindMapId,
+        nodeIds,
+      ])
     } finally {
       client.release()
     }
@@ -273,18 +273,35 @@ export class LocalMindMapService {
 }
 
 // 根据环境变量决定使用哪个数据库服务
-export const MindMapService = process.env.USE_LOCAL_DB === 'true' 
-  ? LocalMindMapService 
-  : // fallback 到原来的服务，这里需要从原文件导入
-  class {
-    static async getUserMindMaps() { throw new Error('Supabase service not available in local mode') }
-    static async getMindMap() { throw new Error('Supabase service not available in local mode') }
-    static async createMindMap() { throw new Error('Supabase service not available in local mode') }
-    static async updateMindMap() { throw new Error('Supabase service not available in local mode') }
-    static async deleteMindMap() { throw new Error('Supabase service not available in local mode') }
-    static async getMindMapNodes() { throw new Error('Supabase service not available in local mode') }
-    static async upsertNodes() { throw new Error('Supabase service not available in local mode') }
-    static async deleteNodes() { throw new Error('Supabase service not available in local mode') }
-  }
+export const MindMapService =
+  process.env.USE_LOCAL_DB === 'true'
+    ? LocalMindMapService
+    : // fallback 到原来的服务，这里需要从原文件导入
+      class {
+        static async getUserMindMaps() {
+          throw new Error('Supabase service not available in local mode')
+        }
+        static async getMindMap() {
+          throw new Error('Supabase service not available in local mode')
+        }
+        static async createMindMap() {
+          throw new Error('Supabase service not available in local mode')
+        }
+        static async updateMindMap() {
+          throw new Error('Supabase service not available in local mode')
+        }
+        static async deleteMindMap() {
+          throw new Error('Supabase service not available in local mode')
+        }
+        static async getMindMapNodes() {
+          throw new Error('Supabase service not available in local mode')
+        }
+        static async upsertNodes() {
+          throw new Error('Supabase service not available in local mode')
+        }
+        static async deleteNodes() {
+          throw new Error('Supabase service not available in local mode')
+        }
+      }
 
 export default MindMapService

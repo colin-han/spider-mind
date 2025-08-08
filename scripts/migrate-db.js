@@ -1,30 +1,36 @@
 #!/usr/bin/env node
 
-const { Pool } = require('pg');
-const fs = require('fs');
-const path = require('path');
+const { Pool } = require('pg')
+const fs = require('fs')
+const path = require('path')
 
 // 从环境变量读取数据库配置
-require('dotenv').config({ path: path.join(__dirname, '..', '.env.local') });
+require('dotenv').config({ path: path.join(__dirname, '..', '.env.local') })
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-});
+})
 
 async function runMigration() {
   try {
-    console.log('🔗 连接到PostgreSQL数据库...');
-    
+    console.log('🔗 连接到PostgreSQL数据库...')
+
     // 测试连接
-    const client = await pool.connect();
-    console.log('✅ 数据库连接成功');
-    
+    const client = await pool.connect()
+    console.log('✅ 数据库连接成功')
+
     // 读取迁移文件
-    const migrationPath = path.join(__dirname, '..', 'supabase', 'migrations', '001_initial_schema.sql');
-    const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
-    
-    console.log('📄 执行数据库迁移...');
-    
+    const migrationPath = path.join(
+      __dirname,
+      '..',
+      'supabase',
+      'migrations',
+      '001_initial_schema.sql'
+    )
+    const migrationSQL = fs.readFileSync(migrationPath, 'utf8')
+
+    console.log('📄 执行数据库迁移...')
+
     // 修改后的迁移SQL，移除Supabase特定内容
     const localMigrationSQL = `
 -- 启用必要的扩展
@@ -124,37 +130,36 @@ ON CONFLICT (email) DO NOTHING;
 INSERT INTO mind_maps (id, title, user_id) VALUES 
     ('22222222-2222-2222-2222-222222222222', '示例思维导图', '11111111-1111-1111-1111-111111111111')
 ON CONFLICT (id) DO NOTHING;
-    `;
-    
-    await client.query(localMigrationSQL);
-    console.log('✅ 数据库迁移完成');
-    
+    `
+
+    await client.query(localMigrationSQL)
+    console.log('✅ 数据库迁移完成')
+
     // 验证表是否创建成功
     const result = await client.query(`
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public' 
       ORDER BY table_name
-    `);
-    
-    console.log('📊 创建的表:');
+    `)
+
+    console.log('📊 创建的表:')
     result.rows.forEach(row => {
-      console.log(`  - ${row.table_name}`);
-    });
-    
-    client.release();
-    console.log('🎉 数据库初始化完成!');
-    
+      console.log(`  - ${row.table_name}`)
+    })
+
+    client.release()
+    console.log('🎉 数据库初始化完成!')
   } catch (error) {
-    console.error('❌ 数据库迁移失败:', error);
-    process.exit(1);
+    console.error('❌ 数据库迁移失败:', error)
+    process.exit(1)
   } finally {
-    await pool.end();
+    await pool.end()
   }
 }
 
 if (require.main === module) {
-  runMigration();
+  runMigration()
 }
 
-module.exports = { runMigration };
+module.exports = { runMigration }
