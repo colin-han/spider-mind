@@ -69,8 +69,8 @@ export function MindMapNode({ id, data, selected }: NodeProps) {
       <Card
         className={`
           min-w-[120px] max-w-[300px] p-3 cursor-pointer transition-all duration-200
-          ${selected ? 'ring-2 ring-blue-500 shadow-lg' : 'hover:shadow-md'}
-          ${isEditing ? 'ring-2 ring-orange-500' : ''}
+          ${selected ? 'ring-2 ring-primary shadow-lg' : 'hover:shadow-md'}
+          ${isEditing ? 'ring-2 ring-accent' : ''}
         `}
         onDoubleClick={handleDoubleClick}
       >
@@ -84,7 +84,7 @@ export function MindMapNode({ id, data, selected }: NodeProps) {
             className="border-none p-0 h-auto text-center font-medium"
           />
         ) : (
-          <div className="text-center font-medium text-sm text-gray-800 break-words">{content}</div>
+          <div className="text-center font-medium text-sm text-foreground break-words">{content}</div>
         )}
       </Card>
     </>

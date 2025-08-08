@@ -45,24 +45,27 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* Radix UI Sand gray scale for backgrounds */
+  --background: #fdfdfc;
+  --foreground: #21201c;
+  --card: #fdfdfc;
+  --card-foreground: #21201c;
+  --popover: #fdfdfc;
+  --popover-foreground: #21201c;
+  /* Radix UI Violet for primary accent */
+  --primary: #8b5cf6;
+  --primary-foreground: #fefefe;
+  --secondary: #f9f8f6;
+  --secondary-foreground: #21201c;
+  --muted: #f9f8f6;
+  --muted-foreground: #6f6e69;
+  --accent: #8b5cf6;
+  --accent-foreground: #fefefe;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* Sand borders and inputs */
+  --border: #e7e5e4;
+  --input: #e7e5e4;
+  --ring: #8b5cf6;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -79,24 +82,27 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Radix UI Sand dark mode backgrounds */
+  --background: #111110;
+  --foreground: #eeeeec;
+  --card: #191918;
+  --card-foreground: #eeeeec;
+  --popover: #191918;
+  --popover-foreground: #eeeeec;
+  /* Radix UI Violet for dark mode primary */
+  --primary: #a78bfa;
+  --primary-foreground: #111110;
+  --secondary: #1c1c1a;
+  --secondary-foreground: #eeeeec;
+  --muted: #1c1c1a;
+  --muted-foreground: #a1a09a;
+  --accent: #a78bfa;
+  --accent-foreground: #111110;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  /* Sand dark borders and inputs */
+  --border: #2a2a27;
+  --input: #2a2a27;
+  --ring: #a78bfa;
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -118,5 +124,33 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  
+  /* 强制暗色主题 */
+  :root {
+    color-scheme: dark;
+  }
+  
+  html.dark,
+  html.dark body,
+  .dark {
+    /* 确保暗色主题变量覆盖默认值 */
+    --background: #111110;
+    --foreground: #eeeeec;
+    --card: #191918;
+    --card-foreground: #eeeeec;
+    --popover: #191918;
+    --popover-foreground: #eeeeec;
+    --primary: #a78bfa;
+    --primary-foreground: #111110;
+    --secondary: #1c1c1a;
+    --secondary-foreground: #eeeeec;
+    --muted: #1c1c1a;
+    --muted-foreground: #a1a09a;
+    --accent: #a78bfa;
+    --accent-foreground: #111110;
+    --border: #2a2a27;
+    --input: #2a2a27;
+    --ring: #a78bfa;
   }
 }

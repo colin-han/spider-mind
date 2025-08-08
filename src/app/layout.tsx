@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
+import { Theme } from '@radix-ui/themes'
 import { AuthProvider } from '@/contexts/auth-context'
 import './globals.css'
+import '@radix-ui/themes/styles.css'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -24,11 +26,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="zh">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+    <html lang="zh" className="dark">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased dark`}>
+        <Theme accentColor="violet" grayColor="sand" appearance="dark">
+          <AuthProvider>{children}</AuthProvider>
+        </Theme>
       </body>
     </html>
   )

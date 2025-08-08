@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import {
   ReactFlow,
   MiniMap,
@@ -35,27 +35,56 @@ const initialNodes: Node[] = []
 
 const initialEdges: Edge[] = []
 
+export interface MindMapRef {
+  addNode: () => void
+  deleteSelected: () => void
+  save: () => void
+}
+
 export interface MindMapProps {
+  initialNodes?: Node[]
+  initialEdges?: Edge[]
   initialData?: {
     nodes: Node[]
     edges: Edge[]
   }
+  onChange?: (data: { nodes: Node[]; edges: Edge[] }) => void
   onSave?: (data: { nodes: Node[]; edges: Edge[] }) => void
+  onSelectionChange?: (selectedNodes: string[]) => void
+  showToolbar?: boolean
   className?: string
 }
 
-export function MindMap({ initialData, onSave, className = '' }: MindMapProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialData?.nodes || initialNodes)
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialData?.edges || initialEdges)
+export const MindMap = forwardRef<MindMapRef, MindMapProps>(({ 
+  initialNodes: propInitialNodes,
+  initialEdges: propInitialEdges,
+  initialData, 
+  onChange,
+  onSave, 
+  onSelectionChange,
+  showToolbar = true,
+  className = '' 
+}, ref) => {
+  const finalInitialNodes = propInitialNodes || initialData?.nodes || initialNodes
+  const finalInitialEdges = propInitialEdges || initialData?.edges || initialEdges
+  
+  const [nodes, setNodes, onNodesChange] = useNodesState(finalInitialNodes)
+  const [edges, setEdges, onEdgesChange] = useEdgesState(finalInitialEdges)
   const [selectedNodes, setSelectedNodes] = useState<string[]>([])
   const [selectedEdges, setSelectedEdges] = useState<string[]>([])
   const [showAIAssistant, setShowAIAssistant] = useState(false)
   const [layoutNodes, setLayoutNodes] = useState<LayoutNode[]>([])
   const [mindMapId] = useState<string>('temp-mindmap-id') // 临时ID，后续需要从props或路由获取
 
-  const onSelectionChange = useCallback((params: OnSelectionChangeParams) => {
-    setSelectedNodes(params.nodes.map(node => node.id))
-    setSelectedEdges(params.edges.map(edge => edge.id))
+  const onSelectionChangeRef = useRef(onSelectionChange)
+  onSelectionChangeRef.current = onSelectionChange
+
+  const onSelectionChangeCallback = useCallback((params: OnSelectionChangeParams) => {
+    const nodeIds = params.nodes.map(node => node.id)
+    const edgeIds = params.edges.map(edge => edge.id)
+    setSelectedNodes(nodeIds)
+    setSelectedEdges(edgeIds)
+    onSelectionChangeRef.current?.(nodeIds)
   }, [])
 
   // 应用自动布局
@@ -87,8 +116,12 @@ export function MindMap({ initialData, onSave, className = '' }: MindMapProps) {
 
       setNodes(reactFlowNodes)
       setEdges(reactFlowEdges)
+
+      // 通知父组件数据变化
+      const data = { nodes: reactFlowNodes, edges: reactFlowEdges }
+      onChange?.(data)
     },
-    [setNodes, setEdges]
+    [setNodes, setEdges, onChange]
   )
 
   const addNode = useCallback(async () => {
@@ -216,11 +249,13 @@ export function MindMap({ initialData, onSave, className = '' }: MindMapProps) {
         await MindMapService.upsertNodes(dbNodes)
       }
 
-      onSave?.({ nodes, edges })
+      const data = { nodes, edges }
+      onChange?.(data)
+      onSave?.(data)
     } catch (error) {
       console.error('保存思维导图失败:', error)
     }
-  }, [nodes, edges, onSave, layoutNodes, mindMapId])
+  }, [nodes, edges, onChange, onSave, layoutNodes, mindMapId])
 
   const handleAISuggestionApply = useCallback(
     (suggestion: {
@@ -263,9 +298,29 @@ export function MindMap({ initialData, onSave, className = '' }: MindMapProps) {
   const selectedNode =
     selectedNodes.length === 1 ? nodes.find(n => n.id === selectedNodes[0]) : undefined
 
-  // 初始化默认根节点
+  // 暴露方法给父组件
+  useImperativeHandle(ref, () => ({
+    addNode,
+    deleteSelected,
+    save: handleSave
+  }), [addNode, deleteSelected, handleSave])
+
+  // 初始化布局节点
   useEffect(() => {
-    if (layoutNodes.length === 0 && (!initialData?.nodes || initialData.nodes.length === 0)) {
+    // 如果有初始数据（从数据库加载）
+    if (finalInitialNodes.length > 0 && layoutNodes.length === 0) {
+      const initialLayoutNodes: LayoutNode[] = finalInitialNodes.map(node => ({
+        id: node.id,
+        parent_node_id: node.data?.parent_node_id || null,
+        sort_order: node.data?.sort_order || 0,
+        node_level: node.data?.node_level || 0,
+        content: String(node.data?.content || ''),
+      }))
+      setLayoutNodes(initialLayoutNodes)
+      // 不需要立即应用布局，因为initialNodes已经有位置信息
+    }
+    // 如果没有初始数据，创建默认根节点
+    else if (layoutNodes.length === 0 && finalInitialNodes.length === 0) {
       const rootNode: LayoutNode = {
         id: crypto.randomUUID(),
         parent_node_id: null,
@@ -276,7 +331,7 @@ export function MindMap({ initialData, onSave, className = '' }: MindMapProps) {
       setLayoutNodes([rootNode])
       applyAutoLayout([rootNode])
     }
-  }, [layoutNodes.length, initialData?.nodes, applyAutoLayout])
+  }, [finalInitialNodes, layoutNodes.length, applyAutoLayout])
 
   // 监听节点内容更新事件
   useEffect(() => {
@@ -294,14 +349,16 @@ export function MindMap({ initialData, onSave, className = '' }: MindMapProps) {
 
   return (
     <div className={`w-full h-full relative ${className}`}>
-      <MindMapToolbar
-        onAddNode={addNode}
-        onDeleteSelected={deleteSelected}
-        onSave={handleSave}
-        onAIAssist={() => setShowAIAssistant(true)}
-        hasSelection={selectedNodes.length > 0 || selectedEdges.length > 0}
-        selectedNodeCount={selectedNodes.length}
-      />
+      {showToolbar && (
+        <MindMapToolbar
+          onAddNode={addNode}
+          onDeleteSelected={deleteSelected}
+          onSave={handleSave}
+          onAIAssist={() => setShowAIAssistant(true)}
+          hasSelection={selectedNodes.length > 0 || selectedEdges.length > 0}
+          selectedNodeCount={selectedNodes.length}
+        />
+      )}
 
       {showAIAssistant && (
         <AIAssistant
@@ -327,15 +384,15 @@ export function MindMap({ initialData, onSave, className = '' }: MindMapProps) {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onSelectionChange={onSelectionChange}
+        onSelectionChange={onSelectionChangeCallback}
         nodeTypes={nodeTypes}
         fitView
-        className="bg-gray-50"
+        className="bg-background"
       >
         <Controls />
         <MiniMap />
-        <Background variant={BackgroundVariant.Dots} gap={12} size={1} color="#e2e8f0" />
+        <Background variant={BackgroundVariant.Dots} gap={12} size={1} color="#2a2a27" />
       </ReactFlow>
     </div>
   )
-}
+})
