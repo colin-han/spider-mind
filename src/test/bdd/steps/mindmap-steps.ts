@@ -17,6 +17,9 @@ When('我点击{string}按钮', async function (this: BDDWorld, buttonText: stri
     await this.clickAddChildNode()
   } else if (buttonText === '保存') {
     await this.clickSaveButton()
+  } else if (buttonText === '新建思维导图') {
+    // 严格按描述：只点击按钮，不做任何额外操作
+    await this.clickNewMindMapButtonOnly()
   }
 })
 
@@ -46,12 +49,27 @@ Then('我应该自动进入思维导图编辑页面', async function (this: BDDW
   expect(isOnEditPage).toBe(true)
 })
 
+Then('浏览器应该自动进入思维导图编辑页面', async function (this: BDDWorld) {
+  const isOnEditPage = await this.verifyOnEditPage()
+  expect(isOnEditPage).toBe(true)
+})
+
 Then('我应该看到一个默认的主节点', async function (this: BDDWorld) {
   const hasDefaultNode = await this.verifyDefaultMainNode()
   expect(hasDefaultNode).toBe(true)
 })
 
+Then('当前思维导图应该有一个默认的主节点', async function (this: BDDWorld) {
+  const hasDefaultNode = await this.verifyDefaultMainNode()
+  expect(hasDefaultNode).toBe(true)
+})
+
 Then('主节点应该是选中状态', async function (this: BDDWorld) {
+  const isSelected = await this.verifyMainNodeSelected()
+  expect(isSelected).toBe(true)
+})
+
+Then('当前思维导图的主节点应该是选中状态', async function (this: BDDWorld) {
   const isSelected = await this.verifyMainNodeSelected()
   expect(isSelected).toBe(true)
 })

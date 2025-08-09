@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -30,6 +31,7 @@ export default function MindMapsListPage() {
   })
   const [deleting, setDeleting] = useState(false)
   const { user } = useAuth()
+  const router = useRouter()
 
   // 加载思维导图列表
   useEffect(() => {
@@ -83,14 +85,9 @@ export default function MindMapsListPage() {
       })
 
       const result = await response.json()
-      if (result.success) {
-        // 重新加载列表
-        const listResponse = await fetch(`/api/mindmaps?userId=${user.id}`)
-        const listResult = await listResponse.json()
-        if (listResult.success) {
-          setMindMaps(listResult.data)
-          setFilteredMindMaps(listResult.data)
-        }
+      if (result.success && result.data) {
+        // 自动跳转到新创建的思维导图编辑页面
+        router.push(`/mindmaps/${result.data.id}`)
       }
     } catch (error) {
       console.error('Failed to create mind map:', error)

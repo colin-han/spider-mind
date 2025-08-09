@@ -76,7 +76,9 @@ describe('Performance Tests', () => {
       // 生成边连接
       const edges = Array(edgeCount)
         .fill(0)
-        .map((_item, _index) => TestDataFactory.createEdge(`perf-node-0`, `perf-node-${_index + 1}`))
+        .map((_item, _index) =>
+          TestDataFactory.createEdge(`perf-node-0`, `perf-node-${_index + 1}`)
+        )
 
       const endTime = performance.now()
       const renderTime = endTime - startTime
@@ -246,15 +248,16 @@ describe('Performance Tests', () => {
             TestDataFactory.createNode({
               id: `large-node-${_index}`,
               data: {
-                content: `这是一个包含很多文字的大型节点内容，用于测试数据压缩效果 ${_index}`.repeat(
-                  5
-                ),
+                content:
+                  `这是一个包含很多文字的大型节点内容，用于测试数据压缩效果 ${_index}`.repeat(5),
               },
             })
           ),
         edges: Array(largeNodeCount - 1)
           .fill(0)
-          .map((_item, _index) => TestDataFactory.createEdge('large-node-0', `large-node-${_index + 1}`)),
+          .map((_item, _index) =>
+            TestDataFactory.createEdge('large-node-0', `large-node-${_index + 1}`)
+          ),
       }
 
       const originalSize = JSON.stringify(largeContent).length

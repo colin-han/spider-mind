@@ -95,14 +95,14 @@ export class BDDWorld {
 
   async extractAndTrackMindMapId() {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 从URL中提取思维导图ID
     const url = this.page.url()
     const matches = url.match(/\/mindmaps\/([^\/]+)/)
     if (matches) {
       const mindMapId = matches[1]
       this.currentMindMapId = mindMapId
-      
+
       // 只有当ID还没有被跟踪时才添加到列表中
       if (!this.createdMindMapIds.includes(mindMapId)) {
         this.createdMindMapIds.push(mindMapId)
@@ -340,7 +340,9 @@ export class BDDWorld {
       return
     }
 
-    console.log(`清理 ${this.createdMindMapIds.length} 个测试创建的思维导图: ${this.createdMindMapIds.join(', ')}`)
+    console.log(
+      `清理 ${this.createdMindMapIds.length} 个测试创建的思维导图: ${this.createdMindMapIds.join(', ')}`
+    )
 
     for (const mindMapId of this.createdMindMapIds) {
       try {
@@ -368,10 +370,10 @@ Before(async function (this: BDDWorld) {
 
 After(async function (this: BDDWorld, scenario) {
   await this.captureScreenshotOnFailure(scenario)
-  
+
   // 清理测试创建的思维导图
   await this.cleanupMindMaps()
-  
+
   // 清理浏览器资源
   await this.cleanup()
 })

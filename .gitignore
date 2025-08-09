@@ -78,3 +78,4 @@ pids
 # Temporary files
 *.tmp
 *.temp
+test-results/

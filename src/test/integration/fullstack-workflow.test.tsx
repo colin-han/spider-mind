@@ -71,10 +71,13 @@ describe('全栈工作流集成测试', () => {
       })
 
       // 渲染思维导图列表页面
-      const { mockAuthContextValue: _mockAuthContextValue } = renderWithProviders(<MindMapListPage />, {
-        authenticated: true,
-        user: testUser,
-      })
+      const { mockAuthContextValue: _mockAuthContextValue } = renderWithProviders(
+        <MindMapListPage />,
+        {
+          authenticated: true,
+          user: testUser,
+        }
+      )
 
       // 验证页面加载
       await waitFor(() => {
