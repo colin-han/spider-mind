@@ -78,4 +78,7 @@ pids
 # Temporary files
 *.tmp
 *.temp
+# 测试结果文件
 test-results/
+cucumber-report.*
+failure-*.png
