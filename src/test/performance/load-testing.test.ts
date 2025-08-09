@@ -9,7 +9,7 @@ describe('性能测试套件', () => {
     MEMORY_USAGE_MB: 50, // 50MB
     CPU_USAGE_PERCENT: 30, // 30%
     BUNDLE_SIZE_KB: 500, // 500KB
-    TIME_TO_INTERACTIVE: 3000 // 3秒
+    TIME_TO_INTERACTIVE: 3000, // 3秒
   }
 
   let mockFetch: ReturnType<typeof vi.fn>
@@ -19,7 +19,7 @@ describe('性能测试套件', () => {
     originalFetch = global.fetch
     mockFetch = vi.fn()
     global.fetch = mockFetch
-    
+
     // Mock performance.now for consistent timing
     let mockTime = 0
     vi.spyOn(performance, 'now').mockImplementation(() => {
@@ -30,17 +30,15 @@ describe('性能测试套件', () => {
 
   describe('API性能测试', () => {
     it('思维导图列表API应该在阈值时间内响应', async () => {
-      const mindMaps = Array.from({ length: 100 }, () => 
-        TestDataFactory.createMindMap()
-      )
+      const mindMaps = Array.from({ length: 100 }, () => TestDataFactory.createMindMap())
 
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(mindMaps)
+        json: () => Promise.resolve(mindMaps),
       })
 
-      const { result, duration } = await PerformanceTestUtils.measureAsyncOperation(
-        () => fetch('/api/mindmaps')
+      const { result, duration } = await PerformanceTestUtils.measureAsyncOperation(() =>
+        fetch('/api/mindmaps')
       )
 
       expect(result.ok).toBe(true)
@@ -49,28 +47,28 @@ describe('性能测试套件', () => {
 
     it('AI建议API应该处理大量数据时保持性能', async () => {
       const largeNodeSet = Array.from({ length: 200 }, (_, i) =>
-        TestDataFactory.createMindMapNode({ 
-          content: `大型节点内容 ${i}`.repeat(10)
+        TestDataFactory.createMindMapNode({
+          content: `大型节点内容 ${i}`.repeat(10),
         })
       )
 
       const aiResponse = [
         { type: 'expand', title: 'AI建议1', content: '内容1' },
-        { type: 'expand', title: 'AI建议2', content: '内容2' }
+        { type: 'expand', title: 'AI建议2', content: '内容2' },
       ]
 
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(aiResponse)
+        json: () => Promise.resolve(aiResponse),
       })
 
-      const { duration } = await PerformanceTestUtils.measureAsyncOperation(
-        () => fetch('/api/ai/mindmap', {
+      const { duration } = await PerformanceTestUtils.measureAsyncOperation(() =>
+        fetch('/api/ai/mindmap', {
           method: 'POST',
           body: JSON.stringify({
             context: '大型思维导图测试',
-            nodes: largeNodeSet
-          })
+            nodes: largeNodeSet,
+          }),
         })
       )
 
@@ -81,21 +79,21 @@ describe('性能测试套件', () => {
       const searchResults = Array.from({ length: 50 }, () => ({
         mindmap: TestDataFactory.createMindMap(),
         similarity: Math.random() * 0.5 + 0.5, // 0.5-1.0
-        matched_content: '匹配内容'
+        matched_content: '匹配内容',
       }))
 
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(searchResults)
+        json: () => Promise.resolve(searchResults),
       })
 
-      const { duration } = await PerformanceTestUtils.measureAsyncOperation(
-        () => fetch('/api/search', {
+      const { duration } = await PerformanceTestUtils.measureAsyncOperation(() =>
+        fetch('/api/search', {
           method: 'POST',
           body: JSON.stringify({
             query: '性能测试查询'.repeat(20), // 长查询文本
-            similarity_threshold: 0.7
-          })
+            similarity_threshold: 0.7,
+          }),
         })
       )
 
@@ -113,23 +111,25 @@ describe('性能测试套件', () => {
           id: `node-${i}`,
           type: 'mindMapNode',
           position: { x: Math.random() * 1000, y: Math.random() * 1000 },
-          data: { content: `节点内容 ${i}` }
+          data: { content: `节点内容 ${i}` },
         })),
         edges: Array.from({ length: 99 }, (_, i) => ({
           id: `edge-${i}`,
           source: `node-${Math.floor(i / 10)}`,
-          target: `node-${i + 1}`
-        }))
+          target: `node-${i + 1}`,
+        })),
       }
 
       const renderTime = await PerformanceTestUtils.measureRenderTime(async () => {
         const { render } = await import('@testing-library/react')
         const React = await import('react')
         const { MindMap } = await import('@/components/mind-map/mind-map')
-        return render(React.createElement(MindMap, { 
-          initialNodes: largeMindMapData.nodes, 
-          initialEdges: largeMindMapData.edges 
-        }))
+        return render(
+          React.createElement(MindMap, {
+            initialNodes: largeMindMapData.nodes,
+            initialEdges: largeMindMapData.edges,
+          })
+        )
       })
 
       expect(renderTime).toBeLessThan(PERFORMANCE_THRESHOLDS.COMPONENT_RENDER_TIME * 10) // 大型组件允许更多时间
@@ -140,13 +140,11 @@ describe('性能测试套件', () => {
       const { renderWithProviders } = await import('@/test/helpers/test-utils')
 
       // Mock大量思维导图
-      const largeMindMapList = Array.from({ length: 1000 }, () =>
-        TestDataFactory.createMindMap()
-      )
+      const largeMindMapList = Array.from({ length: 1000 }, () => TestDataFactory.createMindMap())
 
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(largeMindMapList)
+        json: () => Promise.resolve(largeMindMapList),
       })
 
       const renderTime = await PerformanceTestUtils.measureRenderTime(async () => {
@@ -166,18 +164,20 @@ describe('性能测试套件', () => {
         type: 'expand',
         title: `AI建议 ${i}`,
         description: `详细描述 ${i}`.repeat(5),
-        content: `建议内容 ${i}`.repeat(10)
+        content: `建议内容 ${i}`.repeat(10),
       }))
 
       const renderTime = await PerformanceTestUtils.measureRenderTime(async () => {
         const { render } = await import('@testing-library/react')
         const React = await import('react')
         const { AIAssistant } = await import('@/components/ai/ai-assistant')
-        return render(React.createElement(AIAssistant, { 
-          allNodes: [],
-          onSuggestionApply: vi.fn(),
-          onClose: vi.fn()
-        }))
+        return render(
+          React.createElement(AIAssistant, {
+            allNodes: [],
+            onSuggestionApply: vi.fn(),
+            onClose: vi.fn(),
+          })
+        )
       })
 
       expect(renderTime).toBeLessThan(PERFORMANCE_THRESHOLDS.COMPONENT_RENDER_TIME * 2)
@@ -192,27 +192,29 @@ describe('性能测试套件', () => {
           content: JSON.stringify({
             nodes: Array.from({ length: 50 }, (_, j) => ({
               id: `node-${i}-${j}`,
-              data: { content: `内容 ${i}-${j}`.repeat(5) }
-            }))
-          })
+              data: { content: `内容 ${i}-${j}`.repeat(5) },
+            })),
+          }),
         })
-        
+
         // 模拟组件挂载和卸载
         const { render } = await import('@testing-library/react')
         const React = await import('react')
         const { MindMapNode } = await import('@/components/mind-map/mind-map-node')
-        
-        const result = render(React.createElement(MindMapNode, { 
-          id: "test", 
-          data: { content: '测试节点' } 
-        }))
+
+        const result = render(
+          React.createElement(MindMapNode, {
+            id: 'test',
+            data: { content: '测试节点' },
+          })
+        )
         result.unmount()
-        
+
         return mindMap
       })
 
       const initialMemory = process.memoryUsage().heapUsed
-      
+
       // 执行操作
       for (const operation of operations) {
         await operation()
@@ -234,15 +236,15 @@ describe('性能测试套件', () => {
       const hugeMindMapData = {
         nodes: Array.from({ length: 5000 }, (_, i) => ({
           id: `node-${i}`,
-          data: { 
-            content: `大型节点内容 ${i}`.repeat(100) // 模拟大量文本
-          }
+          data: {
+            content: `大型节点内容 ${i}`.repeat(100), // 模拟大量文本
+          },
         })),
         edges: Array.from({ length: 4999 }, (_, i) => ({
           id: `edge-${i}`,
           source: `node-${i}`,
-          target: `node-${i + 1}`
-        }))
+          target: `node-${i + 1}`,
+        })),
       }
 
       const initialMemory = process.memoryUsage().heapUsed
@@ -264,15 +266,15 @@ describe('性能测试套件', () => {
     it('应该处理并发API请求', async () => {
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(TestDataFactory.createMindMap())
+        json: () => Promise.resolve(TestDataFactory.createMindMap()),
       })
 
       const concurrentRequests = Array.from({ length: 20 }, (_, i) =>
         fetch(`/api/mindmaps/test-${i}`)
       )
 
-      const { result, duration } = await PerformanceTestUtils.measureAsyncOperation(
-        () => Promise.all(concurrentRequests)
+      const { result, duration } = await PerformanceTestUtils.measureAsyncOperation(() =>
+        Promise.all(concurrentRequests)
       )
 
       expect(result).toHaveLength(20)
@@ -281,13 +283,11 @@ describe('性能测试套件', () => {
     })
 
     it('应该处理并发AI请求', async () => {
-      const aiResponse = [
-        { type: 'expand', title: 'AI建议', content: '内容' }
-      ]
+      const aiResponse = [{ type: 'expand', title: 'AI建议', content: '内容' }]
 
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(aiResponse)
+        json: () => Promise.resolve(aiResponse),
       })
 
       const concurrentAIRequests = Array.from({ length: 10 }, (_, i) =>
@@ -295,13 +295,13 @@ describe('性能测试套件', () => {
           method: 'POST',
           body: JSON.stringify({
             context: `并发测试 ${i}`,
-            nodes: [TestDataFactory.createMindMapNode()]
-          })
+            nodes: [TestDataFactory.createMindMapNode()],
+          }),
         })
       )
 
-      const { result, duration } = await PerformanceTestUtils.measureAsyncOperation(
-        () => Promise.all(concurrentAIRequests)
+      const { result, duration } = await PerformanceTestUtils.measureAsyncOperation(() =>
+        Promise.all(concurrentAIRequests)
       )
 
       expect(result).toHaveLength(10)
@@ -316,17 +316,17 @@ describe('性能测试套件', () => {
       const largeNodeSet = Array.from({ length: 500 }, (_, i) => ({
         id: `node-${i}`,
         data: { content: `节点 ${i}` },
-        position: { x: 0, y: 0 }
+        position: { x: 0, y: 0 },
       }))
 
       const largeEdgeSet = Array.from({ length: 499 }, (_, i) => ({
         id: `edge-${i}`,
         source: `node-${Math.floor(i / 10)}`,
-        target: `node-${i + 1}`
+        target: `node-${i + 1}`,
       }))
 
-      const { duration } = await PerformanceTestUtils.measureAsyncOperation(
-        () => calculateAutoLayout(largeNodeSet, largeEdgeSet)
+      const { duration } = await PerformanceTestUtils.measureAsyncOperation(() =>
+        calculateAutoLayout(largeNodeSet, largeEdgeSet)
       )
 
       expect(duration).toBeLessThan(PERFORMANCE_THRESHOLDS.COMPONENT_RENDER_TIME * 10)
@@ -334,15 +334,16 @@ describe('性能测试套件', () => {
 
     it('大量文本的向量化处理应该批量优化', async () => {
       const { OpenAIService } = await import('@/lib/ai')
-      
+
       // Mock OpenAI服务
       mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          data: Array.from({ length: 100 }, () => ({
-            embedding: Array.from({ length: 1536 }, () => Math.random())
-          }))
-        })
+        json: () =>
+          Promise.resolve({
+            data: Array.from({ length: 100 }, () => ({
+              embedding: Array.from({ length: 1536 }, () => Math.random()),
+            })),
+          }),
       })
 
       const openaiService = new OpenAIService()
@@ -350,8 +351,8 @@ describe('性能测试套件', () => {
         `大批量文本处理测试 ${i}`.repeat(10)
       )
 
-      const { duration } = await PerformanceTestUtils.measureAsyncOperation(
-        () => openaiService.generateBatchEmbeddings(largeTextBatch)
+      const { duration } = await PerformanceTestUtils.measureAsyncOperation(() =>
+        openaiService.generateBatchEmbeddings(largeTextBatch)
       )
 
       expect(duration).toBeLessThan(PERFORMANCE_THRESHOLDS.API_RESPONSE_TIME * 5)
@@ -365,7 +366,7 @@ describe('性能测试套件', () => {
         // 1. 登录
         await fetch('/api/auth/login', {
           method: 'POST',
-          body: JSON.stringify({ email: 'test@example.com', password: 'password' })
+          body: JSON.stringify({ email: 'test@example.com', password: 'password' }),
         })
 
         // 2. 获取思维导图列表
@@ -377,29 +378,41 @@ describe('性能测试套件', () => {
         // 4. 获取AI建议
         await fetch('/api/ai/mindmap', {
           method: 'POST',
-          body: JSON.stringify({ context: '测试', nodes: [] })
+          body: JSON.stringify({ context: '测试', nodes: [] }),
         })
 
         // 5. 更新思维导图
         await fetch('/api/mindmaps/test-id', {
           method: 'PUT',
-          body: JSON.stringify({ title: '更新后的标题' })
+          body: JSON.stringify({ title: '更新后的标题' }),
         })
 
         // 6. 向量搜索
         await fetch('/api/search', {
           method: 'POST',
-          body: JSON.stringify({ query: '搜索查询' })
+          body: JSON.stringify({ query: '搜索查询' }),
         })
       }
 
       // Mock 所有API响应
       mockFetch
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ token: 'test' }) })
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([TestDataFactory.createMindMap()]) })
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(TestDataFactory.createMindMap()) })
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([{ type: 'expand', title: 'AI建议' }]) })
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(TestDataFactory.createMindMap()) })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve([TestDataFactory.createMindMap()]),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(TestDataFactory.createMindMap()),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve([{ type: 'expand', title: 'AI建议' }]),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(TestDataFactory.createMindMap()),
+        })
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) })
 
       const { duration } = await PerformanceTestUtils.measureAsyncOperation(workflow)

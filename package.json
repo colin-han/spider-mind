@@ -18,7 +18,7 @@
     "test:security": "vitest run src/test/security",
     "test:watch": "vitest --watch",
     "test:ci": "vitest run --coverage --reporter=junit --outputFile=test-results.xml",
-    "test:bdd": "cucumber-js --config cucumber.config.js",
+    "test:bdd": "TS_NODE_PROJECT=tsconfig.bdd.json cucumber-js --config cucumber.config.js",
     "test:bdd:watch": "cucumber-js --config cucumber.config.js --watch",
     "test:bdd:html": "cucumber-js --config cucumber.config.js --format html:test-results/bdd-report.html",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:bdd",
@@ -31,7 +31,16 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:migrate": "node scripts/migrate-db.js",
-    "db:test": "node scripts/test-db-connection.js"
+    "db:test": "node scripts/test-db-connection.js",
+    "pm2:dev": "node scripts/pm2-manager.js dev",
+    "pm2:prod": "node scripts/pm2-manager.js prod",
+    "pm2:stop": "pm2 stop ecosystem.config.js",
+    "pm2:restart": "pm2 restart ecosystem.config.js",
+    "pm2:reload": "pm2 reload ecosystem.config.js",
+    "pm2:delete": "pm2 delete ecosystem.config.js",
+    "pm2:logs": "pm2 logs",
+    "pm2:status": "pm2 status",
+    "pm2:monit": "pm2 monit"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",

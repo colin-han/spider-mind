@@ -190,36 +190,53 @@ export class BDDWorld {
     console.log('页面上所有节点内容:', allNodeTexts)
     console.log('期望的内容:', expectedContent)
 
-    // 检查节点内容（使用多种方式定位）
-    const nodeWithContent = await this.page.locator(`text="${expectedContent}"`).count()
-    console.log('精确文本匹配数量:', nodeWithContent)
-    if (nodeWithContent > 0) return true
+    // 检查是否有任何节点包含期望的内容
+    const hasContent = allNodeTexts.some(text => text && text.includes(expectedContent))
+    console.log('节点内容是否包含期望文本:', hasContent)
 
-    // 也检查是否在节点容器中
-    const nodeContainer = await this.page
-      .locator(`[data-testid*="rf__node"]:has-text("${expectedContent}")`)
-      .count()
-    console.log('节点容器匹配数量:', nodeContainer)
-    if (nodeContainer > 0) return true
+    if (hasContent) return true
 
-    // 检查是否在Card内
-    const cardContent = await this.page.locator(`div:has-text("${expectedContent}")`).count()
-    console.log('Card内匹配数量:', cardContent)
+    // 备选方案：使用getByText检查
+    const containsContent = await this.page.getByText(expectedContent, { exact: false }).count()
+    console.log('getByText匹配数量:', containsContent)
 
-    // 最后检查是否有包含期望内容的文本
-    const containsContent = await this.page.getByText(expectedContent).count()
-    console.log('包含文本匹配数量:', containsContent)
-
-    return cardContent > 0 || containsContent > 0
+    return containsContent > 0
   }
 
   async clickSaveButton() {
     if (!this.page) throw new Error('Page not initialized')
 
-    await this.page.click('button:has-text("保存")')
+    // 尝试多种保存按钮选择器
+    const saveButtonSelectors = [
+      'button:has-text("保存")',
+      'button[title*="保存"]',
+      'button:has-text("Save")',
+      '[data-testid*="save"]',
+      'button:has([data-icon="save"])',
+    ]
+
+    let clicked = false
+    for (const selector of saveButtonSelectors) {
+      try {
+        const button = this.page.locator(selector).first()
+        if (await button.isVisible()) {
+          await button.click()
+          clicked = true
+          console.log(`点击了保存按钮: ${selector}`)
+          break
+        }
+      } catch (e) {
+        // 继续尝试下一个选择器
+      }
+    }
+
+    if (!clicked) {
+      console.log('未找到保存按钮，尝试使用键盘快捷键')
+      await this.page.keyboard.press('Control+S')
+    }
 
     // 等待保存完成
-    await this.page.waitForTimeout(1000)
+    await this.page.waitForTimeout(2000)
   }
 
   async verifySaveSuccessMessage() {

@@ -123,9 +123,11 @@ export default function MindMapsListPage() {
         // 从列表中移除已删除的思维导图
         const updatedMindMaps = mindMaps.filter(m => m.id !== deleteDialog.mindMap!.id)
         setMindMaps(updatedMindMaps)
-        setFilteredMindMaps(updatedMindMaps.filter(mindMap =>
-          mindMap.title.toLowerCase().includes(searchQuery.toLowerCase())
-        ))
+        setFilteredMindMaps(
+          updatedMindMaps.filter(mindMap =>
+            mindMap.title.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+        )
         setDeleteDialog({ open: false, mindMap: null })
       } else {
         console.error('删除失败:', result.message)
@@ -214,13 +216,13 @@ export default function MindMapsListPage() {
                             {formatDate(mindMap.updated_at)}
                           </CardDescription>
                         </div>
-                        
+
                         {/* 删除按钮 */}
                         <Button
                           variant="ghost"
                           size="sm"
                           className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-                          onClick={(e) => openDeleteDialog(mindMap, e)}
+                          onClick={e => openDeleteDialog(mindMap, e)}
                           title="删除思维导图"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -257,7 +259,7 @@ export default function MindMapsListPage() {
         {/* 删除确认对话框 */}
         <AlertDialog
           open={deleteDialog.open}
-          onOpenChange={(open) => setDeleteDialog({ open, mindMap: null })}
+          onOpenChange={open => setDeleteDialog({ open, mindMap: null })}
           title="删除思维导图"
           description={
             deleteDialog.mindMap

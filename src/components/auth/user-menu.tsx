@@ -32,11 +32,8 @@ export function UserMenu() {
       {showMenu && (
         <>
           {/* 背景遮罩 */}
-          <div 
-            className="fixed inset-0 z-10" 
-            onClick={() => setShowMenu(false)}
-          />
-          
+          <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+
           {/* 菜单 */}
           <Card className="absolute right-0 top-full mt-2 w-64 z-20">
             <CardContent className="p-4 space-y-4">
@@ -46,9 +43,9 @@ export function UserMenu() {
               </div>
 
               <div className="space-y-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="w-full justify-start"
                   onClick={() => setShowMenu(false)}
                 >
@@ -56,9 +53,9 @@ export function UserMenu() {
                   设置
                 </Button>
 
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="w-full justify-start text-red-600 hover:text-red-700"
                   onClick={handleSignOut}
                 >

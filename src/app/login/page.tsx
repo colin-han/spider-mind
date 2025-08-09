@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
-  
+
   const { signIn, isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
 
@@ -26,7 +26,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!email || !password) {
       setError('请填写邮箱和密码')
       return
@@ -34,10 +34,10 @@ export default function LoginPage() {
 
     setIsSubmitting(true)
     setError('')
-    
+
     try {
       const success = await signIn(email, password)
-      
+
       if (success) {
         router.push('/mindmaps')
       } else {
@@ -85,13 +85,13 @@ export default function LoginPage() {
                   type="email"
                   placeholder="输入您的邮箱"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={e => setEmail(e.target.value)}
                   className="pl-10"
                   disabled={isSubmitting}
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">
                 密码
@@ -103,7 +103,7 @@ export default function LoginPage() {
                   type="password"
                   placeholder="输入您的密码"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={e => setPassword(e.target.value)}
                   className="pl-10"
                   disabled={isSubmitting}
                 />
@@ -117,11 +117,7 @@ export default function LoginPage() {
               </div>
             )}
 
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={isSubmitting}
-            >
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? '登录中...' : '登录'}
             </Button>
           </form>

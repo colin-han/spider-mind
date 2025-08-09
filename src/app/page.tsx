@@ -25,7 +25,11 @@ export default function Home() {
       <div className="text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
         <p className="mt-4 text-gray-600">
-          {isLoading ? '检查登录状态...' : (isAuthenticated ? '正在跳转到思维导图...' : '正在跳转到登录页...')}
+          {isLoading
+            ? '检查登录状态...'
+            : isAuthenticated
+              ? '正在跳转到思维导图...'
+              : '正在跳转到登录页...'}
         </p>
       </div>
     </div>

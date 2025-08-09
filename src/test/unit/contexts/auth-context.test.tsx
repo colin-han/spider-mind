@@ -21,7 +21,9 @@ function TestComponent() {
   return (
     <div>
       <div data-testid="loading">{isLoading ? 'loading' : 'not-loading'}</div>
-      <div data-testid="authenticated">{isAuthenticated ? 'authenticated' : 'not-authenticated'}</div>
+      <div data-testid="authenticated">
+        {isAuthenticated ? 'authenticated' : 'not-authenticated'}
+      </div>
       <div data-testid="user">{user ? user.email : 'no-user'}</div>
       <button onClick={() => signIn('dev@test.com', 'password')} data-testid="signin">
         Sign In

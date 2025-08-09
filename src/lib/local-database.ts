@@ -197,13 +197,13 @@ export class LocalMindMapService {
       for (const node of nodes) {
         let result
         if (node.id) {
-          // 更新现有节点
+          // 尝试更新现有节点
           result = await client.query(
             `UPDATE mind_map_nodes 
              SET content = $2, parent_node_id = $3, sort_order = $4, 
                  node_level = $5, node_type = $6, style = $7, embedding = $8, 
                  updated_at = NOW()
-             WHERE id = $1 
+             WHERE id = $1 AND mind_map_id = $9
              RETURNING *`,
             [
               node.id,
@@ -214,8 +214,30 @@ export class LocalMindMapService {
               node.node_type || 'mindMapNode',
               JSON.stringify(node.style || {}),
               node.embedding,
+              node.mind_map_id,
             ]
           )
+
+          // 如果更新没有影响任何行，则插入新节点
+          if (result.rows.length === 0) {
+            result = await client.query(
+              `INSERT INTO mind_map_nodes 
+               (id, mind_map_id, content, parent_node_id, sort_order, node_level, node_type, style, embedding)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+               RETURNING *`,
+              [
+                node.id,
+                node.mind_map_id,
+                node.content,
+                node.parent_node_id,
+                node.sort_order || 0,
+                node.node_level || 0,
+                node.node_type || 'mindMapNode',
+                JSON.stringify(node.style || {}),
+                node.embedding,
+              ]
+            )
+          }
         } else {
           // 创建新节点
           result = await client.query(

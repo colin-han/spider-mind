@@ -16,6 +16,39 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       )
     }
 
+    // 获取最新的节点数据
+    const nodes = await MindMapService.getMindMapNodes(params.id)
+
+    // 如果有节点数据，用节点数据更新主表content
+    if (nodes.length > 0) {
+      // 将节点数据转换为ReactFlow格式
+      const reactFlowNodes = nodes.map(node => ({
+        id: node.id,
+        type: 'mindMapNode',
+        position: { x: 0, y: 0 }, // 位置会在前端重新计算
+        data: {
+          content: node.content,
+          isEditing: false,
+        },
+      }))
+
+      // 生成边的连接
+      const reactFlowEdges = nodes
+        .filter(node => node.parent_node_id)
+        .map(node => ({
+          id: `${node.parent_node_id}-${node.id}`,
+          source: node.parent_node_id!,
+          target: node.id,
+          type: 'default',
+        }))
+
+      // 更新mindMap的content
+      mindMap.content = {
+        nodes: reactFlowNodes,
+        edges: reactFlowEdges,
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: mindMap,

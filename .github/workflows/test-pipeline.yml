@@ -1,0 +1,485 @@
+name: 🧪 综合测试管道
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # 每日凌晨2点运行完整测试套件
+    - cron: '0 2 * * *'
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+jobs:
+  # 代码质量检查
+  code-quality:
+    name: 🔍 代码质量检查
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🏗️ 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 安装依赖
+        run: npm ci --prefer-offline --no-audit
+
+      - name: 🔍 ESLint 检查
+        run: npm run lint:check
+
+      - name: 🎨 Prettier 格式检查
+        run: npm run format:check
+
+      - name: 🔬 TypeScript 类型检查
+        run: npm run type-check
+
+      - name: 📊 生成代码质量报告
+        run: |
+          mkdir -p reports
+          npm run lint:check -- --format json --output-file reports/eslint-report.json || true
+          npm run type-check -- --noEmit false --outDir reports/tsc-output || true
+
+      - name: 📤 上传代码质量报告
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: code-quality-reports
+          path: reports/
+          retention-days: 7
+
+  # 单元测试和集成测试
+  unit-integration-tests:
+    name: 🧪 单元和集成测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      matrix:
+        node-version: [18, 20, 21]
+        test-suite: [unit, integration]
+
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🏗️ 设置 Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: 📦 安装依赖
+        run: npm ci --prefer-offline --no-audit
+
+      - name: 🧪 运行 ${{ matrix.test-suite }} 测试
+        run: npm run test:${{ matrix.test-suite }} -- --coverage
+        env:
+          CI: true
+          NODE_ENV: test
+
+      - name: 📊 生成测试报告
+        if: always()
+        run: |
+          mkdir -p test-results
+          npm run test:${{ matrix.test-suite }} -- --coverage --reporter=junit --outputFile=test-results/${{ matrix.test-suite }}-results.xml
+
+      - name: 📤 上传测试报告
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.test-suite }}-node${{ matrix.node-version }}
+          path: |
+            test-results/
+            coverage/
+          retention-days: 7
+
+      - name: 📈 上传覆盖率到 Codecov
+        uses: codecov/codecov-action@v4
+        if: matrix.node-version == '20' && matrix.test-suite == 'unit'
+        with:
+          files: ./coverage/lcov.info
+          flags: ${{ matrix.test-suite }}
+          name: ${{ matrix.test-suite }}-tests
+
+  # E2E 测试
+  e2e-tests:
+    name: 🌐 端到端测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+        shard: [1, 2, 3, 4]
+
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🏗️ 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 安装依赖
+        run: npm ci --prefer-offline --no-audit
+
+      - name: 🎭 安装 Playwright
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: 🏗️ 构建应用
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: 🌐 运行 E2E 测试
+        run: |
+          npx playwright test \
+            --project=${{ matrix.browser }} \
+            --shard=${{ matrix.shard }}/4 \
+            --reporter=junit \
+            --output-dir=test-results/e2e-artifacts
+        env:
+          CI: true
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+
+      - name: 📤 上传 E2E 测试结果
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-results-${{ matrix.browser }}-shard${{ matrix.shard }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+      - name: 📸 上传失败截图
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-failures-${{ matrix.browser }}-shard${{ matrix.shard }}
+          path: test-results/e2e-artifacts/
+          retention-days: 30
+
+  # 性能测试
+  performance-tests:
+    name: ⚡ 性能测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[perf-test]')
+
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🏗️ 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 安装依赖
+        run: npm ci --prefer-offline --no-audit
+
+      - name: ⚡ 运行性能测试
+        run: npm run test:performance
+        env:
+          CI: true
+          NODE_ENV: test
+
+      - name: 📊 生成性能报告
+        if: always()
+        run: |
+          mkdir -p performance-results
+          npm run test:performance -- --reporter=json --outputFile=performance-results/performance-report.json
+
+      - name: 📤 上传性能报告
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-results
+          path: performance-results/
+          retention-days: 30
+
+      - name: 📈 性能回归检查
+        run: |
+          # 比较性能基准
+          node scripts/check-performance-regression.js performance-results/performance-report.json
+
+  # 安全测试
+  security-tests:
+    name: 🔒 安全测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🏗️ 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 安装依赖
+        run: npm ci --prefer-offline --no-audit
+
+      - name: 🔒 运行安全测试
+        run: npm run test:security
+        env:
+          CI: true
+          NODE_ENV: test
+
+      - name: 🔍 依赖漏洞扫描
+        run: npm audit --audit-level high
+
+      - name: 🛡️ Semgrep 安全扫描
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/owasp-top-10
+            p/javascript
+            p/typescript
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+      - name: 📊 生成安全报告
+        if: always()
+        run: |
+          mkdir -p security-results
+          npm run test:security -- --reporter=json --outputFile=security-results/security-report.json
+
+      - name: 📤 上传安全报告
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-results
+          path: security-results/
+          retention-days: 30
+
+  # 可访问性测试
+  accessibility-tests:
+    name: ♿ 可访问性测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🏗️ 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 安装依赖
+        run: npm ci --prefer-offline --no-audit
+
+      - name: 🎭 安装 Playwright
+        run: npx playwright install chromium
+
+      - name: 🏗️ 构建应用
+        run: npm run build
+
+      - name: ♿ 运行可访问性测试
+        run: |
+          # 启动应用
+          npm start &
+          APP_PID=$!
+
+          # 等待应用启动
+          npx wait-on http://localhost:3000 --timeout 30000
+
+          # 运行可访问性测试
+          npx axe-playwright --urls http://localhost:3000 \
+            --save accessibility-results.json \
+            --tags wcag2a,wcag2aa,wcag21aa
+
+          # 停止应用
+          kill $APP_PID
+
+      - name: 📤 上传可访问性报告
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: accessibility-results
+          path: accessibility-results.json
+          retention-days: 30
+
+  # 视觉回归测试
+  visual-regression-tests:
+    name: 👁️ 视觉回归测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🏗️ 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 安装依赖
+        run: npm ci --prefer-offline --no-audit
+
+      - name: 🎭 安装 Playwright
+        run: npx playwright install chromium
+
+      - name: 🏗️ 构建应用
+        run: npm run build
+
+      - name: 👁️ 运行视觉回归测试
+        run: |
+          npx playwright test visual-regression/ \
+            --update-snapshots=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }} \
+            --reporter=html
+
+      - name: 📤 上传视觉差异报告
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-regression-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 30
+
+  # 测试结果聚合和报告
+  test-results:
+    name: 📊 测试结果聚合
+    runs-on: ubuntu-latest
+    needs: [code-quality, unit-integration-tests, e2e-tests, security-tests]
+    if: always()
+
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      - name: 📥 下载所有测试报告
+        uses: actions/download-artifact@v4
+        with:
+          path: all-reports
+
+      - name: 📊 生成综合测试报告
+        run: |
+          mkdir -p final-report
+
+          # 合并所有测试结果
+          find all-reports -name "*.xml" -exec cp {} final-report/ \;
+          find all-reports -name "*.json" -exec cp {} final-report/ \;
+
+          # 生成 HTML 报告
+          node scripts/generate-test-report.js final-report/
+
+      - name: 📈 发布测试结果
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: '🧪 综合测试结果'
+          path: 'final-report/*.xml'
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: 💬 PR评论测试结果
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request' && always()
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'final-report/summary.json';
+
+            if (fs.existsSync(path)) {
+              const summary = JSON.parse(fs.readFileSync(path, 'utf8'));
+              const body = `## 🧪 测试结果摘要
+              
+              | 测试类型 | 通过 | 失败 | 跳过 | 总计 |
+              |---------|------|------|------|------|
+              | 单元测试 | ${summary.unit.passed} | ${summary.unit.failed} | ${summary.unit.skipped} | ${summary.unit.total} |
+              | 集成测试 | ${summary.integration.passed} | ${summary.integration.failed} | ${summary.integration.skipped} | ${summary.integration.total} |
+              | E2E测试 | ${summary.e2e.passed} | ${summary.e2e.failed} | ${summary.e2e.skipped} | ${summary.e2e.total} |
+              | 安全测试 | ${summary.security.passed} | ${summary.security.failed} | ${summary.security.skipped} | ${summary.security.total} |
+              
+              **代码覆盖率**: ${summary.coverage}%
+              **总体状态**: ${summary.overall_status}
+              
+              详细报告请查看 [测试报告](${summary.report_url})
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }
+
+      - name: 📤 上传最终报告
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: final-test-report
+          path: final-report/
+          retention-days: 30
+
+  # 测试质量监控
+  test-quality:
+    name: 📈 测试质量监控
+    runs-on: ubuntu-latest
+    needs: [test-results]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      - name: 📥 下载测试报告
+        uses: actions/download-artifact@v4
+        with:
+          name: final-test-report
+          path: reports
+
+      - name: 📊 分析测试质量趋势
+        run: |
+          node scripts/analyze-test-quality.js reports/
+
+      - name: 📈 更新质量指标
+        env:
+          MONITORING_API_KEY: ${{ secrets.MONITORING_API_KEY }}
+        run: |
+          # 发送指标到监控系统（如 Datadog, New Relic 等）
+          node scripts/send-test-metrics.js
+
+# 工作流程配置
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# 权限配置
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  pull-requests: write
+  security-events: write

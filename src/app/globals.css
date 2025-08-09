@@ -125,12 +125,12 @@
   body {
     @apply bg-background text-foreground;
   }
-  
+
   /* 强制暗色主题 */
   :root {
     color-scheme: dark;
   }
-  
+
   html.dark,
   html.dark body,
   .dark {

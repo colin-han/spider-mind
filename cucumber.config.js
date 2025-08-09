@@ -9,10 +9,10 @@ module.exports = {
     features: ['src/test/bdd/features/**/*.feature'],
 
     // 步骤定义和支持文件位置
-    require: ['src/test/bdd/steps/**/*.ts', 'src/test/bdd/support/**/*.ts'],
+    require: ['src/test/bdd/steps/*.ts', 'src/test/bdd/support/*.ts'],
 
     // TypeScript支持
-    requireModule: ['ts-node/register'],
+    requireModule: ['ts-node/register/transpile-only'],
 
     // 格式化器
     format: [

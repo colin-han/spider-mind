@@ -84,7 +84,9 @@ export function MindMapNode({ id, data, selected }: NodeProps) {
             className="border-none p-0 h-auto text-center font-medium"
           />
         ) : (
-          <div className="text-center font-medium text-sm text-foreground break-words">{content}</div>
+          <div className="text-center font-medium text-sm text-foreground break-words">
+            {content}
+          </div>
         )}
       </Card>
     </>

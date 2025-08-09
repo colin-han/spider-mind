@@ -66,7 +66,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           email: 'dev@test.com',
           full_name: '开发测试用户',
           created_at: '2025-01-09T01:00:00.000Z',
-          updated_at: '2025-01-09T01:00:00.000Z'
+          updated_at: '2025-01-09T01:00:00.000Z',
         }
 
         setUser(testUser)
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading,
     isAuthenticated: !!user,
     signIn,
-    signOut
+    signOut,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

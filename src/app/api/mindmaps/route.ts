@@ -30,14 +30,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    const rootNodeId = crypto.randomUUID()
+    const title = body.title || '新思维导图'
 
     const mindMap = await MindMapService.createMindMap({
-      title: body.title || '新思维导图',
-      content: body.content || {
+      title,
+      content: {
         nodes: [
           {
-            id: 'root',
-            data: { content: '新思维导图' },
+            id: rootNodeId,
+            data: { content: title },
             position: { x: 400, y: 300 },
             type: 'mindMapNode',
           },
@@ -47,6 +49,18 @@ export async function POST(request: NextRequest) {
       user_id: body.userId || '11111111-1111-1111-1111-111111111111',
       is_public: body.is_public || false,
     })
+
+    // 同时在 mind_map_nodes 表中创建初始节点
+    await MindMapService.upsertNodes([
+      {
+        id: rootNodeId,
+        mind_map_id: mindMap.id,
+        parent_node_id: null,
+        sort_order: 0,
+        node_level: 0,
+        content: title,
+      },
+    ])
 
     return NextResponse.json({
       success: true,

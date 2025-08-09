@@ -150,7 +150,9 @@ describe('LoginPage', () => {
   })
 
   it('应该在提交时禁用表单', async () => {
-    mockSignIn.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve(true), 100)))
+    mockSignIn.mockImplementation(
+      () => new Promise(resolve => setTimeout(() => resolve(true), 100))
+    )
 
     render(<LoginPage />)
 

@@ -1,0 +1,71 @@
+module.exports = {
+  apps: [
+    {
+      name: 'spider-mind-dev',
+      script: 'npm',
+      args: 'run dev',
+      cwd: __dirname,
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      env: {
+        NODE_ENV: 'development',
+        PORT: 3000,
+      },
+      log_file: './logs/dev-combined.log',
+      out_file: './logs/dev-out.log',
+      error_file: './logs/dev-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    },
+    {
+      name: 'spider-mind-prod',
+      script: 'npm',
+      args: 'run start',
+      cwd: __dirname,
+      instances: 'max',
+      exec_mode: 'cluster',
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3000,
+      },
+      log_file: './logs/prod-combined.log',
+      out_file: './logs/prod-out.log',
+      error_file: './logs/prod-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    },
+    {
+      name: 'spider-mind-db',
+      script: 'docker',
+      args: 'compose up postgres',
+      cwd: __dirname,
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      env: {
+        COMPOSE_PROJECT_NAME: 'spider-mind',
+      },
+      log_file: './logs/db-combined.log',
+      out_file: './logs/db-out.log',
+      error_file: './logs/db-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    },
+  ],
+
+  deploy: {
+    production: {
+      user: 'deploy',
+      host: 'your-server.com',
+      ref: 'origin/main',
+      repo: 'git@github.com:your-username/spider-mind.git',
+      path: '/var/www/spider-mind',
+      'pre-deploy-local': '',
+      'post-deploy':
+        'npm install && npm run build && pm2 reload ecosystem.config.js --env production',
+      'pre-setup': '',
+    },
+  },
+}

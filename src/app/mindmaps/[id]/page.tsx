@@ -8,7 +8,18 @@ import { Input } from '@/components/ui/input'
 import { ProtectedRoute } from '@/components/auth/protected-route'
 import { UserMenu } from '@/components/auth/user-menu'
 import { useAuth } from '@/contexts/auth-context'
-import { ArrowLeft, Save, Settings, Share, Sparkles, Plus, Trash2, Search, Download, Upload } from 'lucide-react'
+import {
+  ArrowLeft,
+  Save,
+  Settings,
+  Share,
+  Sparkles,
+  Plus,
+  Trash2,
+  Search,
+  Download,
+  Upload,
+} from 'lucide-react'
 import { MindMap, type MindMapRef } from '@/components/mind-map/mind-map'
 import { AIAssistant } from '@/components/ai/ai-assistant'
 
@@ -208,9 +219,9 @@ function MindMapDetailPage() {
             添加节点
           </Button>
 
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleDeleteSelected}
             disabled={selectedNodes.length === 0}
             className="text-red-600 hover:text-red-700"
@@ -272,10 +283,12 @@ function MindMapDetailPage() {
         {showAIAssistant && (
           <div className="absolute top-4 right-4 z-10">
             <AIAssistant
-              allNodes={mindMapData.content.nodes?.map((node: any) => ({
-                id: node.id,
-                content: node.data?.content || '',
-              })) || []}
+              allNodes={
+                mindMapData.content.nodes?.map((node: any) => ({
+                  id: node.id,
+                  content: node.data?.content || '',
+                })) || []
+              }
               onSuggestionApply={handleAISuggestionApply}
               onClose={() => setShowAIAssistant(false)}
             />
