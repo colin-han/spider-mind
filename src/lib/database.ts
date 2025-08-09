@@ -1,6 +1,4 @@
-// Supabase已禁用，暂时使用占位符
-const supabase = null as any
-type Database = any
+import { supabase, type Database } from './supabase'
 
 type Tables = Database['public']['Tables']
 type MindMap = Tables['mind_maps']['Row']
@@ -177,6 +175,73 @@ export class MindMapService {
 
     if (error) throw error
     return data || []
+  }
+
+  // 从ReactFlow格式的content同步节点数据到nodes表
+  static async syncNodesFromContent(
+    mindMapId: string,
+    content: { nodes: unknown[]; edges: unknown[] }
+  ): Promise<void> {
+    // 构建父子关系映射
+    const parentMap: { [nodeId: string]: string | null } = {}
+    content.edges?.forEach((edge: unknown) => {
+      const edgeObj = edge as { source?: string; target?: string }
+      if (edgeObj.source && edgeObj.target) {
+        parentMap[edgeObj.target] = edgeObj.source
+      }
+    })
+
+    // 计算节点层级
+    const calculateNodeLevel = (nodeId: string, visited = new Set()): number => {
+      if (visited.has(nodeId)) return 0 // 防止循环引用
+      visited.add(nodeId)
+
+      const parentId = parentMap[nodeId]
+      if (!parentId) return 0 // 根节点层级为0
+
+      return calculateNodeLevel(parentId, visited) + 1
+    }
+
+    // 先删除现有节点
+    const { error: deleteError } = await supabase
+      .from('mind_map_nodes')
+      .delete()
+      .eq('mind_map_id', mindMapId)
+
+    if (deleteError) throw deleteError
+
+    // 插入新节点
+    const nodesToInsert = (content.nodes || [])
+      .map((node, index) => {
+        const nodeObj = node as {
+          id?: string
+          data?: { content?: string; style?: unknown }
+          type?: string
+        }
+        if (nodeObj && nodeObj.id) {
+          return {
+            id: nodeObj.id,
+            mind_map_id: mindMapId,
+            content: nodeObj.data?.content || '',
+            parent_node_id: parentMap[nodeObj.id] || null,
+            sort_order: index,
+            node_level: calculateNodeLevel(nodeObj.id),
+            node_type: nodeObj.type || 'mindMapNode',
+            style: nodeObj.data?.style || {},
+            embedding: undefined, // embedding暂时为空
+          }
+        }
+        return null
+      })
+      .filter(Boolean)
+
+    if (nodesToInsert.length > 0) {
+      const { error: insertError } = await supabase
+        .from('mind_map_nodes')
+        .insert(nodesToInsert as MindMapNodeInsert[])
+
+      if (insertError) throw insertError
+    }
   }
 }
 

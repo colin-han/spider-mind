@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { GET, POST } from '@/app/api/mindmaps/route'
 import { PUT, DELETE, GET as GET_SINGLE } from '@/app/api/mindmaps/[id]/route'
-import { MindMapService } from '@/lib/local-database'
+import { MindMapService } from '@/lib/database'
 
 // Mock MindMapService
-vi.mock('@/lib/local-database', () => ({
+vi.mock('@/lib/database', () => ({
   MindMapService: {
     getUserMindMaps: vi.fn(),
     getMindMap: vi.fn(),

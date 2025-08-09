@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { MindMapService } from '@/lib/local-database'
+import { MindMapService } from '@/lib/database'
 
 export async function GET() {
   try {

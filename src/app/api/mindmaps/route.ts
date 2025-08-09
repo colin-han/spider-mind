@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { MindMapService } from '@/lib/local-database'
+import { MindMapService } from '@/lib/database'
 
 // 获取所有思维导图
 export async function GET(request: NextRequest) {
