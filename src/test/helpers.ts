@@ -4,7 +4,7 @@ import { render, RenderOptions } from '@testing-library/react'
 
 // 测试数据工厂
 export class TestDataFactory {
-  static createMindMap(overrides: Partial<any> = {}) {
+  static createMindMap(overrides: Record<string, unknown> = {}) {
     return {
       id: 'test-map-1',
       title: '测试思维导图',
@@ -28,7 +28,7 @@ export class TestDataFactory {
     }
   }
 
-  static createNode(overrides: Partial<any> = {}) {
+  static createNode(overrides: Record<string, unknown> = {}) {
     return {
       id: `node-${Date.now()}`,
       type: 'mindMapNode',
@@ -41,7 +41,7 @@ export class TestDataFactory {
     }
   }
 
-  static createEdge(sourceId: string, targetId: string, overrides: Partial<any> = {}) {
+  static createEdge(sourceId: string, targetId: string, overrides: Record<string, unknown> = {}) {
     return {
       id: `edge-${sourceId}-${targetId}`,
       source: sourceId,
@@ -51,7 +51,7 @@ export class TestDataFactory {
     }
   }
 
-  static createUser(overrides: Partial<any> = {}) {
+  static createUser(overrides: Record<string, unknown> = {}) {
     return {
       id: 'test-user-1',
       email: 'test@example.com',
@@ -70,8 +70,8 @@ export class MockSupabaseService {
     return {
       getMindMaps: vi.fn(() => Promise.resolve([TestDataFactory.createMindMap()])),
       getMindMapById: vi.fn((id: string) => Promise.resolve(TestDataFactory.createMindMap({ id }))),
-      createMindMap: vi.fn((data: any) => Promise.resolve(TestDataFactory.createMindMap(data))),
-      updateMindMap: vi.fn((id: string, data: any) =>
+      createMindMap: vi.fn((data: Record<string, unknown>) => Promise.resolve(TestDataFactory.createMindMap(data))),
+      updateMindMap: vi.fn((id: string, data: Record<string, unknown>) =>
         Promise.resolve(TestDataFactory.createMindMap({ id, ...data }))
       ),
       deleteMindMap: vi.fn(() => Promise.resolve(true)),

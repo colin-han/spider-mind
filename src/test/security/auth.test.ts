@@ -12,7 +12,7 @@ describe('Security Tests', () => {
       expect(validateJWT(validToken)).toBe(true)
       expect(validateJWT(invalidToken)).toBe(false)
       expect(validateJWT('')).toBe(false)
-      expect(validateJWT(null as any)).toBe(false)
+      expect(validateJWT(null as unknown)).toBe(false)
     })
 
     it('应该防止会话固定攻击', () => {
@@ -238,13 +238,13 @@ describe('Security Tests', () => {
       expect(validateApiKey(validApiKey)).toBe(true)
 
       invalidApiKeys.forEach(key => {
-        expect(validateApiKey(key as any)).toBe(false)
+        expect(validateApiKey(key as unknown)).toBe(false)
       })
     })
 
     it('应该记录安全相关事件', () => {
       const securityEvents = []
-      const mockLogger = (event: any) => securityEvents.push(event)
+      const mockLogger = (event: unknown) => securityEvents.push(event)
 
       // 模拟各种安全事件
       logSecurityEvent(mockLogger, 'login_attempt', { userId: 'user-1', success: true })
@@ -304,7 +304,7 @@ describe('Security Tests', () => {
       expect(validateCSRFToken(validToken, validToken)).toBe(true)
 
       invalidTokens.forEach(token => {
-        expect(validateCSRFToken(validToken, token as any)).toBe(false)
+        expect(validateCSRFToken(validToken, token as unknown)).toBe(false)
       })
     })
   })
@@ -317,7 +317,7 @@ function validateJWT(token: string): boolean {
   return parts.length === 3 && parts.every(part => part.length > 0)
 }
 
-function mockLogin(credentials: any, sessionId: string) {
+function mockLogin(credentials: Record<string, unknown>, sessionId: string) {
   return {
     success: true,
     sessionId: Math.random().toString(16).substring(2, 34), // 模拟新session ID
@@ -388,7 +388,7 @@ function sanitizeSqlInput(input: string): string {
     .replace(/UNION\s+SELECT/gi, '')
 }
 
-function hasPermission(user: any, resource: any, action: string): boolean {
+function hasPermission(user: Record<string, unknown>, resource: Record<string, unknown>, action: string): boolean {
   if (user.role === 'admin') return true
   if (user.id === resource.user_id) return true
   if (resource.is_public && action === 'read') return true
@@ -407,11 +407,11 @@ function checkRateLimit(
   return { allowed: requestCount <= maxRequests }
 }
 
-function validateApiKey(key: any): boolean {
+function validateApiKey(key: unknown): boolean {
   return typeof key === 'string' && key.startsWith('sk-') && key.length > 10
 }
 
-function logSecurityEvent(logger: Function, type: string, data: any) {
+function logSecurityEvent(logger: (event: unknown) => void, type: string, data: unknown) {
   logger({
     type,
     timestamp: new Date().toISOString(),

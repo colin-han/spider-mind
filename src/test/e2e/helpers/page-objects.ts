@@ -278,7 +278,7 @@ export class E2ETestHelpers {
     })
   }
 
-  static async mockApiResponse(page: Page, url: string, response: any) {
+  static async mockApiResponse(page: Page, url: string, response: unknown) {
     await page.route(url, route => {
       route.fulfill({
         status: 200,

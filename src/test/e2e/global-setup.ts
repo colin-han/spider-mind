@@ -1,9 +1,9 @@
 import { chromium, FullConfig } from '@playwright/test'
 
-async function globalSetup(config: FullConfig) {
+async function globalSetup(_config: FullConfig) {
   console.log('🚀 E2E测试全局设置开始')
 
-  const { baseURL } = config.projects[0].use
+  const { baseURL } = _config.projects[0].use
 
   // 启动浏览器进行预热和基础检查
   const browser = await chromium.launch()
@@ -33,7 +33,7 @@ async function globalSetup(config: FullConfig) {
   }
 }
 
-async function setupTestData(page: any) {
+async function setupTestData(page: import('@playwright/test').Page) {
   // 创建测试用户（如果需要）
   const testUser = {
     email: 'e2etest@example.com',

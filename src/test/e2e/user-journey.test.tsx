@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { TestDataFactory } from '@/test/helpers'
 
 // 端到端测试需要实际的浏览器环境，这里提供测试结构
@@ -53,7 +53,7 @@ describe('End-to-End User Journey', () => {
 
     it('应该完成AI辅助创建思维导图的流程', async () => {
       // 1. 登录已有用户
-      const existingUser = TestDataFactory.createUser()
+      // const existingUser = TestDataFactory.createUser()
 
       // await page.goto('http://localhost:3000/login')
       // await page.fill('[data-testid="email"]', existingUser.email)

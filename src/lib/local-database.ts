@@ -303,7 +303,11 @@ export class LocalMindMapService {
 
       // 插入新节点
       for (let i = 0; i < (content.nodes || []).length; i++) {
-        const node = content.nodes[i] as { id?: string; data?: { content?: string; style?: unknown }; type?: string }
+        const node = content.nodes[i] as {
+          id?: string
+          data?: { content?: string; style?: unknown }
+          type?: string
+        }
         if (node && node.id) {
           await client.query(
             `INSERT INTO mind_map_nodes 

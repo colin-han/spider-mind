@@ -1,6 +1,6 @@
 import { FullConfig } from '@playwright/test'
 
-async function globalTeardown(config: FullConfig) {
+async function globalTeardown(_config: FullConfig) {
   console.log('🧹 E2E测试全局清理开始')
 
   try {
@@ -21,7 +21,6 @@ async function cleanupTestData() {
   console.log('清理测试数据...')
 
   // 示例：删除测试用户和相关数据
-  const testEmailPattern = '%e2etest%'
 
   // 这里可以通过数据库连接直接清理
   // 或者通过API调用清理

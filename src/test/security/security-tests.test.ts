@@ -425,7 +425,7 @@ describe('安全测试套件', () => {
           headers: {
             get: (name: string) => (name === 'x-request-id' ? `req_${Date.now()}` : null),
           },
-        } as any)
+        } as Response)
 
         const response = await fetch(operation.url, {
           method: operation.method,

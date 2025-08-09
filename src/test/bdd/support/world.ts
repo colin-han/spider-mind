@@ -225,7 +225,7 @@ export class BDDWorld {
           console.log(`点击了保存按钮: ${selector}`)
           break
         }
-      } catch (e) {
+      } catch {
         // 继续尝试下一个选择器
       }
     }
@@ -280,7 +280,7 @@ export class BDDWorld {
     return this.currentMindMapId ? currentUrl.includes(this.currentMindMapId) : false
   }
 
-  async captureScreenshotOnFailure(scenario: any) {
+  async captureScreenshotOnFailure(scenario: { result?: { status: string } }) {
     if (scenario.result?.status === 'FAILED' && this.page) {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
       await this.page.screenshot({

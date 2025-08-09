@@ -273,7 +273,7 @@ describe('Performance Tests', () => {
 })
 
 // 辅助函数
-async function simulateAIRequest(prompt: string, cache: Map<string, any>) {
+async function simulateAIRequest(prompt: string, cache: Map<string, unknown>) {
   if (cache.has(prompt)) {
     // 缓存命中，立即返回
     return cache.get(prompt)

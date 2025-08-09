@@ -38,7 +38,7 @@ function MindMapDetailPage() {
   const params = useParams()
   const router = useRouter()
   const mindMapId = params.id as string
-  const { } = useAuth()
+  const {} = useAuth()
 
   const [mindMapData, setMindMapData] = useState<MindMapData | null>(null)
   const [loading, setLoading] = useState(true)

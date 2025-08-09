@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { TestDataFactory, MockFactory } from '@/test/helpers/test-utils'
+import { TestDataFactory } from '@/test/helpers/test-utils'
 
 // API集成测试
 describe('思维导图API集成测试', () => {
@@ -70,7 +70,7 @@ describe('思维导图API集成测试', () => {
 
       expect(response.ok).toBe(true)
       expect(result).toHaveLength(3)
-      expect(result.every((mm: any) => mm.title && mm.id)).toBe(true)
+      expect(result.every((mm: Record<string, unknown>) => mm.title && mm.id)).toBe(true)
     })
 
     it('应该更新现有的思维导图', async () => {
@@ -146,7 +146,7 @@ describe('思维导图API集成测试', () => {
 
       expect(response.ok).toBe(true)
       expect(result).toHaveLength(2)
-      expect(result.every((mm: any) => mm.title.includes('AI'))).toBe(true)
+      expect(result.every((mm: unknown) => mm.title.includes('AI'))).toBe(true)
     })
 
     it('应该支持分页查询', async () => {
@@ -401,8 +401,8 @@ describe('思维导图API集成测试', () => {
       expect(parsedContent.edges).toHaveLength(2)
 
       // 验证节点ID的一致性
-      const nodeIds = parsedContent.nodes.map((n: any) => n.id)
-      const edgeNodeIds = parsedContent.edges.flatMap((e: any) => [e.source, e.target])
+      const nodeIds = parsedContent.nodes.map((n: unknown) => n.id)
+      const edgeNodeIds = parsedContent.edges.flatMap((e: unknown) => [e.source, e.target])
       expect(edgeNodeIds.every((id: string) => nodeIds.includes(id))).toBe(true)
     })
   })

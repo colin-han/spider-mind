@@ -1,11 +1,10 @@
 import React from 'react'
 import { render, RenderOptions } from '@testing-library/react'
 import { vi } from 'vitest'
-import { AuthProvider } from '@/contexts/auth-context'
 
 // Mock数据生成器
 export class TestDataFactory {
-  static createUser(overrides: Partial<any> = {}) {
+  static createUser(overrides: Record<string, unknown> = {}) {
     return {
       id: '123',
       email: 'test@example.com',
@@ -17,7 +16,7 @@ export class TestDataFactory {
     }
   }
 
-  static createMindMap(overrides: Partial<any> = {}) {
+  static createMindMap(overrides: Record<string, unknown> = {}) {
     return {
       id: 'mindmap-123',
       title: '测试思维导图',
@@ -30,7 +29,7 @@ export class TestDataFactory {
     }
   }
 
-  static createMindMapNode(overrides: Partial<any> = {}) {
+  static createMindMapNode(overrides: Record<string, unknown> = {}) {
     return {
       id: 'node-123',
       content: '节点内容',
@@ -50,7 +49,7 @@ export class TestDataFactory {
 // 自定义渲染器，包含Provider
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   authenticated?: boolean
-  user?: any
+  user?: Record<string, unknown> | null
 }
 
 export function renderWithProviders(ui: React.ReactElement, options: CustomRenderOptions = {}) {
@@ -146,7 +145,7 @@ export class MockFactory {
 // 测试断言辅助函数
 export class TestAssertions {
   static async waitForLoadingToFinish() {
-    const { waitForElementToBeRemoved } = await import('@testing-library/react')
+    // const { waitForElementToBeRemoved } = await import('@testing-library/react')
     const loadingElements = document.querySelectorAll('[data-testid*="loading"]')
     if (loadingElements.length > 0) {
       await waitForLoadingToFinish()
@@ -166,7 +165,7 @@ export class TestAssertions {
 
 // 性能测试辅助函数
 export class PerformanceTestUtils {
-  static async measureRenderTime(renderFn: () => Promise<any>) {
+  static async measureRenderTime(renderFn: () => Promise<unknown>) {
     const startTime = performance.now()
     await renderFn()
     const endTime = performance.now()
@@ -203,7 +202,7 @@ export class E2ETestHelpers {
     }
   }
 
-  static async waitForNetworkIdle(page: any, timeout = 5000) {
+  static async waitForNetworkIdle(page: import('@playwright/test').Page, timeout = 5000) {
     await page.waitForLoadState('networkidle', { timeout })
   }
 }
