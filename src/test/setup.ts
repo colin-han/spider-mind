@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom'
-import { beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest'
+import { beforeAll, afterAll, beforeEach, afterEach } from 'vitest'
 import { cleanup } from '@testing-library/react'
 
 // 模拟环境变量

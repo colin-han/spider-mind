@@ -1,6 +1,6 @@
-import { FullConfig } from '@playwright/test'
+// import { FullConfig } from '@playwright/test'
 
-async function globalTeardown(_config: FullConfig) {
+async function globalTeardown() {
   console.log('🧹 E2E测试全局清理开始')
 
   try {

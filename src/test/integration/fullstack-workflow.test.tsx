@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders, TestDataFactory } from '@/test/helpers/test-utils'
 import MindMapListPage from '@/app/mindmaps/page'
-import { AuthProvider } from '@/contexts/auth-context'
 
 // 全栈工作流集成测试
 describe('全栈工作流集成测试', () => {
@@ -34,7 +33,7 @@ describe('全栈工作流集成测试', () => {
 
   describe('用户完整工作流', () => {
     it('应该支持用户从登录到创建思维导图的完整流程', async () => {
-      const user = userEvent.setup()
+      const _user = userEvent.setup()
       const testUser = TestDataFactory.createUser()
 
       // Step 1: Mock 登录API响应
@@ -72,7 +71,7 @@ describe('全栈工作流集成测试', () => {
       })
 
       // 渲染思维导图列表页面
-      const { mockAuthContextValue } = renderWithProviders(<MindMapListPage />, {
+      const { mockAuthContextValue: _mockAuthContextValue } = renderWithProviders(<MindMapListPage />, {
         authenticated: true,
         user: testUser,
       })
@@ -104,7 +103,7 @@ describe('全栈工作流集成测试', () => {
     })
 
     it('应该支持思维导图编辑和保存工作流', async () => {
-      const user = userEvent.setup()
+      const _user = userEvent.setup()
       const testUser = TestDataFactory.createUser()
       const existingMindMap = TestDataFactory.createMindMap({
         title: '待编辑的思维导图',
@@ -135,7 +134,7 @@ describe('全栈工作流集成测试', () => {
       })
 
       // 渲染思维导图编辑页面
-      const MindMapDetailPage = (await import('@/app/mindmaps/[id]/page')).default
+      const _MindMapDetailPage = (await import('@/app/mindmaps/[id]/page')).default
 
       // Mock useParams
       vi.mock('next/navigation', () => ({
@@ -147,7 +146,7 @@ describe('全栈工作流集成测试', () => {
         }),
       }))
 
-      renderWithProviders(<MindMapDetailPage />, { authenticated: true, user: testUser })
+      renderWithProviders(<_MindMapDetailPage />, { authenticated: true, user: testUser })
 
       // 等待页面加载
       await waitFor(() => {
@@ -176,7 +175,7 @@ describe('全栈工作流集成测试', () => {
     })
 
     it('应该支持AI助手功能工作流', async () => {
-      const user = userEvent.setup()
+      const _user = userEvent.setup()
       const testUser = TestDataFactory.createUser()
       const mindMapWithNode = TestDataFactory.createMindMap({
         content: JSON.stringify({
@@ -214,9 +213,9 @@ describe('全栈工作流集成测试', () => {
         })
 
       // 渲染思维导图编辑页面
-      const MindMapDetailPage = (await import('@/app/mindmaps/[id]/page')).default
+      const _MindMapDetailPage = (await import('@/app/mindmaps/[id]/page')).default
 
-      renderWithProviders(<MindMapDetailPage />, { authenticated: true, user: testUser })
+      renderWithProviders(<_MindMapDetailPage />, { authenticated: true, user: testUser })
 
       // 等待页面加载
       await waitFor(() => {
@@ -255,7 +254,7 @@ describe('全栈工作流集成测试', () => {
     })
 
     it('应该支持搜索和发现工作流', async () => {
-      const user = userEvent.setup()
+      const _user = userEvent.setup()
       const testUser = TestDataFactory.createUser()
 
       // Mock 搜索API响应
@@ -318,7 +317,7 @@ describe('全栈工作流集成测试', () => {
 
   describe('错误处理和用户体验', () => {
     it('应该优雅处理网络错误', async () => {
-      const user = userEvent.setup()
+      const _user = userEvent.setup()
       const testUser = TestDataFactory.createUser()
 
       // Mock 网络错误
@@ -412,7 +411,7 @@ describe('全栈工作流集成测试', () => {
     })
 
     it('应该支持乐观更新', async () => {
-      const user = userEvent.setup()
+      const _user = userEvent.setup()
       const testUser = TestDataFactory.createUser()
       const existingMindMap = TestDataFactory.createMindMap()
 
@@ -440,9 +439,9 @@ describe('全栈工作流集成测试', () => {
             )
         )
 
-      const MindMapDetailPage = (await import('@/app/mindmaps/[id]/page')).default
+      const _MindMapDetailPage = (await import('@/app/mindmaps/[id]/page')).default
 
-      renderWithProviders(<MindMapDetailPage />, { authenticated: true, user: testUser })
+      renderWithProviders(<_MindMapDetailPage />, { authenticated: true, user: testUser })
 
       await waitFor(() => {
         expect(screen.getByDisplayValue(existingMindMap.title)).toBeInTheDocument()
@@ -464,7 +463,7 @@ describe('全栈工作流集成测试', () => {
 
   describe('数据流和状态管理', () => {
     it('应该正确管理全局状态更新', async () => {
-      const user = userEvent.setup()
+      const _user = userEvent.setup()
       const testUser = TestDataFactory.createUser()
       const initialMindMaps = [
         TestDataFactory.createMindMap({ title: '初始思维导图1' }),

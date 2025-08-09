@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { TestDataFactory, MockSupabaseService } from '@/test/helpers'
 
 describe('Database Services', () => {
@@ -12,7 +12,7 @@ describe('Database Services', () => {
 
   describe('MindMapService', () => {
     it('应该获取用户的思维导图列表', async () => {
-      const userId = 'test-user-1'
+      const _userId = 'test-user-1'
 
       const mindMaps = await mockMindMapService.getMindMaps()
 
@@ -77,7 +77,7 @@ describe('Database Services', () => {
 
   describe('AuthService', () => {
     it('应该获取当前用户信息', async () => {
-      const user = await mockAuthService.getCurrentUser()
+      const _user = await mockAuthService.getCurrentUser()
 
       expect(mockAuthService.getCurrentUser).toHaveBeenCalled()
       expect(user).toHaveProperty('id')

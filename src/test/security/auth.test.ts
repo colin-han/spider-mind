@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { TestDataFactory } from '@/test/helpers'
 
 describe('Security Tests', () => {
@@ -147,17 +147,17 @@ describe('Security Tests', () => {
     })
 
     it('应该使用参数化查询', () => {
-      const userId = "test'; DROP TABLE users; --"
+      const _userId = "test'; DROP TABLE users; --"
 
       // 模拟参数化查询
       const query = {
         text: 'SELECT * FROM mind_maps WHERE user_id = $1',
-        params: [userId],
+        params: [_userId],
       }
 
       // 参数化查询应该正确转义参数
-      expect(query.text).not.toContain(userId)
-      expect(query.params[0]).toBe(userId) // 参数保持原样，由数据库驱动处理
+      expect(query.text).not.toContain(_userId)
+      expect(query.params[0]).toBe(_userId) // 参数保持原样，由数据库驱动处理
     })
   })
 
@@ -206,22 +206,22 @@ describe('Security Tests', () => {
 
   describe('API安全', () => {
     it('应该实现速率限制', () => {
-      const userId = 'user-1'
+      const _userId = 'user-1'
       const endpoint = '/api/mindmaps'
       const maxRequests = 100
-      const timeWindow = 60000 // 1分钟
+      const _timeWindow = 60000 // 1分钟
 
       // 模拟大量请求
       const requests = Array(120)
         .fill(0)
-        .map((_, index) => ({
-          userId,
+        .map((_item, _index) => ({
+          _userId,
           endpoint,
-          timestamp: Date.now() + index * 100, // 每100ms一个请求
+          timestamp: Date.now() + _index * 100, // 每100ms一个请求
         }))
 
       const results = requests.map(req =>
-        checkRateLimit(req.userId, req.endpoint, req.timestamp, maxRequests, timeWindow)
+        checkRateLimit(req._userId, req.endpoint, req.timestamp, maxRequests, _timeWindow)
       )
 
       // 前100个请求应该通过
@@ -317,7 +317,7 @@ function validateJWT(token: string): boolean {
   return parts.length === 3 && parts.every(part => part.length > 0)
 }
 
-function mockLogin(credentials: Record<string, unknown>, sessionId: string) {
+function mockLogin(credentials: Record<string, unknown>, _sessionId: string) {
   return {
     success: true,
     sessionId: Math.random().toString(16).substring(2, 34), // 模拟新session ID
@@ -325,7 +325,7 @@ function mockLogin(credentials: Record<string, unknown>, sessionId: string) {
   }
 }
 
-function generatePasswordResetToken(email: string): string {
+function generatePasswordResetToken(_email: string): string {
   return Array(64)
     .fill(0)
     .map(() => Math.floor(Math.random() * 16).toString(16))
@@ -388,7 +388,11 @@ function sanitizeSqlInput(input: string): string {
     .replace(/UNION\s+SELECT/gi, '')
 }
 
-function hasPermission(user: Record<string, unknown>, resource: Record<string, unknown>, action: string): boolean {
+function hasPermission(
+  user: Record<string, unknown>,
+  resource: Record<string, unknown>,
+  action: string
+): boolean {
   if (user.role === 'admin') return true
   if (user.id === resource.user_id) return true
   if (resource.is_public && action === 'read') return true
@@ -400,7 +404,7 @@ function checkRateLimit(
   endpoint: string,
   timestamp: number,
   maxRequests: number,
-  timeWindow: number
+  _timeWindow: number
 ) {
   // 模拟简单的速率限制
   const requestCount = Math.floor(timestamp / 1000) % (maxRequests + 20)

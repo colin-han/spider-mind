@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { GET, POST } from '@/app/api/mindmaps/route'
 import { PUT, DELETE, GET as GET_SINGLE } from '@/app/api/mindmaps/[id]/route'
 import { MindMapService } from '@/lib/local-database'

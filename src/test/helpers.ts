@@ -70,7 +70,9 @@ export class MockSupabaseService {
     return {
       getMindMaps: vi.fn(() => Promise.resolve([TestDataFactory.createMindMap()])),
       getMindMapById: vi.fn((id: string) => Promise.resolve(TestDataFactory.createMindMap({ id }))),
-      createMindMap: vi.fn((data: Record<string, unknown>) => Promise.resolve(TestDataFactory.createMindMap(data))),
+      createMindMap: vi.fn((data: Record<string, unknown>) =>
+        Promise.resolve(TestDataFactory.createMindMap(data))
+      ),
       updateMindMap: vi.fn((id: string, data: Record<string, unknown>) =>
         Promise.resolve(TestDataFactory.createMindMap({ id, ...data }))
       ),

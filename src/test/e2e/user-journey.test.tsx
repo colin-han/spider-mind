@@ -123,7 +123,7 @@ describe('End-to-End User Journey', () => {
       // await page.goto('http://localhost:3000/explore')
 
       // 2. 搜索特定主题
-      const searchQuery = '机器学习'
+      const _searchQuery = '机器学习'
       // await page.fill('[data-testid="search-input"]', searchQuery)
       // await page.press('[data-testid="search-input"]', 'Enter')
 

@@ -33,7 +33,7 @@ async function globalSetup(_config: FullConfig) {
   }
 }
 
-async function setupTestData(page: import('@playwright/test').Page) {
+async function setupTestData(_page: import('@playwright/test').Page) {
   // 创建测试用户（如果需要）
   const testUser = {
     email: 'e2etest@example.com',

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { TestDataFactory, MockSupabaseService, MockAIService } from '@/test/helpers'
 
 // 集成测试：思维导图完整流程
@@ -172,10 +172,10 @@ describe('MindMap Integration Flow', () => {
     const batchSize = 10
     const batchCreatePromises = Array(batchSize)
       .fill(0)
-      .map((_, index) =>
+      .map((_item, _index) =>
         mockMindMapService.createMindMap({
-          title: `批量思维导图 ${index + 1}`,
-          description: `第 ${index + 1} 个批量创建的思维导图`,
+          title: `批量思维导图 ${_index + 1}`,
+          description: `第 ${_index + 1} 个批量创建的思维导图`,
         })
       )
 
@@ -186,10 +186,10 @@ describe('MindMap Integration Flow', () => {
     const largeNodeCount = 100
     const largeNodes = Array(largeNodeCount)
       .fill(0)
-      .map((_, index) =>
+      .map((_item, _index) =>
         TestDataFactory.createNode({
-          id: `large-node-${index}`,
-          data: { content: `节点 ${index + 1}` },
+          id: `large-node-${_index}`,
+          data: { content: `节点 ${_index + 1}` },
         })
       )
 
@@ -200,7 +200,7 @@ describe('MindMap Integration Flow', () => {
       nodes: largeNodes,
       edges: largeNodes
         .slice(1)
-        .map((node, index) => TestDataFactory.createEdge(largeNodes[0].id, node.id)),
+        .map((_item, _index) => TestDataFactory.createEdge(largeNodes[0].id, node.id)),
     }
 
     const complexAnalysis = await mockAIService.analyzeStructure(complexContent)

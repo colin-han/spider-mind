@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { AIService, ClaudeService, OpenAIService } from '@/lib/ai'
-import { TestDataFactory, PerformanceTestUtils, MockFactory } from '@/test/helpers/test-utils'
+import { TestDataFactory } from '@/test/helpers/test-utils'
 
 // Mock 高级响应数据
 const mockClaudeStructuredResponse = {

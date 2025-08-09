@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { PerformanceTestUtils, TestDataFactory } from '@/test/helpers/test-utils'
 
 // 性能测试套件
@@ -160,7 +160,7 @@ describe('性能测试套件', () => {
     it('AI助手面板应该优化大量建议的显示', async () => {
       const { default: AIAssistant } = await import('@/components/ai/ai-assistant')
 
-      const largeSuggestionList = Array.from({ length: 200 }, (_, i) => ({
+      const _largeSuggestionList = Array.from({ length: 200 }, (_, i) => ({
         type: 'expand',
         title: `AI建议 ${i}`,
         description: `详细描述 ${i}`.repeat(5),

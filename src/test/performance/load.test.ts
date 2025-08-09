@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { TestDataFactory } from '@/test/helpers'
 
 describe('Performance Tests', () => {
@@ -9,7 +9,7 @@ describe('Performance Tests', () => {
       // 模拟数据库查询
       const mockMindMaps = Array(1000)
         .fill(0)
-        .map((_, index) => TestDataFactory.createMindMap({ id: `perf-map-${index}` }))
+        .map((_item, _index) => TestDataFactory.createMindMap({ id: `perf-map-${_index}` }))
 
       // 模拟查询延迟
       await new Promise(resolve => setTimeout(resolve, 50))
@@ -22,7 +22,7 @@ describe('Performance Tests', () => {
     })
 
     it('应该高效处理向量搜索', async () => {
-      const searchQuery = '人工智能机器学习深度学习'
+      const _searchQuery = '人工智能机器学习深度学习'
       const vectorDimension = 1536 // OpenAI embeddings维度
 
       const startTime = performance.now()
@@ -35,8 +35,8 @@ describe('Performance Tests', () => {
       // 模拟向量相似度计算
       const mockResults = Array(100)
         .fill(0)
-        .map((_, index) => ({
-          id: `result-${index}`,
+        .map((_item, _index) => ({
+          id: `result-${_index}`,
           similarity: Math.random(),
           mindMap: TestDataFactory.createMindMap(),
         }))
@@ -63,12 +63,12 @@ describe('Performance Tests', () => {
       // 生成大量节点
       const nodes = Array(nodeCount)
         .fill(0)
-        .map((_, index) =>
+        .map((_item, _index) =>
           TestDataFactory.createNode({
-            id: `perf-node-${index}`,
+            id: `perf-node-${_index}`,
             position: {
-              x: (index % 20) * 150,
-              y: Math.floor(index / 20) * 100,
+              x: (_index % 20) * 150,
+              y: Math.floor(_index / 20) * 100,
             },
           })
         )
@@ -76,7 +76,7 @@ describe('Performance Tests', () => {
       // 生成边连接
       const edges = Array(edgeCount)
         .fill(0)
-        .map((_, index) => TestDataFactory.createEdge(`perf-node-0`, `perf-node-${index + 1}`))
+        .map((_item, _index) => TestDataFactory.createEdge(`perf-node-0`, `perf-node-${_index + 1}`))
 
       const endTime = performance.now()
       const renderTime = endTime - startTime
@@ -136,7 +136,7 @@ describe('Performance Tests', () => {
       const batchSize = 10
       const requests = Array(batchSize)
         .fill(0)
-        .map((_, index) => `节点内容 ${index + 1}`)
+        .map((_item, _index) => `节点内容 ${_index + 1}`)
 
       const startTime = performance.now()
 
@@ -195,8 +195,8 @@ describe('Performance Tests', () => {
       // 模拟多用户同时操作
       const operations = Array(concurrentUsers)
         .fill(0)
-        .map(async (_, index) => {
-          const userId = `user-${index}`
+        .map((_item, _index) => {
+          const _userId = `user-${_index}`
 
           // 模拟用户操作：读取、修改、保存
           const readTime = Math.random() * 50
@@ -211,8 +211,8 @@ describe('Performance Tests', () => {
           const content = JSON.parse(mindMap.content)
           content.nodes.push(
             TestDataFactory.createNode({
-              id: `user-${index}-node`,
-              data: { content: `${userId}的修改` },
+              id: `user-${_index}-node`,
+              data: { content: `${_userId}的修改` },
             })
           )
 
@@ -220,7 +220,7 @@ describe('Performance Tests', () => {
           await new Promise(resolve => setTimeout(resolve, saveTime))
 
           return {
-            userId,
+            _userId,
             success: true,
             operations: ['read', 'modify', 'save'],
           }
@@ -242,11 +242,11 @@ describe('Performance Tests', () => {
       const largeContent = {
         nodes: Array(largeNodeCount)
           .fill(0)
-          .map((_, index) =>
+          .map((_item, _index) =>
             TestDataFactory.createNode({
-              id: `large-node-${index}`,
+              id: `large-node-${_index}`,
               data: {
-                content: `这是一个包含很多文字的大型节点内容，用于测试数据压缩效果 ${index}`.repeat(
+                content: `这是一个包含很多文字的大型节点内容，用于测试数据压缩效果 ${_index}`.repeat(
                   5
                 ),
               },
@@ -254,7 +254,7 @@ describe('Performance Tests', () => {
           ),
         edges: Array(largeNodeCount - 1)
           .fill(0)
-          .map((_, index) => TestDataFactory.createEdge('large-node-0', `large-node-${index + 1}`)),
+          .map((_item, _index) => TestDataFactory.createEdge('large-node-0', `large-node-${_index + 1}`)),
       }
 
       const originalSize = JSON.stringify(largeContent).length
