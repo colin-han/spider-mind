@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input'
 import { ProtectedRoute } from '@/components/auth/protected-route'
 import { UserMenu } from '@/components/auth/user-menu'
 import { useAuth } from '@/contexts/auth-context'
-import { Plus, Search, Calendar, FileText } from 'lucide-react'
+import { Plus, Search, Calendar, FileText, Trash2 } from 'lucide-react'
+import { AlertDialog } from '@/components/ui/alert-dialog'
 
 interface MindMap {
   id: string
@@ -23,6 +24,11 @@ export default function MindMapsListPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredMindMaps, setFilteredMindMaps] = useState<MindMap[]>([])
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; mindMap: MindMap | null }>({
+    open: false,
+    mindMap: null,
+  })
+  const [deleting, setDeleting] = useState(false)
   const { user } = useAuth()
 
   // 加载思维导图列表
@@ -95,6 +101,44 @@ export default function MindMapsListPage() {
     return new Date(dateString).toLocaleString('zh-CN')
   }
 
+  // 打开删除确认对话框
+  const openDeleteDialog = (mindMap: MindMap, e: React.MouseEvent) => {
+    e.preventDefault() // 阻止导航到详情页
+    e.stopPropagation()
+    setDeleteDialog({ open: true, mindMap })
+  }
+
+  // 删除思维导图
+  const deleteMindMap = async () => {
+    if (!deleteDialog.mindMap || deleting) return
+
+    setDeleting(true)
+    try {
+      const response = await fetch(`/api/mindmaps/${deleteDialog.mindMap.id}`, {
+        method: 'DELETE',
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        // 从列表中移除已删除的思维导图
+        const updatedMindMaps = mindMaps.filter(m => m.id !== deleteDialog.mindMap!.id)
+        setMindMaps(updatedMindMaps)
+        setFilteredMindMaps(updatedMindMaps.filter(mindMap =>
+          mindMap.title.toLowerCase().includes(searchQuery.toLowerCase())
+        ))
+        setDeleteDialog({ open: false, mindMap: null })
+      } else {
+        console.error('删除失败:', result.message)
+        alert('删除失败: ' + result.message)
+      }
+    } catch (error) {
+      console.error('删除思维导图失败:', error)
+      alert('删除失败，请稍后重试')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -156,31 +200,48 @@ export default function MindMapsListPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredMindMaps.map(mindMap => (
-              <Link key={mindMap.id} href={`/mindmaps/${mindMap.id}`}>
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-                  <CardHeader>
-                    <CardTitle className="truncate" title={mindMap.title}>
-                      {mindMap.title}
-                    </CardTitle>
-                    <CardDescription className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      {formatDate(mindMap.updated_at)}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm text-gray-600">
-                      {mindMap.content &&
-                      typeof mindMap.content === 'object' &&
-                      'nodes' in mindMap.content
-                        ? `${(mindMap.content.nodes as unknown[]).length} 个节点`
-                        : '空白思维导图'}
-                    </div>
-                    <div className="mt-4 h-20 bg-gray-50 rounded border-2 border-dashed border-gray-200 flex items-center justify-center">
-                      <span className="text-xs text-gray-500">思维导图预览</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+              <div key={mindMap.id} className="relative group">
+                <Link href={`/mindmaps/${mindMap.id}`}>
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="truncate" title={mindMap.title}>
+                            {mindMap.title}
+                          </CardTitle>
+                          <CardDescription className="flex items-center gap-2 mt-2">
+                            <Calendar className="h-4 w-4" />
+                            {formatDate(mindMap.updated_at)}
+                          </CardDescription>
+                        </div>
+                        
+                        {/* 删除按钮 */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                          onClick={(e) => openDeleteDialog(mindMap, e)}
+                          title="删除思维导图"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-sm text-gray-600">
+                        {mindMap.content &&
+                        typeof mindMap.content === 'object' &&
+                        'nodes' in mindMap.content
+                          ? `${(mindMap.content.nodes as unknown[]).length} 个节点`
+                          : '空白思维导图'}
+                      </div>
+                      <div className="mt-4 h-20 bg-gray-50 rounded border-2 border-dashed border-gray-200 flex items-center justify-center">
+                        <span className="text-xs text-gray-500">思维导图预览</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </div>
             ))}
           </div>
         )}
@@ -192,6 +253,22 @@ export default function MindMapsListPage() {
             filteredMindMaps.length !== mindMaps.length &&
             `, 显示 ${filteredMindMaps.length} 个匹配结果`}
         </div>
+
+        {/* 删除确认对话框 */}
+        <AlertDialog
+          open={deleteDialog.open}
+          onOpenChange={(open) => setDeleteDialog({ open, mindMap: null })}
+          title="删除思维导图"
+          description={
+            deleteDialog.mindMap
+              ? `确定要删除思维导图 "${deleteDialog.mindMap.title}" 吗？此操作不可撤销。`
+              : ''
+          }
+          confirmText={deleting ? '删除中...' : '删除'}
+          cancelText="取消"
+          onConfirm={deleteMindMap}
+          variant="destructive"
+        />
       </div>
     </ProtectedRoute>
   )
