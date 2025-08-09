@@ -47,7 +47,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }
-      
+
       // 保存到全局存储
       global.mindMapsStorage.push(mindMap)
     }

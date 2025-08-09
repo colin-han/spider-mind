@@ -70,7 +70,7 @@ export class BDDWorld {
 
     console.log('等待新建思维导图按钮出现...')
     await this.page.waitForSelector('button:has-text("新建思维导图")', { timeout: 10000 })
-    
+
     console.log('点击新建思维导图按钮...')
     await this.page.click('button:has-text("新建思维导图")')
 
@@ -349,27 +349,27 @@ export class BDDWorld {
   async createMindMapWithMainNode(name?: string) {
     // 直接通过API创建思维导图，而不是通过UI
     if (!this.page) throw new Error('Page not initialized')
-    
+
     const title = name || '新思维导图'
-    
+
     // 创建思维导图
-    const createResponse = await this.page.evaluate(async (title) => {
+    const createResponse = await this.page.evaluate(async title => {
       const response = await fetch('/api/mindmaps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title,
-          userId: '11111111-1111-1111-1111-111111111111'
-        })
+          userId: '11111111-1111-1111-1111-111111111111',
+        }),
       })
       return response.json()
     }, title)
-    
+
     if (createResponse.success) {
       this.currentMindMapId = createResponse.data.id
       this.createdMindMapIds.push(createResponse.data.id)
     }
-    
+
     // 确保在首页
     await this.page.goto(`${this.baseUrl}/mindmaps`)
     await this.page.waitForLoadState('networkidle')
@@ -388,7 +388,7 @@ export class BDDWorld {
   // 点击子节点
   async clickChildNode() {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 点击第二个节点（子节点）
     const childNode = this.page.locator('[data-testid*="rf__node"]').nth(1)
     await childNode.click()
@@ -398,7 +398,7 @@ export class BDDWorld {
   // 点击主节点
   async clickMainNode() {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 点击第一个节点（主节点）
     const mainNode = this.page.locator('[data-testid*="rf__node"]').first()
     await mainNode.click()
@@ -408,14 +408,14 @@ export class BDDWorld {
   // 验证主节点视觉反馈
   async verifyMainNodeVisualFeedback() {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 检查选中状态的视觉反馈
     const visualFeedback = await this.page
       .locator('[data-testid*="rf__node"] .ring-2.ring-primary')
       .count()
-    
+
     if (visualFeedback > 0) return true
-    
+
     // 也检查ReactFlow的内置选中状态样式
     const reactFlowSelected = await this.page.locator('[data-testid*="rf__node"].selected').count()
     return reactFlowSelected > 0
@@ -424,18 +424,21 @@ export class BDDWorld {
   // 验证节点处于编辑模式
   async verifyNodeInEditMode() {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 检查是否有输入框处于激活状态，尝试多种选择器
     const selectors = [
       'input[type="text"]',
       'input',
       '.mindmap-node input',
-      '[data-testid*="rf__node"] input'
+      '[data-testid*="rf__node"] input',
     ]
-    
+
     for (const selector of selectors) {
       try {
-        const inputVisible = await this.page.locator(selector).isVisible().catch(() => false)
+        const inputVisible = await this.page
+          .locator(selector)
+          .isVisible()
+          .catch(() => false)
         if (inputVisible) {
           console.log(`找到编辑输入框: ${selector}`)
           return true
@@ -444,7 +447,7 @@ export class BDDWorld {
         // 继续尝试下一个选择器
       }
     }
-    
+
     console.log('未找到任何编辑输入框')
     return false
   }
@@ -452,19 +455,22 @@ export class BDDWorld {
   // 验证可以编辑节点内容
   async verifyCanEditNodeContent() {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 检查是否出现了输入框（假设已经在编辑模式）
     const selectors = [
       'input[type="text"]',
       'input',
       '.mindmap-node input',
-      '[data-testid*="rf__node"] input'
+      '[data-testid*="rf__node"] input',
     ]
-    
+
     let inputFound = false
     for (const selector of selectors) {
       try {
-        const inputVisible = await this.page.locator(selector).isVisible().catch(() => false)
+        const inputVisible = await this.page
+          .locator(selector)
+          .isVisible()
+          .catch(() => false)
         if (inputVisible) {
           console.log(`使用编辑输入框: ${selector}`)
           inputFound = true
@@ -474,25 +480,25 @@ export class BDDWorld {
         // 继续尝试下一个选择器
       }
     }
-    
+
     if (!inputFound) {
       console.log('未找到编辑输入框，无法验证编辑功能')
       return false
     }
-    
+
     return true
   }
 
   // 验证子节点被选中
   async verifyChildNodeSelected() {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 检查子节点是否有选中样式
     const childNode = this.page.locator('[data-testid*="rf__node"]').nth(1)
     const hasSelectedClass = await childNode.locator('.ring-2.ring-primary').count()
-    
+
     if (hasSelectedClass > 0) return true
-    
+
     // 也检查ReactFlow的选中状态
     const isReactFlowSelected = await childNode.getAttribute('class')
     return isReactFlowSelected?.includes('selected') || false
@@ -501,13 +507,13 @@ export class BDDWorld {
   // 验证主节点未被选中
   async verifyMainNodeNotSelected() {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 检查主节点是否没有选中样式
     const mainNode = this.page.locator('[data-testid*="rf__node"]').first()
     const hasSelectedClass = await mainNode.locator('.ring-2.ring-primary').count()
-    
+
     if (hasSelectedClass > 0) return false
-    
+
     // 也检查ReactFlow的选中状态
     const isReactFlowSelected = await mainNode.getAttribute('class')
     return !isReactFlowSelected?.includes('selected')
@@ -516,13 +522,13 @@ export class BDDWorld {
   // 验证子节点未被选中
   async verifyChildNodeNotSelected() {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 检查子节点是否没有选中样式
     const childNode = this.page.locator('[data-testid*="rf__node"]').nth(1)
     const hasSelectedClass = await childNode.locator('.ring-2.ring-primary').count()
-    
+
     if (hasSelectedClass > 0) return false
-    
+
     // 也检查ReactFlow的选中状态
     const isReactFlowSelected = await childNode.getAttribute('class')
     return !isReactFlowSelected?.includes('selected')

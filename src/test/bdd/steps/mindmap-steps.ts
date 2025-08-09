@@ -11,9 +11,12 @@ Given('我已经创建了一个包含主节点的思维导图', async function (
   await this.createMindMapWithMainNode()
 })
 
-Given('我已经创建了一个仅包含主节点的思维导图，名字叫：{string};', async function (this: BDDWorld, mindMapName: string) {
-  await this.createMindMapWithMainNode(mindMapName)
-})
+Given(
+  '我已经创建了一个仅包含主节点的思维导图，名字叫：{string};',
+  async function (this: BDDWorld, mindMapName: string) {
+    await this.createMindMapWithMainNode(mindMapName)
+  }
+)
 
 Given('我已经打开了一个思维导图', async function (this: BDDWorld) {
   await this.openExistingMindMap()
@@ -74,13 +77,13 @@ When('我点击主节点', async function (this: BDDWorld) {
 When('我点击{string}思维导图', async function (this: BDDWorld, mindMapName: string) {
   // 在思维导图列表页面点击指定名字的思维导图
   if (!this.page) throw new Error('Page not initialized')
-  
+
   // 根据思维导图名字点击对应的卡片
   await this.page.click(`text="${mindMapName}"`)
-  
+
   // 等待跳转到编辑页面
   await this.page.waitForURL('**/mindmaps/**')
-  
+
   // 提取并跟踪思维导图ID
   await this.extractAndTrackMindMapId()
 })
@@ -198,16 +201,16 @@ Then('当前思维导图的主节点应该是未选中状态', async function (t
 
 Then('子节点应该显示选中的视觉反馈', async function (this: BDDWorld) {
   if (!this.page) throw new Error('Page not initialized')
-  
+
   // 检查子节点的选中状态视觉反馈
   const childNode = this.page.locator('[data-testid*="rf__node"]').nth(1)
   const visualFeedback = await childNode.locator('.ring-2.ring-primary').count()
-  
+
   if (visualFeedback > 0) {
     expect(visualFeedback).toBeGreaterThan(0)
     return
   }
-  
+
   // 也检查ReactFlow的内置选中状态样式
   const reactFlowSelected = await childNode.getAttribute('class')
   expect(reactFlowSelected).toContain('selected')

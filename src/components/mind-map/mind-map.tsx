@@ -157,10 +157,10 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           setTimeout(() => {
             setSelectedNodes([parentNodeId])
             // 确保ReactFlow也知道这个选择状态
-            setNodes(prevNodes => 
+            setNodes(prevNodes =>
               prevNodes.map(node => ({
                 ...node,
-                selected: node.id === parentNodeId
+                selected: node.id === parentNodeId,
               }))
             )
           }, 100)
@@ -169,10 +169,10 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           setTimeout(() => {
             setSelectedNodes([newLayoutNode.id])
             // 确保ReactFlow也知道这个选择状态
-            setNodes(prevNodes => 
+            setNodes(prevNodes =>
               prevNodes.map(node => ({
                 ...node,
-                selected: node.id === newLayoutNode.id
+                selected: node.id === newLayoutNode.id,
               }))
             )
           }, 100)
@@ -303,17 +303,17 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           }
         })
         setLayoutNodes(initialLayoutNodes)
-        
+
         // 自动选中主节点（根节点）
         const mainNode = initialLayoutNodes.find(node => node.parent_node_id === null)
         if (mainNode) {
           setTimeout(() => {
             setSelectedNodes([mainNode.id])
             // 确保ReactFlow也知道这个选择状态
-            setNodes(prevNodes => 
+            setNodes(prevNodes =>
               prevNodes.map(node => ({
                 ...node,
-                selected: node.id === mainNode.id
+                selected: node.id === mainNode.id,
               }))
             )
           }, 100)
@@ -330,15 +330,15 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         }
         setLayoutNodes([rootNode])
         applyAutoLayout([rootNode])
-        
+
         // 自动选中新创建的主节点
         setTimeout(() => {
           setSelectedNodes([rootNode.id])
           // 确保ReactFlow也知道这个选择状态
-          setNodes(prevNodes => 
+          setNodes(prevNodes =>
             prevNodes.map(node => ({
               ...node,
-              selected: node.id === rootNode.id
+              selected: node.id === rootNode.id,
             }))
           )
         }, 100)
