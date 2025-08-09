@@ -82,6 +82,13 @@ function MindMapDetailPage() {
 
     setSaving(true)
     try {
+      // 如果没有传入新内容，尝试从MindMap组件获取当前状态
+      let contentToSave = newContent
+      if (!contentToSave && mindMapRef.current) {
+        // TODO: 需要在MindMap组件中实现getCurrentData方法
+        contentToSave = mindMapData.content // 暂时使用现有数据
+      }
+
       const response = await fetch(`/api/mindmaps/${mindMapData.id}`, {
         method: 'PUT',
         headers: {
@@ -89,7 +96,7 @@ function MindMapDetailPage() {
         },
         body: JSON.stringify({
           title,
-          content: newContent || mindMapData.content,
+          content: contentToSave || mindMapData.content,
         }),
       })
 
@@ -98,8 +105,8 @@ function MindMapDetailPage() {
         setLastSaved(new Date())
 
         // 如果有新内容，更新本地状态
-        if (newContent) {
-          setMindMapData(prev => (prev ? { ...prev, content: newContent } : null))
+        if (contentToSave) {
+          setMindMapData(prev => (prev ? { ...prev, content: contentToSave } : null))
         }
 
         // 如果标题改变了，更新
@@ -116,6 +123,8 @@ function MindMapDetailPage() {
 
   // 处理思维导图内容变化
   const handleMindMapChange = async (newContent: { nodes: unknown[]; edges: unknown[] }) => {
+    // 先更新本地状态，再保存
+    setMindMapData(prev => (prev ? { ...prev, content: newContent } : null))
     await saveMindMap(newContent)
   }
 

@@ -33,24 +33,14 @@ export async function POST(request: NextRequest) {
     const rootNodeId = crypto.randomUUID()
     const title = body.title || '新思维导图'
 
+    // 创建思维导图（不包含content字段）
     const mindMap = await MindMapService.createMindMap({
       title,
-      content: {
-        nodes: [
-          {
-            id: rootNodeId,
-            data: { content: title },
-            position: { x: 400, y: 300 },
-            type: 'mindMapNode',
-          },
-        ],
-        edges: [],
-      },
       user_id: body.userId || '11111111-1111-1111-1111-111111111111',
       is_public: body.is_public || false,
     })
 
-    // 同时在 mind_map_nodes 表中创建初始节点
+    // 在nodes表中创建初始节点
     await MindMapService.upsertNodes([
       {
         id: rootNodeId,
@@ -59,6 +49,8 @@ export async function POST(request: NextRequest) {
         sort_order: 0,
         node_level: 0,
         content: title,
+        node_type: 'mindMapNode',
+        style: {},
       },
     ])
 

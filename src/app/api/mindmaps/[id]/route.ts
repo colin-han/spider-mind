@@ -16,42 +16,43 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       )
     }
 
-    // 获取最新的节点数据
+    // 获取节点数据并构建ReactFlow格式
     const nodes = await MindMapService.getMindMapNodes(params.id)
 
-    // 如果有节点数据，用节点数据更新主表content
-    if (nodes.length > 0) {
-      // 将节点数据转换为ReactFlow格式
-      const reactFlowNodes = nodes.map(node => ({
-        id: node.id,
-        type: 'mindMapNode',
-        position: { x: 0, y: 0 }, // 位置会在前端重新计算
-        data: {
-          content: node.content,
-          isEditing: false,
-        },
+    // 将节点数据转换为ReactFlow格式
+    const reactFlowNodes = nodes.map(node => ({
+      id: node.id,
+      type: node.node_type || 'mindMapNode',
+      position: { x: 0, y: 0 }, // 位置会在前端重新计算
+      data: {
+        content: node.content,
+        isEditing: false,
+        style: typeof node.style === 'object' ? node.style : {},
+      },
+    }))
+
+    // 生成边的连接
+    const reactFlowEdges = nodes
+      .filter(node => node.parent_node_id)
+      .map(node => ({
+        id: `${node.parent_node_id}-${node.id}`,
+        source: node.parent_node_id!,
+        target: node.id,
+        type: 'default',
       }))
 
-      // 生成边的连接
-      const reactFlowEdges = nodes
-        .filter(node => node.parent_node_id)
-        .map(node => ({
-          id: `${node.parent_node_id}-${node.id}`,
-          source: node.parent_node_id!,
-          target: node.id,
-          type: 'default',
-        }))
-
-      // 更新mindMap的content
-      mindMap.content = {
+    // 构建完整的响应数据
+    const responseData = {
+      ...mindMap,
+      content: {
         nodes: reactFlowNodes,
         edges: reactFlowEdges,
-      }
+      },
     }
 
     return NextResponse.json({
       success: true,
-      data: mindMap,
+      data: responseData,
     })
   } catch (error) {
     console.error('Failed to get mind map:', error)
@@ -71,11 +72,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   try {
     const body = await request.json()
 
+    // 更新基本信息
     const updatedMindMap = await MindMapService.updateMindMap(params.id, {
       title: body.title,
-      content: body.content,
       is_public: body.is_public,
     })
+
+    // 如果有content，同步到nodes表（这是数据的主要保存路径）
+    if (body.content && (body.content.nodes || body.content.edges)) {
+      await MindMapService.syncNodesFromContent(params.id, body.content)
+    }
 
     return NextResponse.json({
       success: true,

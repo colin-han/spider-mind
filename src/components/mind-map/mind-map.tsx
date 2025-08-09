@@ -25,7 +25,7 @@ import {
   getNodeLevel,
   type LayoutNode,
 } from '@/lib/auto-layout'
-import { MindMapService } from '@/lib/database'
+// 移除数据库直接访问，组件应该通过API调用进行数据操作
 
 const nodeTypes = {
   mindMapNode: MindMapNode,
@@ -164,22 +164,8 @@ export const MindMap = forwardRef<MindMapRef, MindMapProps>(
           }, 100)
         }
 
-        // 保存到数据库
-        try {
-          await MindMapService.upsertNodes([
-            {
-              id: newLayoutNode.id,
-              mind_map_id: mindMapId,
-              content: newLayoutNode.content,
-              parent_node_id: newLayoutNode.parent_node_id,
-              sort_order: newLayoutNode.sort_order,
-              node_level: newLayoutNode.node_level,
-            },
-          ])
-        } catch (dbError) {
-          console.error('保存节点到数据库失败:', dbError)
-          // 可以在这里添加用户友好的错误提示
-        }
+        // TODO: 通过API保存节点数据，而不是直接调用数据库
+        // 当前由页面级的onChange处理保存逻辑
       } catch (error) {
         console.error('添加节点失败:', error)
       }
@@ -189,8 +175,7 @@ export const MindMap = forwardRef<MindMapRef, MindMapProps>(
       if (selectedNodes.length === 0) return
 
       try {
-        // 从数据库删除节点
-        await MindMapService.deleteNodes(mindMapId, selectedNodes)
+        // TODO: 通过API删除节点，而不是直接调用数据库
 
         // 更新布局节点数据
         const updatedLayoutNodes = layoutNodes.filter(node => !selectedNodes.includes(node.id))
@@ -218,50 +203,24 @@ export const MindMap = forwardRef<MindMapRef, MindMapProps>(
         )
         setLayoutNodes(updatedLayoutNodes)
 
-        // 保存到数据库
-        try {
-          const nodeToUpdate = updatedLayoutNodes.find(node => node.id === nodeId)
-          if (nodeToUpdate) {
-            await MindMapService.upsertNodes([
-              {
-                id: nodeToUpdate.id,
-                mind_map_id: mindMapId,
-                content: nodeToUpdate.content,
-                parent_node_id: nodeToUpdate.parent_node_id,
-                sort_order: nodeToUpdate.sort_order,
-                node_level: nodeToUpdate.node_level,
-              },
-            ])
-          }
-        } catch (error) {
-          console.error('更新节点内容到数据库失败:', error)
+        // 通过onChange回调通知父组件数据变更，让父组件处理保存
+        const updatedData = { 
+          nodes: nodes.map(node =>
+            node.id === nodeId ? { ...node, data: { ...node.data, content } } : node
+          ), 
+          edges 
         }
+        onChange?.(updatedData)
       },
-      [setNodes, layoutNodes, mindMapId]
+      [setNodes, layoutNodes, nodes, edges, onChange]
     )
 
     const handleSave = useCallback(async () => {
-      try {
-        // 保存所有节点的最新内容到数据库
-        if (layoutNodes.length > 0) {
-          const dbNodes = layoutNodes.map(node => ({
-            id: node.id,
-            mind_map_id: mindMapId,
-            content: node.content,
-            parent_node_id: node.parent_node_id,
-            sort_order: node.sort_order,
-            node_level: node.node_level,
-          }))
-          await MindMapService.upsertNodes(dbNodes)
-        }
-
-        const data = { nodes, edges }
-        onChange?.(data)
-        onSave?.(data)
-      } catch (error) {
-        console.error('保存思维导图失败:', error)
-      }
-    }, [nodes, edges, onChange, onSave, layoutNodes, mindMapId])
+      // 通过回调通知父组件保存数据，不再直接操作数据库
+      const data = { nodes, edges }
+      onChange?.(data)
+      onSave?.(data)
+    }, [nodes, edges, onChange, onSave])
 
     const handleAISuggestionApply = useCallback(
       (suggestion: {

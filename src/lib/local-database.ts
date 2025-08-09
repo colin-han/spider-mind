@@ -9,7 +9,6 @@ const pool = new Pool({
 interface MindMap {
   id: string
   title: string
-  content: Record<string, unknown>
   user_id: string
   is_public: boolean
   embedding: string | null
@@ -19,7 +18,6 @@ interface MindMap {
 
 interface MindMapInsert {
   title: string
-  content: Record<string, unknown>
   user_id: string
   is_public?: boolean
   embedding?: string | null
@@ -27,7 +25,6 @@ interface MindMapInsert {
 
 interface MindMapUpdate {
   title?: string
-  content?: Record<string, unknown>
   is_public?: boolean
   embedding?: string | null
 }
@@ -98,12 +95,11 @@ export class LocalMindMapService {
     const client = await pool.connect()
     try {
       const result = await client.query(
-        `INSERT INTO mind_maps (title, content, user_id, is_public, embedding) 
-         VALUES ($1, $2, $3, $4, $5) 
+        `INSERT INTO mind_maps (title, user_id, is_public, embedding) 
+         VALUES ($1, $2, $3, $4) 
          RETURNING *`,
         [
           mindMap.title,
-          JSON.stringify(mindMap.content),
           mindMap.user_id,
           mindMap.is_public || false,
           mindMap.embedding || null,
@@ -126,11 +122,6 @@ export class LocalMindMapService {
       if (updates.title !== undefined) {
         setPairs.push(`title = $${paramIndex}`)
         values.push(updates.title)
-        paramIndex++
-      }
-      if (updates.content !== undefined) {
-        setPairs.push(`content = $${paramIndex}`)
-        values.push(JSON.stringify(updates.content))
         paramIndex++
       }
       if (updates.is_public !== undefined) {
@@ -277,6 +268,72 @@ export class LocalMindMapService {
         mindMapId,
         nodeIds,
       ])
+    } finally {
+      client.release()
+    }
+  }
+
+  // 从ReactFlow格式的content同步节点数据到nodes表
+  static async syncNodesFromContent(
+    mindMapId: string,
+    content: { nodes: any[]; edges: any[] }
+  ): Promise<void> {
+    const client = await pool.connect()
+    try {
+      // 开启事务
+      await client.query('BEGIN')
+
+      // 清空现有节点
+      await client.query('DELETE FROM mind_map_nodes WHERE mind_map_id = $1', [mindMapId])
+
+      // 构建父子关系映射
+      const parentMap: { [nodeId: string]: string | null } = {}
+      content.edges?.forEach((edge: any) => {
+        if (edge.source && edge.target) {
+          parentMap[edge.target] = edge.source
+        }
+      })
+
+      // 计算节点层级
+      const calculateNodeLevel = (nodeId: string, visited = new Set()): number => {
+        if (visited.has(nodeId)) return 0 // 防止循环引用
+        visited.add(nodeId)
+        
+        const parentId = parentMap[nodeId]
+        if (!parentId) return 0 // 根节点层级为0
+        
+        return calculateNodeLevel(parentId, visited) + 1
+      }
+
+      // 插入新节点
+      for (let i = 0; i < (content.nodes || []).length; i++) {
+        const node = content.nodes[i]
+        if (node && node.id) {
+          await client.query(
+            `INSERT INTO mind_map_nodes 
+             (id, mind_map_id, content, parent_node_id, sort_order, node_level, node_type, style, embedding)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [
+              node.id,
+              mindMapId,
+              node.data?.content || '',
+              parentMap[node.id] || null,
+              i, // 使用数组索引作为排序
+              calculateNodeLevel(node.id),
+              node.type || 'mindMapNode',
+              JSON.stringify(node.data?.style || {}),
+              null, // embedding暂时为空
+            ]
+          )
+        }
+      }
+
+      // 提交事务
+      await client.query('COMMIT')
+    } catch (error) {
+      // 回滚事务
+      await client.query('ROLLBACK')
+      throw error
     } finally {
       client.release()
     }
