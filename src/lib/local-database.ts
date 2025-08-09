@@ -98,12 +98,7 @@ export class LocalMindMapService {
         `INSERT INTO mind_maps (title, user_id, is_public, embedding) 
          VALUES ($1, $2, $3, $4) 
          RETURNING *`,
-        [
-          mindMap.title,
-          mindMap.user_id,
-          mindMap.is_public || false,
-          mindMap.embedding || null,
-        ]
+        [mindMap.title, mindMap.user_id, mindMap.is_public || false, mindMap.embedding || null]
       )
       return result.rows[0]
     } finally {
@@ -276,7 +271,7 @@ export class LocalMindMapService {
   // 从ReactFlow格式的content同步节点数据到nodes表
   static async syncNodesFromContent(
     mindMapId: string,
-    content: { nodes: any[]; edges: any[] }
+    content: { nodes: unknown[]; edges: unknown[] }
   ): Promise<void> {
     const client = await pool.connect()
     try {
@@ -288,9 +283,10 @@ export class LocalMindMapService {
 
       // 构建父子关系映射
       const parentMap: { [nodeId: string]: string | null } = {}
-      content.edges?.forEach((edge: any) => {
-        if (edge.source && edge.target) {
-          parentMap[edge.target] = edge.source
+      content.edges?.forEach((edge: unknown) => {
+        const edgeObj = edge as { source?: string; target?: string }
+        if (edgeObj.source && edgeObj.target) {
+          parentMap[edgeObj.target] = edgeObj.source
         }
       })
 
@@ -298,16 +294,16 @@ export class LocalMindMapService {
       const calculateNodeLevel = (nodeId: string, visited = new Set()): number => {
         if (visited.has(nodeId)) return 0 // 防止循环引用
         visited.add(nodeId)
-        
+
         const parentId = parentMap[nodeId]
         if (!parentId) return 0 // 根节点层级为0
-        
+
         return calculateNodeLevel(parentId, visited) + 1
       }
 
       // 插入新节点
       for (let i = 0; i < (content.nodes || []).length; i++) {
-        const node = content.nodes[i]
+        const node = content.nodes[i] as { id?: string; data?: { content?: string; style?: unknown }; type?: string }
         if (node && node.id) {
           await client.query(
             `INSERT INTO mind_map_nodes 
@@ -379,6 +375,9 @@ export const MindMapService =
           throw new Error('Supabase service not available in local mode')
         }
         static async deleteNodes() {
+          throw new Error('Supabase service not available in local mode')
+        }
+        static async syncNodesFromContent() {
           throw new Error('Supabase service not available in local mode')
         }
       }

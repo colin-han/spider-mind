@@ -12,7 +12,7 @@ export interface RightPanelProps {
   onThemeChange: (theme: string) => void
 }
 
-export function RightPanel({ selectedNodeIds, activeTheme, onThemeChange }: RightPanelProps) {
+export function RightPanel({ selectedNodeIds }: RightPanelProps) {
   const [activeTab, setActiveTab] = useState('format')
 
   return (

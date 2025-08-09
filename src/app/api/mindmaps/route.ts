@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     await MindMapService.upsertNodes([
       {
         id: rootNodeId,
-        mind_map_id: mindMap.id,
+        mind_map_id: mindMap?.id || '',
         parent_node_id: null,
         sort_order: 0,
         node_level: 0,

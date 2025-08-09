@@ -20,7 +20,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const nodes = await MindMapService.getMindMapNodes(params.id)
 
     // 将节点数据转换为ReactFlow格式
-    const reactFlowNodes = nodes.map(node => ({
+    const reactFlowNodes = (nodes || []).map(node => ({
       id: node.id,
       type: node.node_type || 'mindMapNode',
       position: { x: 0, y: 0 }, // 位置会在前端重新计算
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }))
 
     // 生成边的连接
-    const reactFlowEdges = nodes
+    const reactFlowEdges = (nodes || [])
       .filter(node => node.parent_node_id)
       .map(node => ({
         id: `${node.parent_node_id}-${node.id}`,

@@ -10,8 +10,8 @@ export async function GET() {
       success: true,
       message: '数据库连接正常',
       data: {
-        mindMapsCount: mindMaps.length,
-        mindMaps: mindMaps,
+        mindMapsCount: mindMaps?.length || 0,
+        mindMaps: mindMaps || [],
       },
     })
   } catch (error) {
@@ -34,10 +34,6 @@ export async function POST(request: NextRequest) {
     // 创建测试思维导图
     const mindMap = await MindMapService.createMindMap({
       title: body.title || '测试思维导图',
-      content: body.content || {
-        nodes: [{ id: 'node1', data: { content: '根节点' }, position: { x: 0, y: 0 } }],
-        edges: [],
-      },
       user_id: '11111111-1111-1111-1111-111111111111',
       is_public: false,
     })

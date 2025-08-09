@@ -11,7 +11,6 @@ import { useAuth } from '@/contexts/auth-context'
 import {
   ArrowLeft,
   Save,
-  Settings,
   Share,
   Sparkles,
   Plus,
@@ -22,6 +21,7 @@ import {
 } from 'lucide-react'
 import { MindMap, type MindMapRef } from '@/components/mind-map/mind-map'
 import { AIAssistant } from '@/components/ai/ai-assistant'
+import type { Node, Edge } from '@xyflow/react'
 
 interface MindMapData {
   id: string
@@ -38,7 +38,7 @@ function MindMapDetailPage() {
   const params = useParams()
   const router = useRouter()
   const mindMapId = params.id as string
-  const { user } = useAuth()
+  const { } = useAuth()
 
   const [mindMapData, setMindMapData] = useState<MindMapData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -136,7 +136,7 @@ function MindMapDetailPage() {
   }
 
   // 处理AI建议应用
-  const handleAISuggestionApply = async (suggestion: any) => {
+  const handleAISuggestionApply = async (suggestion: unknown) => {
     // 这里可以实现AI建议的应用逻辑
     console.log('Applying AI suggestion:', suggestion)
 
@@ -280,8 +280,8 @@ function MindMapDetailPage() {
       {/* 思维导图编辑器 */}
       <div className="flex-1 relative">
         <MindMap
-          initialNodes={mindMapData.content.nodes}
-          initialEdges={mindMapData.content.edges}
+          initialNodes={mindMapData.content.nodes as Node[]}
+          initialEdges={mindMapData.content.edges as Edge[]}
           onChange={handleMindMapChange}
           onSelectionChange={handleSelectionChange}
           ref={mindMapRef}
@@ -293,10 +293,13 @@ function MindMapDetailPage() {
           <div className="absolute top-4 right-4 z-10">
             <AIAssistant
               allNodes={
-                mindMapData.content.nodes?.map((node: any) => ({
-                  id: node.id,
-                  content: node.data?.content || '',
-                })) || []
+                mindMapData.content.nodes?.map((node: unknown) => {
+                  const nodeObj = node as { id?: string; data?: { content?: string } }
+                  return {
+                    id: nodeObj.id || '',
+                    content: nodeObj.data?.content || '',
+                  }
+                }) || []
               }
               onSuggestionApply={handleAISuggestionApply}
               onClose={() => setShowAIAssistant(false)}

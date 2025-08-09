@@ -55,7 +55,7 @@ export interface MindMapProps {
   className?: string
 }
 
-export const MindMap = forwardRef<MindMapRef, MindMapProps>(
+const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
   (
     {
       initialNodes: propInitialNodes,
@@ -78,7 +78,7 @@ export const MindMap = forwardRef<MindMapRef, MindMapProps>(
     const [selectedEdges, setSelectedEdges] = useState<string[]>([])
     const [showAIAssistant, setShowAIAssistant] = useState(false)
     const [layoutNodes, setLayoutNodes] = useState<LayoutNode[]>([])
-    const [mindMapId] = useState<string>('temp-mindmap-id') // 临时ID，后续需要从props或路由获取
+    // 移除未使用的mindMapId状态
 
     const onSelectionChangeRef = useRef(onSelectionChange)
     onSelectionChangeRef.current = onSelectionChange
@@ -169,7 +169,7 @@ export const MindMap = forwardRef<MindMapRef, MindMapProps>(
       } catch (error) {
         console.error('添加节点失败:', error)
       }
-    }, [selectedNodes, layoutNodes, mindMapId, applyAutoLayout])
+    }, [selectedNodes, layoutNodes, applyAutoLayout])
 
     const deleteSelected = useCallback(async () => {
       if (selectedNodes.length === 0) return
@@ -186,7 +186,7 @@ export const MindMap = forwardRef<MindMapRef, MindMapProps>(
       } catch (error) {
         console.error('删除节点失败:', error)
       }
-    }, [selectedNodes, layoutNodes, mindMapId, applyAutoLayout])
+    }, [selectedNodes, layoutNodes, applyAutoLayout])
 
     const updateNodeContent = useCallback(
       async (nodeId: string, content: string) => {
@@ -204,11 +204,11 @@ export const MindMap = forwardRef<MindMapRef, MindMapProps>(
         setLayoutNodes(updatedLayoutNodes)
 
         // 通过onChange回调通知父组件数据变更，让父组件处理保存
-        const updatedData = { 
+        const updatedData = {
           nodes: nodes.map(node =>
             node.id === nodeId ? { ...node, data: { ...node.data, content } } : node
-          ), 
-          edges 
+          ),
+          edges,
         }
         onChange?.(updatedData)
       },
@@ -278,13 +278,16 @@ export const MindMap = forwardRef<MindMapRef, MindMapProps>(
     useEffect(() => {
       // 如果有初始数据（从数据库加载）
       if (finalInitialNodes.length > 0 && layoutNodes.length === 0) {
-        const initialLayoutNodes: LayoutNode[] = finalInitialNodes.map(node => ({
-          id: node.id,
-          parent_node_id: node.data?.parent_node_id || null,
-          sort_order: node.data?.sort_order || 0,
-          node_level: node.data?.node_level || 0,
-          content: String(node.data?.content || ''),
-        }))
+        const initialLayoutNodes: LayoutNode[] = finalInitialNodes.map(node => {
+          const nodeData = node.data as Record<string, unknown>
+          return {
+            id: node.id,
+            parent_node_id: (nodeData?.parent_node_id as string) || null,
+            sort_order: (nodeData?.sort_order as number) || 0,
+            node_level: (nodeData?.node_level as number) || 0,
+            content: String(nodeData?.content || ''),
+          }
+        })
         setLayoutNodes(initialLayoutNodes)
         // 不需要立即应用布局，因为initialNodes已经有位置信息
       }
@@ -366,3 +369,7 @@ export const MindMap = forwardRef<MindMapRef, MindMapProps>(
     )
   }
 )
+
+MindMapComponent.displayName = 'MindMap'
+
+export const MindMap = MindMapComponent

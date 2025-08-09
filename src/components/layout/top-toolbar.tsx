@@ -130,7 +130,7 @@ export function TopToolbar({
           节点
         </Button>
         <Button variant="ghost" size="sm" className="flex items-center gap-1">
-          <Image className="w-4 h-4" />
+          <Image className="w-4 h-4" aria-hidden="true" />
           图片
         </Button>
         <Button variant="ghost" size="sm" className="flex items-center gap-1">
