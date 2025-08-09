@@ -18,7 +18,7 @@
     "test:security": "vitest run src/test/security",
     "test:watch": "vitest --watch",
     "test:ci": "vitest run --coverage --reporter=junit --outputFile=test-results.xml",
-    "test:bdd": "TS_NODE_PROJECT=tsconfig.bdd.json cucumber-js --config cucumber.config.js",
+    "test:bdd": "TS_NODE_PROJECT=tsconfig.bdd.json cucumber-js --require-module ts-node/register --require 'src/test/bdd/steps/*.ts' --require 'src/test/bdd/support/*.ts' 'src/test/bdd/features/*.feature'",
     "test:bdd:watch": "cucumber-js --config cucumber.config.js --watch",
     "test:bdd:html": "cucumber-js --config cucumber.config.js --format html:test-results/bdd-report.html",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:bdd",

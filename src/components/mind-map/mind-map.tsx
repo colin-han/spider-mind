@@ -156,11 +156,25 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           // 延迟设置选中状态，确保节点已经渲染完成
           setTimeout(() => {
             setSelectedNodes([parentNodeId])
+            // 确保ReactFlow也知道这个选择状态
+            setNodes(prevNodes => 
+              prevNodes.map(node => ({
+                ...node,
+                selected: node.id === parentNodeId
+              }))
+            )
           }, 100)
         } else {
           // 如果是根节点，选中新创建的节点
           setTimeout(() => {
             setSelectedNodes([newLayoutNode.id])
+            // 确保ReactFlow也知道这个选择状态
+            setNodes(prevNodes => 
+              prevNodes.map(node => ({
+                ...node,
+                selected: node.id === newLayoutNode.id
+              }))
+            )
           }, 100)
         }
 
@@ -289,7 +303,21 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           }
         })
         setLayoutNodes(initialLayoutNodes)
-        // 不需要立即应用布局，因为initialNodes已经有位置信息
+        
+        // 自动选中主节点（根节点）
+        const mainNode = initialLayoutNodes.find(node => node.parent_node_id === null)
+        if (mainNode) {
+          setTimeout(() => {
+            setSelectedNodes([mainNode.id])
+            // 确保ReactFlow也知道这个选择状态
+            setNodes(prevNodes => 
+              prevNodes.map(node => ({
+                ...node,
+                selected: node.id === mainNode.id
+              }))
+            )
+          }, 100)
+        }
       }
       // 如果没有初始数据，创建默认根节点
       else if (layoutNodes.length === 0 && finalInitialNodes.length === 0) {
@@ -302,6 +330,18 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         }
         setLayoutNodes([rootNode])
         applyAutoLayout([rootNode])
+        
+        // 自动选中新创建的主节点
+        setTimeout(() => {
+          setSelectedNodes([rootNode.id])
+          // 确保ReactFlow也知道这个选择状态
+          setNodes(prevNodes => 
+            prevNodes.map(node => ({
+              ...node,
+              selected: node.id === rootNode.id
+            }))
+          )
+        }, 100)
       }
     }, [finalInitialNodes, layoutNodes.length, applyAutoLayout])
 

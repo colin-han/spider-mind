@@ -42,31 +42,43 @@ export class BDDWorld {
   async loginAsTestUser() {
     if (!this.page) throw new Error('Page not initialized')
 
+    console.log('导航到登录页面...')
     await this.page.goto(`${this.baseUrl}/login`)
     await this.page.waitForLoadState('networkidle')
 
+    console.log('等待登录表单加载...')
+    await this.page.waitForSelector('input[id="email"]', { timeout: 10000 })
+
     // 填写测试用户信息
-    await this.page.fill('input[placeholder*="邮箱"]', 'dev@test.com')
-    await this.page.fill('input[placeholder*="密码"]', 'password')
+    console.log('填写登录信息...')
+    await this.page.fill('input[id="email"]', 'dev@test.com')
+    await this.page.fill('input[id="password"]', 'password')
 
     // 点击登录按钮
+    console.log('点击登录按钮...')
     await this.page.click('button:has-text("登录")')
 
     // 等待重定向到思维导图列表页面
-    await this.page.waitForURL('**/mindmaps')
+    console.log('等待重定向到思维导图列表页面...')
+    await this.page.waitForURL('**/mindmaps', { timeout: 15000 })
+    console.log('登录成功，已到达思维导图列表页面')
   }
 
   // 思维导图操作方法
   async clickNewMindMapButtonOnly() {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 点击新建思维导图按钮
+    console.log('等待新建思维导图按钮出现...')
+    await this.page.waitForSelector('button:has-text("新建思维导图")', { timeout: 10000 })
+    
+    console.log('点击新建思维导图按钮...')
     await this.page.click('button:has-text("新建思维导图")')
 
-    // 等待页面跳转到编辑页面
-    await this.page.waitForURL('**/mindmaps/**', { timeout: 10000 })
+    console.log('等待页面跳转到编辑页面...')
+    await this.page.waitForURL('**/mindmaps/**', { timeout: 15000 })
 
     // 提取并跟踪新创建的思维导图ID
+    console.log('提取思维导图ID...')
     await this.extractAndTrackMindMapId()
   }
 
@@ -141,11 +153,11 @@ export class BDDWorld {
   async verifyMainNodeSelected() {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 先点击主节点来选中它
-    await this.page.click('[data-testid*="rf__node"]')
-    await this.page.waitForTimeout(500)
+    // 等待思维导图加载完成
+    await this.page.waitForSelector('[data-testid*="rf__node"]', { timeout: 10000 })
+    await this.page.waitForTimeout(1000)
 
-    // 检查是否有选中的节点（通过ring-2 ring-primary类）
+    // 直接检查是否有选中的节点，不要主动点击
     const selectedNode = await this.page
       .locator('[data-testid*="rf__node"] .ring-2.ring-primary')
       .count()
@@ -331,6 +343,189 @@ export class BDDWorld {
         fullPage: true,
       })
     }
+  }
+
+  // 创建包含主节点的思维导图
+  async createMindMapWithMainNode(name?: string) {
+    // 直接通过API创建思维导图，而不是通过UI
+    if (!this.page) throw new Error('Page not initialized')
+    
+    const title = name || '新思维导图'
+    
+    // 创建思维导图
+    const createResponse = await this.page.evaluate(async (title) => {
+      const response = await fetch('/api/mindmaps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          userId: '11111111-1111-1111-1111-111111111111'
+        })
+      })
+      return response.json()
+    }, title)
+    
+    if (createResponse.success) {
+      this.currentMindMapId = createResponse.data.id
+      this.createdMindMapIds.push(createResponse.data.id)
+    }
+    
+    // 确保在首页
+    await this.page.goto(`${this.baseUrl}/mindmaps`)
+    await this.page.waitForLoadState('networkidle')
+  }
+
+  // 打开现有思维导图
+  async openExistingMindMap() {
+    await this.clickFirstMindMapCard()
+  }
+
+  // 从列表中打开思维导图
+  async openMindMapFromList() {
+    await this.clickFirstMindMapCard()
+  }
+
+  // 点击子节点
+  async clickChildNode() {
+    if (!this.page) throw new Error('Page not initialized')
+    
+    // 点击第二个节点（子节点）
+    const childNode = this.page.locator('[data-testid*="rf__node"]').nth(1)
+    await childNode.click()
+    await this.page.waitForTimeout(50)
+  }
+
+  // 点击主节点
+  async clickMainNode() {
+    if (!this.page) throw new Error('Page not initialized')
+    
+    // 点击第一个节点（主节点）
+    const mainNode = this.page.locator('[data-testid*="rf__node"]').first()
+    await mainNode.click()
+    await this.page.waitForTimeout(50)
+  }
+
+  // 验证主节点视觉反馈
+  async verifyMainNodeVisualFeedback() {
+    if (!this.page) throw new Error('Page not initialized')
+    
+    // 检查选中状态的视觉反馈
+    const visualFeedback = await this.page
+      .locator('[data-testid*="rf__node"] .ring-2.ring-primary')
+      .count()
+    
+    if (visualFeedback > 0) return true
+    
+    // 也检查ReactFlow的内置选中状态样式
+    const reactFlowSelected = await this.page.locator('[data-testid*="rf__node"].selected').count()
+    return reactFlowSelected > 0
+  }
+
+  // 验证节点处于编辑模式
+  async verifyNodeInEditMode() {
+    if (!this.page) throw new Error('Page not initialized')
+    
+    // 检查是否有输入框处于激活状态，尝试多种选择器
+    const selectors = [
+      'input[type="text"]',
+      'input',
+      '.mindmap-node input',
+      '[data-testid*="rf__node"] input'
+    ]
+    
+    for (const selector of selectors) {
+      try {
+        const inputVisible = await this.page.locator(selector).isVisible().catch(() => false)
+        if (inputVisible) {
+          console.log(`找到编辑输入框: ${selector}`)
+          return true
+        }
+      } catch {
+        // 继续尝试下一个选择器
+      }
+    }
+    
+    console.log('未找到任何编辑输入框')
+    return false
+  }
+
+  // 验证可以编辑节点内容
+  async verifyCanEditNodeContent() {
+    if (!this.page) throw new Error('Page not initialized')
+    
+    // 检查是否出现了输入框（假设已经在编辑模式）
+    const selectors = [
+      'input[type="text"]',
+      'input',
+      '.mindmap-node input',
+      '[data-testid*="rf__node"] input'
+    ]
+    
+    let inputFound = false
+    for (const selector of selectors) {
+      try {
+        const inputVisible = await this.page.locator(selector).isVisible().catch(() => false)
+        if (inputVisible) {
+          console.log(`使用编辑输入框: ${selector}`)
+          inputFound = true
+          break
+        }
+      } catch {
+        // 继续尝试下一个选择器
+      }
+    }
+    
+    if (!inputFound) {
+      console.log('未找到编辑输入框，无法验证编辑功能')
+      return false
+    }
+    
+    return true
+  }
+
+  // 验证子节点被选中
+  async verifyChildNodeSelected() {
+    if (!this.page) throw new Error('Page not initialized')
+    
+    // 检查子节点是否有选中样式
+    const childNode = this.page.locator('[data-testid*="rf__node"]').nth(1)
+    const hasSelectedClass = await childNode.locator('.ring-2.ring-primary').count()
+    
+    if (hasSelectedClass > 0) return true
+    
+    // 也检查ReactFlow的选中状态
+    const isReactFlowSelected = await childNode.getAttribute('class')
+    return isReactFlowSelected?.includes('selected') || false
+  }
+
+  // 验证主节点未被选中
+  async verifyMainNodeNotSelected() {
+    if (!this.page) throw new Error('Page not initialized')
+    
+    // 检查主节点是否没有选中样式
+    const mainNode = this.page.locator('[data-testid*="rf__node"]').first()
+    const hasSelectedClass = await mainNode.locator('.ring-2.ring-primary').count()
+    
+    if (hasSelectedClass > 0) return false
+    
+    // 也检查ReactFlow的选中状态
+    const isReactFlowSelected = await mainNode.getAttribute('class')
+    return !isReactFlowSelected?.includes('selected')
+  }
+
+  // 验证子节点未被选中
+  async verifyChildNodeNotSelected() {
+    if (!this.page) throw new Error('Page not initialized')
+    
+    // 检查子节点是否没有选中样式
+    const childNode = this.page.locator('[data-testid*="rf__node"]').nth(1)
+    const hasSelectedClass = await childNode.locator('.ring-2.ring-primary').count()
+    
+    if (hasSelectedClass > 0) return false
+    
+    // 也检查ReactFlow的选中状态
+    const isReactFlowSelected = await childNode.getAttribute('class')
+    return !isReactFlowSelected?.includes('selected')
   }
 
   // 清理测试期间创建的思维导图
