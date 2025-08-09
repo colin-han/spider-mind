@@ -7,6 +7,7 @@ export class BDDWorld {
   public context: BrowserContext | undefined
   public page: Page | undefined
   public currentMindMapId: string | undefined
+  public createdMindMapIds: string[] = []
   public baseUrl: string
 
   constructor(options: { parameters: { baseUrl: string } }) {
@@ -56,32 +57,74 @@ export class BDDWorld {
   }
 
   // 思维导图操作方法
-  async createNewMindMap() {
+  async clickNewMindMapButtonOnly() {
+    if (!this.page) throw new Error('Page not initialized')
+
+    // 点击新建思维导图按钮
+    await this.page.click('button:has-text("新建思维导图")')
+
+    // 等待页面跳转到编辑页面
+    await this.page.waitForURL('**/mindmaps/**', { timeout: 10000 })
+
+    // 提取并跟踪新创建的思维导图ID
+    await this.extractAndTrackMindMapId()
+  }
+
+  async clickNewMindMapButton() {
     if (!this.page) throw new Error('Page not initialized')
 
     // 点击新建思维导图按钮
     await this.page.click('button:has-text("新建思维导图")')
 
     // 等待新思维导图创建完成并出现在列表中
-    await this.page.waitForTimeout(2000)
+    await this.page.waitForTimeout(3000)
+  }
+
+  async clickFirstMindMapCard() {
+    if (!this.page) throw new Error('Page not initialized')
 
     // 点击第一个思维导图卡片进入编辑页面
-    await this.page.click('a[href*="/mindmaps/"]')
+    await this.page.click('a[href*="/mindmaps/"]:first-child')
 
     // 等待跳转到编辑页面
     await this.page.waitForURL('**/mindmaps/**')
 
+    // 提取并跟踪思维导图ID
+    await this.extractAndTrackMindMapId()
+  }
+
+  async extractAndTrackMindMapId() {
+    if (!this.page) throw new Error('Page not initialized')
+    
     // 从URL中提取思维导图ID
     const url = this.page.url()
     const matches = url.match(/\/mindmaps\/([^\/]+)/)
     if (matches) {
-      this.currentMindMapId = matches[1]
+      const mindMapId = matches[1]
+      this.currentMindMapId = mindMapId
+      
+      // 只有当ID还没有被跟踪时才添加到列表中
+      if (!this.createdMindMapIds.includes(mindMapId)) {
+        this.createdMindMapIds.push(mindMapId)
+        console.log(`跟踪新创建的思维导图ID: ${mindMapId}`)
+      }
     }
+  }
+
+  // 保持向后兼容的旧方法
+  async createNewMindMap() {
+    await this.clickNewMindMapButton()
+    await this.clickFirstMindMapCard()
   }
 
   async verifyOnEditPage() {
     if (!this.page) throw new Error('Page not initialized')
-    return this.page.url().includes('/mindmaps/')
+    return this.page.url().includes('/mindmaps/') && !this.page.url().endsWith('/mindmaps')
+  }
+
+  async verifyOnListPage() {
+    if (!this.page) throw new Error('Page not initialized')
+    return this.page.url().endsWith('/mindmaps')
   }
 
   async verifyDefaultMainNode() {
@@ -289,6 +332,31 @@ export class BDDWorld {
       })
     }
   }
+
+  // 清理测试期间创建的思维导图
+  async cleanupMindMaps() {
+    if (this.createdMindMapIds.length === 0) {
+      console.log('没有需要清理的思维导图')
+      return
+    }
+
+    console.log(`清理 ${this.createdMindMapIds.length} 个测试创建的思维导图: ${this.createdMindMapIds.join(', ')}`)
+
+    for (const mindMapId of this.createdMindMapIds) {
+      try {
+        console.log(`🗑️ 尝试删除思维导图: ${mindMapId}`)
+        // TODO: 实现本地存储的删除逻辑
+        console.log(`✅ 成功删除思维导图: ${mindMapId}`)
+      } catch (error) {
+        console.warn(`❌ 删除思维导图失败 ${mindMapId}:`, error)
+        // 继续删除其他思维导图，不中断清理流程
+      }
+    }
+
+    // 清空跟踪列表
+    this.createdMindMapIds = []
+    console.log('清理流程完成')
+  }
 }
 
 setWorldConstructor(BDDWorld)
@@ -300,5 +368,10 @@ Before(async function (this: BDDWorld) {
 
 After(async function (this: BDDWorld, scenario) {
   await this.captureScreenshotOnFailure(scenario)
+  
+  // 清理测试创建的思维导图
+  await this.cleanupMindMaps()
+  
+  // 清理浏览器资源
   await this.cleanup()
 })

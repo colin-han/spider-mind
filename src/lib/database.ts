@@ -1,5 +1,6 @@
-import { supabase } from './supabase'
-import type { Database } from './supabase'
+// Supabase已禁用，暂时使用占位符
+const supabase = null as any
+type Database = any
 
 type Tables = Database['public']['Tables']
 type MindMap = Tables['mind_maps']['Row']
