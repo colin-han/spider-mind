@@ -13,7 +13,7 @@ Given('用户已经登录系统', async function (this: BDDWorld) {
 
 Given('用户在思维导图管理页面', async function (this: BDDWorld) {
   if (!this.page) throw new Error('Page not initialized')
-  
+
   // 确保在思维导图管理页面
   await this.page.goto(`${this.baseUrl}/mindmaps`)
   await this.page.waitForLoadState('networkidle')
@@ -37,7 +37,7 @@ Given('该思维导图已被其他方式删除', async function (this: BDDWorld)
 
   // 通过API删除思维导图，模拟其他方式删除
   try {
-    const result = await this.page.evaluate(async (mindMapId) => {
+    const result = await this.page.evaluate(async mindMapId => {
       const response = await fetch(`/api/mindmaps/${mindMapId}`, {
         method: 'DELETE',
       })
@@ -74,13 +74,16 @@ When('我点击{string}按钮', async function (this: BDDWorld, buttonText: stri
   }
 })
 
-When('我点击{string}思维导图卡片上的删除按钮', async function (this: BDDWorld, mindMapName: string) {
-  await this.clickDeleteButtonOnMindMapCard(mindMapName)
-})
+When(
+  '我点击{string}思维导图卡片上的删除按钮',
+  async function (this: BDDWorld, mindMapName: string) {
+    await this.clickDeleteButtonOnMindMapCard(mindMapName)
+  }
+)
 
 When('我点击确认对话框中的{string}按钮', async function (this: BDDWorld, buttonText: string) {
   if (!this.page) throw new Error('Page not initialized')
-  
+
   if (buttonText === '确认') {
     await this.clickConfirmDeleteButton()
   } else if (buttonText === '取消') {
@@ -90,7 +93,7 @@ When('我点击确认对话框中的{string}按钮', async function (this: BDDWo
 
 When('我点击对话框外部区域', async function (this: BDDWorld) {
   if (!this.page) throw new Error('Page not initialized')
-  
+
   // 点击对话框外部区域（页面背景）
   await this.page.click('body', { position: { x: 10, y: 10 } })
   await this.page.waitForTimeout(500)
@@ -98,7 +101,7 @@ When('我点击对话框外部区域', async function (this: BDDWorld) {
 
 When('我按下ESC键', async function (this: BDDWorld) {
   if (!this.page) throw new Error('Page not initialized')
-  
+
   await this.page.keyboard.press('Escape')
   await this.page.waitForTimeout(500)
 })
@@ -187,10 +190,13 @@ Then('系统发送DELETE请求到{string}', async function (this: BDDWorld, expe
   expect(requestSent).toBe(true)
 })
 
-Then('思维导图列表中不再显示名为{string}的卡片', async function (this: BDDWorld, mindMapName: string) {
-  const cardNotVisible = await this.verifyMindMapCardNotVisible(mindMapName)
-  expect(cardNotVisible).toBe(true)
-})
+Then(
+  '思维导图列表中不再显示名为{string}的卡片',
+  async function (this: BDDWorld, mindMapName: string) {
+    const cardNotVisible = await this.verifyMindMapCardNotVisible(mindMapName)
+    expect(cardNotVisible).toBe(true)
+  }
+)
 
 Then('{string}思维导图仍然显示在列表中', async function (this: BDDWorld, mindMapName: string) {
   const cardVisible = await this.verifyMindMapCardVisible(mindMapName)

@@ -550,19 +550,22 @@ export class BDDWorld {
   // 点击思维导图卡片上的删除按钮
   async clickDeleteButtonOnMindMapCard(mindMapName: string) {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     console.log(`寻找名为"${mindMapName}"的思维导图卡片...`)
-    
+
     // 等待思维导图列表加载完成
-    await this.page.waitForSelector('[data-testid*="mindmap-card"], .mindmap-card, a[href*="/mindmaps/"]', { timeout: 10000 })
-    
+    await this.page.waitForSelector(
+      '[data-testid*="mindmap-card"], .mindmap-card, a[href*="/mindmaps/"]',
+      { timeout: 10000 }
+    )
+
     // 尝试多种方式定位思维导图卡片
     const cardSelectors = [
       `[data-testid*="mindmap-card"]:has-text("${mindMapName}")`,
       `.mindmap-card:has-text("${mindMapName}")`,
       `a[href*="/mindmaps/"]:has-text("${mindMapName}")`,
       `div:has(h3:text("${mindMapName}"))`,
-      `div:has(text("${mindMapName}"))`
+      `div:has(text("${mindMapName}"))`,
     ]
 
     let cardFound = false
@@ -571,11 +574,11 @@ export class BDDWorld {
         const card = this.page.locator(cardSelector).first()
         if (await card.isVisible()) {
           console.log(`找到思维导图卡片，使用选择器: ${cardSelector}`)
-          
+
           // 悬停在卡片上以显示删除按钮
           await card.hover()
           await this.page.waitForTimeout(500)
-          
+
           // 尝试多种删除按钮选择器
           const deleteButtonSelectors = [
             `${cardSelector} [data-testid*="delete"]`,
@@ -584,7 +587,7 @@ export class BDDWorld {
             `${cardSelector} .delete-button`,
             `${cardSelector} button[aria-label*="删除"]`,
             `${cardSelector} svg[data-testid*="trash"]`,
-            `${cardSelector} [class*="delete"]`
+            `${cardSelector} [class*="delete"]`,
           ]
 
           for (const deleteSelector of deleteButtonSelectors) {
@@ -600,7 +603,7 @@ export class BDDWorld {
               // 继续尝试下一个删除按钮选择器
             }
           }
-          
+
           if (cardFound) break
         }
       } catch {
@@ -619,10 +622,10 @@ export class BDDWorld {
   // 点击确认删除按钮
   async clickConfirmDeleteButton() {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 清除之前的删除请求记录
     this.deleteRequests = []
-    
+
     // 尝试多种确认按钮选择器
     const confirmSelectors = [
       '[data-testid="alert-dialog-confirm"]',
@@ -633,7 +636,7 @@ export class BDDWorld {
       '[data-testid*="confirm"]',
       '[role="dialog"] button[variant="destructive"]',
       '.dialog button:has-text("确认")',
-      'button[type="submit"]:has-text("确认")'
+      'button[type="submit"]:has-text("确认")',
     ]
 
     let clicked = false
@@ -662,7 +665,7 @@ export class BDDWorld {
   // 点击取消删除按钮
   async clickCancelDeleteButton() {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 尝试多种取消按钮选择器
     const cancelSelectors = [
       '[data-testid="alert-dialog-cancel"]',
@@ -671,7 +674,7 @@ export class BDDWorld {
       '[data-testid*="cancel"]',
       '[role="dialog"] button:not([variant="destructive"])',
       '.dialog button:has-text("取消")',
-      'button[type="button"]:has-text("取消")'
+      'button[type="button"]:has-text("取消")',
     ]
 
     let clicked = false
@@ -699,7 +702,7 @@ export class BDDWorld {
   // 验证删除确认对话框是否显示
   async verifyDeleteConfirmDialog(): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 尝试多种对话框选择器
     const dialogSelectors = [
       '[data-testid="alert-dialog"]',
@@ -708,7 +711,7 @@ export class BDDWorld {
       '[data-testid*="delete-dialog"]',
       '[data-testid*="confirm-dialog"]',
       '.modal',
-      '.delete-confirmation'
+      '.delete-confirmation',
     ]
 
     for (const selector of dialogSelectors) {
@@ -729,7 +732,7 @@ export class BDDWorld {
   // 验证对话框标题
   async verifyDialogTitle(expectedTitle: string): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 尝试多种标题选择器
     const titleSelectors = [
       '[data-testid="alert-dialog-title"]',
@@ -739,7 +742,7 @@ export class BDDWorld {
       '.dialog h1',
       '.dialog h2',
       '.modal-title',
-      '[data-testid*="dialog-title"]'
+      '[data-testid*="dialog-title"]',
     ]
 
     for (const selector of titleSelectors) {
@@ -765,13 +768,9 @@ export class BDDWorld {
   // 验证对话框内容
   async verifyDialogContent(expectedContent: string): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 检查对话框是否包含期望的内容
-    const contentSelectors = [
-      '[role="dialog"]',
-      '.dialog',
-      '.modal'
-    ]
+    const contentSelectors = ['[role="dialog"]', '.dialog', '.modal']
 
     for (const selector of contentSelectors) {
       try {
@@ -795,14 +794,14 @@ export class BDDWorld {
   // 验证删除进度状态
   async verifyDeleteProgressStatus(expectedStatus: string): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 检查是否显示删除进度状态
     const statusSelectors = [
       `text="${expectedStatus}"`,
       '[role="status"]',
       '.loading',
       '.progress',
-      '[data-testid*="status"]'
+      '[data-testid*="status"]',
     ]
 
     for (const selector of statusSelectors) {
@@ -826,28 +825,29 @@ export class BDDWorld {
     const actualExpectedUrl = expectedUrl.replace('{思维导图ID}', this.currentMindMapId || '')
     console.log(`期望的删除API URL: ${actualExpectedUrl}`)
     console.log(`实际捕获的删除请求: ${this.deleteRequests}`)
-    
+
     // 检查是否有匹配的删除请求
-    return this.deleteRequests.some(url => 
-      url.includes('/api/mindmaps/') && 
-      (this.currentMindMapId ? url.includes(this.currentMindMapId) : true)
+    return this.deleteRequests.some(
+      url =>
+        url.includes('/api/mindmaps/') &&
+        (this.currentMindMapId ? url.includes(this.currentMindMapId) : true)
     )
   }
 
   // 验证思维导图卡片不再可见
   async verifyMindMapCardNotVisible(mindMapName: string): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 等待页面更新
     await this.page.waitForTimeout(2000)
-    
+
     // 检查思维导图卡片是否不再存在
     const cardSelectors = [
       `[data-testid*="mindmap-card"]:has-text("${mindMapName}")`,
       `.mindmap-card:has-text("${mindMapName}")`,
       `a[href*="/mindmaps/"]:has-text("${mindMapName}")`,
       `div:has(h3:text("${mindMapName}"))`,
-      `text="${mindMapName}"`
+      `text="${mindMapName}"`,
     ]
 
     for (const selector of cardSelectors) {
@@ -870,10 +870,10 @@ export class BDDWorld {
   // 验证思维导图卡片仍然可见
   async verifyMindMapCardVisible(mindMapName: string): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 等待页面稳定
     await this.page.waitForTimeout(1000)
-    
+
     // 检查思维导图卡片是否仍然存在
     const cardSelectors = [
       `text="${mindMapName}"`,
@@ -882,7 +882,7 @@ export class BDDWorld {
       `a[href*="/mindmaps/"]:has-text("${mindMapName}")`,
       `div:has(h3:text("${mindMapName}"))`,
       `[data-testid*="mindmap-card"]:has-text("${mindMapName}")`,
-      `.mindmap-card:has-text("${mindMapName}")`
+      `.mindmap-card:has-text("${mindMapName}")`,
     ]
 
     for (const selector of cardSelectors) {
@@ -905,10 +905,10 @@ export class BDDWorld {
   // 验证统计信息更新
   async verifyStatsUpdated(): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 等待统计信息更新
     await this.page.waitForTimeout(1000)
-    
+
     // 检查页面底部是否有统计信息并已更新
     const statsSelectors = [
       '.stats',
@@ -916,7 +916,7 @@ export class BDDWorld {
       '[data-testid*="stats"]',
       'text*="总计"',
       'text*="个思维导图"',
-      'footer'
+      'footer',
     ]
 
     for (const selector of statsSelectors) {
@@ -939,10 +939,10 @@ export class BDDWorld {
   // 验证删除对话框关闭
   async verifyDeleteDialogClosed(): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 等待对话框关闭
     await this.page.waitForTimeout(1000)
-    
+
     // 检查删除确认对话框是否已关闭
     return !(await this.verifyDeleteConfirmDialog())
   }
@@ -950,7 +950,7 @@ export class BDDWorld {
   // 验证删除成功提示
   async verifyDeleteSuccessMessage(expectedMessage: string): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 检查是否有成功提示
     const messageSelectors = [
       `text="${expectedMessage}"`,
@@ -958,7 +958,7 @@ export class BDDWorld {
       '[role="status"]',
       '.success-message',
       '[data-testid*="success"]',
-      '.notification'
+      '.notification',
     ]
 
     for (const selector of messageSelectors) {
@@ -982,14 +982,14 @@ export class BDDWorld {
   // 验证删除按钮可见
   async verifyDeleteButtonVisible(): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 检查删除按钮是否可见（考虑opacity）
     const deleteButtonSelectors = [
       'button[title*="删除"]',
       '[data-testid*="delete"]',
       'button:has-text("删除")',
       '.delete-button',
-      'svg[data-testid*="trash"]'
+      'svg[data-testid*="trash"]',
     ]
 
     for (const selector of deleteButtonSelectors) {
@@ -997,10 +997,12 @@ export class BDDWorld {
         const deleteButton = this.page.locator(selector).first()
         if (await deleteButton.isVisible()) {
           // 检查opacity属性，大于0表示真正可见
-          const opacity = await deleteButton.evaluate(el => {
-            const style = window.getComputedStyle(el)
-            return parseFloat(style.opacity)
-          }).catch(() => 1) // 默认为不透明
+          const opacity = await deleteButton
+            .evaluate(el => {
+              const style = window.getComputedStyle(el)
+              return parseFloat(style.opacity)
+            })
+            .catch(() => 1) // 默认为不透明
 
           if (opacity > 0) {
             console.log(`删除按钮可见: ${selector}, opacity: ${opacity}`)
@@ -1020,10 +1022,10 @@ export class BDDWorld {
   // 验证删除按钮隐藏
   async verifyDeleteButtonHidden(): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 等待动画完成
     await this.page.waitForTimeout(500)
-    
+
     // 检查删除按钮是否隐藏
     return !(await this.verifyDeleteButtonVisible())
   }
@@ -1031,12 +1033,12 @@ export class BDDWorld {
   // 悬停在思维导图卡片上
   async hoverOnMindMapCard() {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 找到第一个思维导图卡片并悬停
     const cardSelectors = [
       '[data-testid*="mindmap-card"]',
       '.mindmap-card',
-      'a[href*="/mindmaps/"]'
+      'a[href*="/mindmaps/"]',
     ]
 
     for (const selector of cardSelectors) {
@@ -1059,7 +1061,7 @@ export class BDDWorld {
   // 鼠标移出思维导图卡片
   async moveMouseAwayFromMindMapCard() {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 将鼠标移动到页面的一个空白区域
     await this.page.mouse.move(50, 50)
     await this.page.waitForTimeout(500)
@@ -1068,7 +1070,7 @@ export class BDDWorld {
   // 点击思维导图卡片内容区域（非删除按钮）
   async clickMindMapCardContent() {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 找到思维导图卡片并点击其内容区域
     const cardSelectors = [
       'a[href*="/mindmaps/"] h3',
@@ -1076,7 +1078,7 @@ export class BDDWorld {
       '[data-testid*="mindmap-card"] h3',
       '.mindmap-card h3',
       '[data-testid*="mindmap-card"] .title',
-      '.mindmap-card .title'
+      '.mindmap-card .title',
     ]
 
     for (const selector of cardSelectors) {
@@ -1100,7 +1102,7 @@ export class BDDWorld {
   // 验证没有触发删除操作
   async verifyNoDeleteTriggered(): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 检查是否没有删除确认对话框出现
     const hasDialog = await this.verifyDeleteConfirmDialog()
     if (hasDialog) {
@@ -1121,10 +1123,10 @@ export class BDDWorld {
   // 验证错误提示
   async verifyErrorMessage(expectedErrorMessage: string): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 等待错误提示出现（可能需要时间）
     await this.page.waitForTimeout(2000)
-    
+
     // 检查是否有错误提示
     const errorSelectors = [
       '[data-testid="delete-error-message"]',
@@ -1133,7 +1135,7 @@ export class BDDWorld {
       '.toast.error',
       '[role="alert"]',
       '[data-testid*="error"]',
-      '.notification.error'
+      '.notification.error',
     ]
 
     for (const selector of errorSelectors) {
@@ -1160,15 +1162,15 @@ export class BDDWorld {
   // 验证列表刷新移除不存在的条目
   async verifyListRefreshedAfterError(): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 等待列表刷新
     await this.page.waitForTimeout(2000)
-    
+
     // 检查页面是否重新加载了思维导图列表
     const listSelectors = [
       '[data-testid*="mindmap-card"]',
       '.mindmap-card',
-      'a[href*="/mindmaps/"]'
+      'a[href*="/mindmaps/"]',
     ]
 
     for (const selector of listSelectors) {
@@ -1192,7 +1194,7 @@ export class BDDWorld {
   // 创建包含子节点的思维导图
   async openMindMapWithChildNodes() {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 复用现有方法
     await this.openExistingMindMap()
     // 等待加载完成后添加子节点
@@ -1214,10 +1216,10 @@ export class BDDWorld {
     for (const mindMapId of this.createdMindMapIds) {
       try {
         console.log(`🗑️ 尝试删除思维导图: ${mindMapId}`)
-        
+
         // 通过API删除思维导图
         if (this.page) {
-          await this.page.evaluate(async (id) => {
+          await this.page.evaluate(async id => {
             try {
               const response = await fetch(`/api/mindmaps/${id}`, {
                 method: 'DELETE',
@@ -1229,7 +1231,7 @@ export class BDDWorld {
             }
           }, mindMapId)
         }
-        
+
         console.log(`✅ 成功删除思维导图: ${mindMapId}`)
       } catch (error) {
         console.warn(`❌ 删除思维导图失败 ${mindMapId}:`, error)

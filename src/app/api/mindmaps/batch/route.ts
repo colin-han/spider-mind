@@ -33,12 +33,12 @@ export async function DELETE(request: NextRequest) {
     global.mindMapsStorage = global.mindMapsStorage.filter(map => map.user_id !== userId)
 
     console.log(`批量删除用户 ${userId} 的 ${deleteCount} 个思维导图`)
-    
+
     return NextResponse.json({
       success: true,
       message: `成功删除 ${deleteCount} 个思维导图`,
       deletedCount: deleteCount,
-      remainingTotal: global.mindMapsStorage.length
+      remainingTotal: global.mindMapsStorage.length,
     })
   } catch (error) {
     console.error('批量删除思维导图失败:', error)

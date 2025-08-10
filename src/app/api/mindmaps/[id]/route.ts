@@ -98,7 +98,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   try {
     // 检查思维导图是否存在
     const mindMapIndex = global.mindMapsStorage.findIndex(map => map.id === params.id)
-    
+
     if (mindMapIndex === -1) {
       return NextResponse.json(
         {
