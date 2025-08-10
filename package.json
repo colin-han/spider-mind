@@ -11,7 +11,7 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:bdd": "TS_NODE_PROJECT=tsconfig.bdd.json cucumber-js --require-module ts-node/register --require 'src/test/bdd/steps/*.ts' --require 'src/test/bdd/support/*.ts' 'src/test/bdd/features/*.feature'",
+    "test:bdd": "TS_NODE_PROJECT=tsconfig.bdd.json cucumber-js --require-module ts-node/register --require 'bdd/steps/*.ts' --require 'bdd/support/*.ts' 'bdd/features/*.feature'",
     "test:bdd:watch": "cucumber-js --config cucumber.config.js --watch",
     "test:bdd:html": "cucumber-js --config cucumber.config.js --format html:test-results/bdd-report.html",
     "test:all": "npm run test:bdd",

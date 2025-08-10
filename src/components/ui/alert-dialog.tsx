@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Button } from './button'
 
 interface AlertDialogProps {
@@ -12,6 +12,7 @@ interface AlertDialogProps {
   cancelText?: string
   onConfirm: () => void
   variant?: 'destructive' | 'default'
+  allowClickOutside?: boolean
 }
 
 export function AlertDialog({
@@ -23,7 +24,21 @@ export function AlertDialog({
   cancelText = '取消',
   onConfirm,
   variant = 'default',
+  allowClickOutside = false,
 }: AlertDialogProps) {
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && open) {
+        onOpenChange(false)
+      }
+    }
+
+    if (open) {
+      document.addEventListener('keydown', handleEscape)
+      return () => document.removeEventListener('keydown', handleEscape)
+    }
+  }, [open, onOpenChange])
+
   if (!open) return null
 
   const handleConfirm = () => {
@@ -35,23 +50,51 @@ export function AlertDialog({
     onOpenChange(false)
   }
 
+  const handleBackdropClick = () => {
+    if (allowClickOutside) {
+      onOpenChange(false)
+    }
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center" data-testid="alert-dialog">
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={handleCancel} />
+      <div 
+        className="fixed inset-0 bg-black/50 transition-opacity" 
+        onClick={handleBackdropClick}
+        data-testid="alert-dialog-backdrop"
+      />
 
       {/* Dialog */}
-      <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">{title}</h3>
-        <p className="text-gray-600 dark:text-gray-300 mb-6">{description}</p>
+      <div 
+        className="relative bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 w-full max-w-md mx-4"
+        data-testid="alert-dialog-content"
+      >
+        <h3 
+          className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2"
+          data-testid="alert-dialog-title"
+        >
+          {title}
+        </h3>
+        <p 
+          className="text-gray-600 dark:text-gray-300 mb-6"
+          data-testid="alert-dialog-description"
+        >
+          {description}
+        </p>
 
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={handleCancel}>
+        <div className="flex justify-end gap-3" data-testid="alert-dialog-actions">
+          <Button 
+            variant="outline" 
+            onClick={handleCancel}
+            data-testid="alert-dialog-cancel"
+          >
             {cancelText}
           </Button>
           <Button
             variant={variant === 'destructive' ? 'destructive' : 'default'}
             onClick={handleConfirm}
+            data-testid="alert-dialog-confirm"
           >
             {confirmText}
           </Button>

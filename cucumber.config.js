@@ -6,13 +6,13 @@
 module.exports = {
   default: {
     // 功能文件位置
-    features: ['src/test/bdd/features/**/*.feature'],
+    features: ['bdd/features/**/*.feature'],
 
     // TypeScript支持
     requireModule: ['ts-node/register'],
 
     // 步骤定义和支持文件位置
-    require: ['src/test/bdd/steps/**/*.ts', 'src/test/bdd/support/**/*.ts'],
+    require: ['bdd/steps/**/*.ts', 'bdd/support/**/*.ts'],
 
     // 格式化器
     format: ['progress'],

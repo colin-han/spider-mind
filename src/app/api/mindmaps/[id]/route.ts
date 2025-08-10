@@ -96,6 +96,22 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 // 删除思维导图
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    // 检查思维导图是否存在
+    const mindMapIndex = global.mindMapsStorage.findIndex(map => map.id === params.id)
+    
+    if (mindMapIndex === -1) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: '思维导图不存在',
+        },
+        { status: 404 }
+      )
+    }
+
+    // 从内存存储中删除
+    global.mindMapsStorage.splice(mindMapIndex, 1)
+
     return NextResponse.json({
       success: true,
       message: '思维导图删除成功',
