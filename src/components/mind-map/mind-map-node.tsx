@@ -8,6 +8,10 @@ import { Input } from '@/components/ui/input'
 export interface MindMapNodeData {
   content: string
   isEditing: boolean
+  testId?: string // Test-ID for stable test identification
+  nodeRole?: string // Node role: 'root', 'child', 'leaf', 'floating'
+  nodeLevel?: number // Node level in the hierarchy (0 for root/floating)
+  isFloating?: boolean // Whether this is a floating node
   updateContent?: (nodeId: string, content: string) => void
   toggleEdit?: (nodeId: string, isEditing: boolean) => void
 }
@@ -67,6 +71,12 @@ export function MindMapNode({ id, data, selected }: NodeProps) {
       />
 
       <Card
+        data-testid={nodeData.testId || `node-${id}`}
+        data-node-role={nodeData.nodeRole}
+        data-node-level={nodeData.nodeLevel}
+        data-node-floating={nodeData.isFloating || false}
+        data-node-selected={selected}
+        data-node-editing={isEditing}
         className={`
           min-w-[120px] max-w-[300px] p-3 cursor-pointer transition-all duration-200
           ${selected ? 'ring-2 ring-primary shadow-lg' : 'hover:shadow-md'}

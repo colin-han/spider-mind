@@ -82,3 +82,5 @@ pids
 test-results/
 cucumber-report.*
 failure-*.png
+.bdd-workflow/
+

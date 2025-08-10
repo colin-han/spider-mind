@@ -109,7 +109,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
               id: layoutNode.id,
               parentId: layoutNode.parent_node_id,
               isFloating: false, // TODO: 后续支持浮动节点时可以调整
-              sortOrder: layoutNode.sort_order
+              sortOrder: layoutNode.sort_order,
             }
             testIdGenerator.registerNode(nodeStructureInfo, layoutNode.content)
           }
@@ -119,7 +119,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         const reactFlowNodes: Node[] = layoutNodesList.map(layoutNode => {
           const testId = testIdGenerator.getTestId(layoutNode.id)
           const nodeInfo = testIdGenerator.getNodeInfo(layoutNode.id)
-          
+
           return {
             id: layoutNode.id,
             type: 'mindMapNode',
@@ -177,7 +177,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           id: newNodeId,
           parentId: parentNodeId,
           isFloating: false,
-          sortOrder: sortOrder
+          sortOrder: sortOrder,
         }
         const testId = testIdGenerator.registerNode(nodeStructureInfo, '新节点')
         console.log(`创建新节点: UUID=${newNodeId}, TestId=${testId}`)
@@ -253,7 +253,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           id: newNodeId,
           parentId: parentNodeId,
           isFloating: false,
-          sortOrder: sortOrder
+          sortOrder: sortOrder,
         }
         const testId = testIdGenerator.registerNode(nodeStructureInfo, '新节点')
         console.log(`创建同级节点: UUID=${newNodeId}, TestId=${testId}`)
@@ -284,15 +284,15 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
       if (selectedNodes.length === 0) return
 
       // 检查是否试图删除根节点
-      const nodeToDelete = layoutNodes.find(node => 
-        selectedNodes.includes(node.id) && node.parent_node_id === null
+      const nodeToDelete = layoutNodes.find(
+        node => selectedNodes.includes(node.id) && node.parent_node_id === null
       )
-      
+
       if (nodeToDelete) {
         // 显示根节点保护提示
         // 创建自定义事件来显示提示信息
         const event = new CustomEvent('showMessage', {
-          detail: { message: '根节点不能被删除', type: 'warning' }
+          detail: { message: '根节点不能被删除', type: 'warning' },
         })
         window.dispatchEvent(event)
         return
@@ -320,11 +320,11 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         const deleteNodeAndChildren = (nodeId: string): string[] => {
           const childNodes = layoutNodes.filter(node => node.parent_node_id === nodeId)
           let deletedNodeIds = [nodeId]
-          
+
           childNodes.forEach(childNode => {
             deletedNodeIds = [...deletedNodeIds, ...deleteNodeAndChildren(childNode.id)]
           })
-          
+
           return deletedNodeIds
         }
 
@@ -438,57 +438,60 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
     )
 
     // 节点导航功能
-    const navigateToNode = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
-      if (selectedNodes.length !== 1 || isInEditMode) return
+    const navigateToNode = useCallback(
+      (direction: 'up' | 'down' | 'left' | 'right') => {
+        if (selectedNodes.length !== 1 || isInEditMode) return
 
-      const currentNodeId = selectedNodes[0]
-      const currentLayoutNode = layoutNodes.find(node => node.id === currentNodeId)
-      if (!currentLayoutNode) return
+        const currentNodeId = selectedNodes[0]
+        const currentLayoutNode = layoutNodes.find(node => node.id === currentNodeId)
+        if (!currentLayoutNode) return
 
-      let targetNodeId: string | null = null
+        let targetNodeId: string | null = null
 
-      switch (direction) {
-        case 'left': // 导航到父节点
-          targetNodeId = currentLayoutNode.parent_node_id
-          break
-        
-        case 'right': // 导航到第一个子节点
-          const firstChild = layoutNodes
-            .filter(node => node.parent_node_id === currentNodeId)
-            .sort((a, b) => a.sort_order - b.sort_order)[0]
-          targetNodeId = firstChild?.id || null
-          break
-        
-        case 'up': // 导航到上一个同级节点
-          const siblings = layoutNodes
-            .filter(node => node.parent_node_id === currentLayoutNode.parent_node_id)
-            .sort((a, b) => a.sort_order - b.sort_order)
-          const currentIndex = siblings.findIndex(node => node.id === currentNodeId)
-          const prevSibling = siblings[currentIndex - 1]
-          targetNodeId = prevSibling?.id || null
-          break
-        
-        case 'down': // 导航到下一个同级节点
-          const downSiblings = layoutNodes
-            .filter(node => node.parent_node_id === currentLayoutNode.parent_node_id)
-            .sort((a, b) => a.sort_order - b.sort_order)
-          const downCurrentIndex = downSiblings.findIndex(node => node.id === currentNodeId)
-          const nextSibling = downSiblings[downCurrentIndex + 1]
-          targetNodeId = nextSibling?.id || null
-          break
-      }
+        switch (direction) {
+          case 'left': // 导航到父节点
+            targetNodeId = currentLayoutNode.parent_node_id
+            break
 
-      // 如果找到目标节点，选中它
-      if (targetNodeId) {
-        setSelectedNodes([targetNodeId])
-        setNodes(prevNodes =>
-          prevNodes.map(node => ({
-            ...node,
-            selected: node.id === targetNodeId,
-          }))
-        )
-      }
-    }, [selectedNodes, layoutNodes, isInEditMode, setNodes])
+          case 'right': // 导航到第一个子节点
+            const firstChild = layoutNodes
+              .filter(node => node.parent_node_id === currentNodeId)
+              .sort((a, b) => a.sort_order - b.sort_order)[0]
+            targetNodeId = firstChild?.id || null
+            break
+
+          case 'up': // 导航到上一个同级节点
+            const siblings = layoutNodes
+              .filter(node => node.parent_node_id === currentLayoutNode.parent_node_id)
+              .sort((a, b) => a.sort_order - b.sort_order)
+            const currentIndex = siblings.findIndex(node => node.id === currentNodeId)
+            const prevSibling = siblings[currentIndex - 1]
+            targetNodeId = prevSibling?.id || null
+            break
+
+          case 'down': // 导航到下一个同级节点
+            const downSiblings = layoutNodes
+              .filter(node => node.parent_node_id === currentLayoutNode.parent_node_id)
+              .sort((a, b) => a.sort_order - b.sort_order)
+            const downCurrentIndex = downSiblings.findIndex(node => node.id === currentNodeId)
+            const nextSibling = downSiblings[downCurrentIndex + 1]
+            targetNodeId = nextSibling?.id || null
+            break
+        }
+
+        // 如果找到目标节点，选中它
+        if (targetNodeId) {
+          setSelectedNodes([targetNodeId])
+          setNodes(prevNodes =>
+            prevNodes.map(node => ({
+              ...node,
+              selected: node.id === targetNodeId,
+            }))
+          )
+        }
+      },
+      [selectedNodes, layoutNodes, isInEditMode, setNodes]
+    )
 
     // 进入编辑模式
     const enterEditMode = useCallback(() => {
@@ -504,76 +507,89 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
     }, [selectedNodes])
 
     // 键盘事件处理
-    const handleKeyDown = useCallback((event: KeyboardEvent) => {
-      // 如果显示对话框，不处理快捷键
-      if (showDeleteDialog || showAIAssistant) return
+    const handleKeyDown = useCallback(
+      (event: KeyboardEvent) => {
+        // 如果显示对话框，不处理快捷键
+        if (showDeleteDialog || showAIAssistant) return
 
-      // 检查是否在编辑模式（任何输入框获得焦点）
-      const isEditingNow = document.activeElement?.tagName === 'INPUT' || 
-                          document.activeElement?.tagName === 'TEXTAREA' ||
-                          (document.activeElement as HTMLElement)?.contentEditable === 'true'
-      
-      setIsInEditMode(isEditingNow)
+        // 检查是否在编辑模式（任何输入框获得焦点）
+        const isEditingNow =
+          document.activeElement?.tagName === 'INPUT' ||
+          document.activeElement?.tagName === 'TEXTAREA' ||
+          (document.activeElement as HTMLElement)?.contentEditable === 'true'
 
-      // 在编辑模式下，只处理Escape键
-      if (isEditingNow) {
-        if (event.key === 'Escape') {
-          // 退出编辑模式，触发blur事件
-          if (document.activeElement && 'blur' in document.activeElement) {
-            (document.activeElement as HTMLElement).blur()
+        setIsInEditMode(isEditingNow)
+
+        // 在编辑模式下，只处理Escape键
+        if (isEditingNow) {
+          if (event.key === 'Escape') {
+            // 退出编辑模式，触发blur事件
+            if (document.activeElement && 'blur' in document.activeElement) {
+              ;(document.activeElement as HTMLElement).blur()
+            }
+            event.preventDefault()
+            event.stopPropagation()
           }
-          event.preventDefault()
-          event.stopPropagation()
+          return
         }
-        return
-      }
 
-      // 非编辑模式下的快捷键处理
-      if (selectedNodes.length === 0) return
+        // 非编辑模式下的快捷键处理
+        if (selectedNodes.length === 0) return
 
-      switch (event.key) {
-        case 'Tab':
-          event.preventDefault()
-          addNode()
-          break
-        
-        case 'Enter':
-          event.preventDefault()
-          addSiblingNode()
-          break
-        
-        case 'Delete':
-        case 'Backspace':
-          event.preventDefault()
-          deleteSelected()
-          break
-        
-        case 'F2':
-          event.preventDefault()
-          enterEditMode()
-          break
-        
-        case 'ArrowUp':
-          event.preventDefault()
-          navigateToNode('up')
-          break
-        
-        case 'ArrowDown':
-          event.preventDefault()
-          navigateToNode('down')
-          break
-        
-        case 'ArrowLeft':
-          event.preventDefault()
-          navigateToNode('left')
-          break
-        
-        case 'ArrowRight':
-          event.preventDefault()
-          navigateToNode('right')
-          break
-      }
-    }, [selectedNodes, showDeleteDialog, showAIAssistant, addNode, addSiblingNode, deleteSelected, enterEditMode, navigateToNode])
+        switch (event.key) {
+          case 'Tab':
+            event.preventDefault()
+            addNode()
+            break
+
+          case 'Enter':
+            event.preventDefault()
+            addSiblingNode()
+            break
+
+          case 'Delete':
+          case 'Backspace':
+            event.preventDefault()
+            deleteSelected()
+            break
+
+          case 'F2':
+            event.preventDefault()
+            enterEditMode()
+            break
+
+          case 'ArrowUp':
+            event.preventDefault()
+            navigateToNode('up')
+            break
+
+          case 'ArrowDown':
+            event.preventDefault()
+            navigateToNode('down')
+            break
+
+          case 'ArrowLeft':
+            event.preventDefault()
+            navigateToNode('left')
+            break
+
+          case 'ArrowRight':
+            event.preventDefault()
+            navigateToNode('right')
+            break
+        }
+      },
+      [
+        selectedNodes,
+        showDeleteDialog,
+        showAIAssistant,
+        addNode,
+        addSiblingNode,
+        deleteSelected,
+        enterEditMode,
+        navigateToNode,
+      ]
+    )
 
     const selectedNode =
       selectedNodes.length === 1 ? nodes.find(n => n.id === selectedNodes[0]) : undefined
@@ -608,7 +624,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
             id: node.id,
             parentId: layoutNode.parent_node_id,
             isFloating: false,
-            sortOrder: layoutNode.sort_order
+            sortOrder: layoutNode.sort_order,
           }
           const testId = testIdGenerator.registerNode(nodeStructureInfo, layoutNode.content)
           console.log(`注册节点: UUID=${node.id}, TestId=${testId}, Content=${layoutNode.content}`)
@@ -648,7 +664,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           id: rootNodeId,
           parentId: null,
           isFloating: false,
-          sortOrder: 0
+          sortOrder: 0,
         }
         const testId = testIdGenerator.registerNode(nodeStructureInfo, '中心主题')
         console.log(`创建根节点: UUID=${rootNodeId}, TestId=${testId}`)
@@ -687,7 +703,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
     // 键盘事件监听
     useEffect(() => {
       document.addEventListener('keydown', handleKeyDown)
-      
+
       return () => {
         document.removeEventListener('keydown', handleKeyDown)
       }

@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
     // 创建测试思维导图
     const mindMap = await MindMapService.createMindMap({
       title: body.title || '测试思维导图',
+      content: { nodes: [], edges: [] },
       user_id: '11111111-1111-1111-1111-111111111111',
       is_public: false,
     })

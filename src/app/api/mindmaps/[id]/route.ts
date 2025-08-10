@@ -20,15 +20,16 @@ if (!global.mindMapsStorage) {
 }
 
 // 获取单个思维导图
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     // 从内存存储中查找
-    let mindMap = global.mindMapsStorage.find(map => map.id === params.id)
+    let mindMap = global.mindMapsStorage.find(map => map.id === id)
 
     if (!mindMap) {
       // 如果没有找到，创建一个默认的思维导图
       mindMap = {
-        id: params.id,
+        id: id,
         title: '新思维导图',
         content: {
           nodes: [
@@ -70,15 +71,16 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // 更新思维导图
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const body = await request.json()
 
     // 简单返回更新成功
     return NextResponse.json({
       success: true,
       message: '思维导图更新成功',
-      data: { id: params.id, ...body, updated_at: new Date().toISOString() },
+      data: { id: id, ...body, updated_at: new Date().toISOString() },
     })
   } catch (error) {
     console.error('Failed to update mind map:', error)
@@ -94,10 +96,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // 删除思维导图
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params
     // 检查思维导图是否存在
-    const mindMapIndex = global.mindMapsStorage.findIndex(map => map.id === params.id)
+    const mindMapIndex = global.mindMapsStorage.findIndex(map => map.id === id)
 
     if (mindMapIndex === -1) {
       return NextResponse.json(

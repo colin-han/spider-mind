@@ -1,23 +1,23 @@
 /**
  * Test-ID 生成器
- * 
+ *
  * 实现基于路径的稳定test-id生成系统：
- * - 根节点: "root"  
+ * - 根节点: "root"
  * - 浮动节点: "float-0", "float-1", "float-2"...
  * - 子节点: "${父节点test-id}-${兄弟序号}" (从0开始)
  */
 
 export interface NodeStructureInfo {
-  id: string              // 节点UUID
+  id: string // 节点UUID
   parentId: string | null // 父节点UUID
-  isFloating: boolean     // 是否为浮动节点
-  sortOrder: number       // 在兄弟节点中的排序
+  isFloating: boolean // 是否为浮动节点
+  sortOrder: number // 在兄弟节点中的排序
 }
 
 export interface TestNodeInfo extends NodeStructureInfo {
-  testId: string         // 生成的test-id
-  content: string        // 节点内容
-  level: number          // 节点层级 (根节点为0)
+  testId: string // 生成的test-id
+  content: string // 节点内容
+  level: number // 节点层级 (根节点为0)
 }
 
 export class TestIdGenerator {
@@ -31,17 +31,17 @@ export class TestIdGenerator {
   registerNode(nodeInfo: NodeStructureInfo, content = '新节点'): string {
     const testId = this.generateTestId(nodeInfo)
     const level = this.calculateNodeLevel(nodeInfo)
-    
+
     const testNodeInfo: TestNodeInfo = {
       ...nodeInfo,
       testId,
       content,
-      level
+      level,
     }
-    
+
     this.nodeMap.set(nodeInfo.id, testNodeInfo)
     this.testIdToUuidMap.set(testId, nodeInfo.id)
-    
+
     return testId
   }
 
@@ -53,23 +53,23 @@ export class TestIdGenerator {
     if (!nodeInfo.parentId && !nodeInfo.isFloating) {
       return 'root'
     }
-    
+
     // 浮动节点
     if (nodeInfo.isFloating && !nodeInfo.parentId) {
       const floatingIndex = this.floatingNodeCounter++
       return `float-${floatingIndex}`
     }
-    
+
     // 子节点：需要基于父节点构建路径
     if (!nodeInfo.parentId) {
       throw new Error('非浮动子节点必须有父节点')
     }
-    
+
     const parentInfo = this.nodeMap.get(nodeInfo.parentId)
     if (!parentInfo) {
       throw new Error(`找不到父节点信息: ${nodeInfo.parentId}`)
     }
-    
+
     const siblingPosition = this.calculateSiblingPosition(nodeInfo)
     return `${parentInfo.testId}-${siblingPosition}`
   }
@@ -81,7 +81,7 @@ export class TestIdGenerator {
     const siblings = Array.from(this.nodeMap.values())
       .filter(node => node.parentId === nodeInfo.parentId)
       .sort((a, b) => a.sortOrder - b.sortOrder)
-    
+
     // 如果当前节点还未注册到map中，需要基于sortOrder计算位置
     let position = 0
     for (const sibling of siblings) {
@@ -89,7 +89,7 @@ export class TestIdGenerator {
         position++
       }
     }
-    
+
     return position
   }
 
@@ -100,12 +100,12 @@ export class TestIdGenerator {
     if (!nodeInfo.parentId) {
       return 0 // 根节点或浮动节点都是第0层
     }
-    
+
     const parentInfo = this.nodeMap.get(nodeInfo.parentId)
     if (!parentInfo) {
       throw new Error(`找不到父节点信息: ${nodeInfo.parentId}`)
     }
-    
+
     return parentInfo.level + 1
   }
 
@@ -183,40 +183,42 @@ export class TestIdGenerator {
   isValidTestId(testId: string): boolean {
     // 根节点
     if (testId === 'root') return true
-    
+
     // 浮动节点
     if (/^float-\d+$/.test(testId)) return true
-    
+
     // 子节点路径
     if (/^(root|float-\d+)(-\d+)+$/.test(testId)) return true
-    
+
     return false
   }
 
   /**
    * 从test-id解析层级信息
    */
-  parseTestIdInfo(testId: string): { level: number; isFloating: boolean; parentTestId?: string } | null {
+  parseTestIdInfo(
+    testId: string
+  ): { level: number; isFloating: boolean; parentTestId?: string } | null {
     if (!this.isValidTestId(testId)) return null
-    
+
     if (testId === 'root') {
       return { level: 0, isFloating: false }
     }
-    
+
     if (testId.startsWith('float-')) {
       return { level: 0, isFloating: true }
     }
-    
+
     // 解析子节点路径
     const parts = testId.split('-')
     const level = parts.length - 1
     const parentParts = parts.slice(0, -1)
     const parentTestId = parentParts.join('-')
-    
+
     return {
       level,
       isFloating: parentTestId.startsWith('float-'),
-      parentTestId
+      parentTestId,
     }
   }
 }

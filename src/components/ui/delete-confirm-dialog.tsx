@@ -15,8 +15,8 @@ export const DeleteConfirmDialog: React.FC<DeleteConfirmDialogProps> = ({
   isOpen,
   onClose,
   onConfirm,
-  title = "删除确认",
-  description = "确定要删除这个节点吗？"
+  title = '删除确认',
+  description = '确定要删除这个节点吗？',
 }) => {
   return (
     <AlertDialog

@@ -330,21 +330,21 @@ Then('主节点的内容应该更新为{string}', async function (this: BDDWorld
 Then('节点{string}应该不处于编辑状态', async function (this: BDDWorld, testId: string) {
   const element = await this.findNodeByTestId(testId)
   if (!element) throw new Error(`找不到节点: ${testId}`)
-  
+
   const inputElement = await element.$('input')
   expect(inputElement).toBeNull()
 })
 
-// 删除确认对话框验证 - 否定形式  
+// 删除确认对话框验证 - 否定形式
 Then('不应该显示删除确认对话框', async function (this: BDDWorld) {
   if (!this.page) throw new Error('Page not initialized')
-  
+
   // 检查删除确认对话框不存在
   const dialog = await this.page.locator('[data-testid="delete-confirm-dialog"]').count()
   expect(dialog).toBe(0)
 })
 
-// 复合验证：场景248行的拼写错误修正  
+// 复合验证：场景248行的拼写错误修正
 Then('节点{string}应要被选中', async function (this: BDDWorld, testId: string) {
   await this.verifyNodeSelected(testId)
 })
@@ -421,11 +421,11 @@ When('我双击节点{string}', async function (this: BDDWorld, testId: string) 
 When('我为节点{string}添加子节点', async function (this: BDDWorld, parentTestId: string) {
   // 先选中目标节点
   await this.selectNodeByTestId(parentTestId)
-  
+
   // 点击添加子节点按钮
   if (!this.page) throw new Error('Page not initialized')
   await this.page.click('button:has-text("添加子节点")')
-  
+
   // 等待新子节点出现
   const newChildTestId = await this.waitForNewChildNode(parentTestId)
   console.log(`为节点"${parentTestId}"添加了子节点"${newChildTestId}"`)
@@ -459,24 +459,24 @@ When('我按下Escape键', async function (this: BDDWorld) {
 
 When('我按下{string}方向键', async function (this: BDDWorld, direction: string) {
   if (!this.page) throw new Error('Page not initialized')
-  
+
   const keyMap: { [key: string]: string } = {
-    '上': 'ArrowUp',
-    '下': 'ArrowDown', 
-    '左': 'ArrowLeft',
-    '右': 'ArrowRight'
+    上: 'ArrowUp',
+    下: 'ArrowDown',
+    左: 'ArrowLeft',
+    右: 'ArrowRight',
   }
-  
+
   const key = keyMap[direction]
   if (!key) throw new Error(`不支持的方向键: ${direction}`)
-  
+
   await this.page.keyboard.press(key)
 })
 
 // 内容输入操作
 When('我输入{string}', async function (this: BDDWorld, content: string) {
   if (!this.page) throw new Error('Page not initialized')
-  
+
   // 查找当前激活的输入框
   const activeInput = await this.page.$('input:focus')
   if (activeInput) {
@@ -512,35 +512,32 @@ Then('节点{string}应该处于编辑状态', async function (this: BDDWorld, t
   await this.verifyNodeInEditingState(testId)
 })
 
-Then('节点{string}的内容应该是{string}', async function (
-  this: BDDWorld, 
-  testId: string, 
-  expectedContent: string
-) {
-  await this.verifyNodeContent(testId, expectedContent)
-})
+Then(
+  '节点{string}的内容应该是{string}',
+  async function (this: BDDWorld, testId: string, expectedContent: string) {
+    await this.verifyNodeContent(testId, expectedContent)
+  }
+)
 
 // 节点关系验证
-Then('节点{string}应该是节点{string}的子节点', async function (
-  this: BDDWorld,
-  childTestId: string,
-  parentTestId: string
-) {
-  await this.verifyParentChildRelationship(childTestId, parentTestId)
-})
+Then(
+  '节点{string}应该是节点{string}的子节点',
+  async function (this: BDDWorld, childTestId: string, parentTestId: string) {
+    await this.verifyParentChildRelationship(childTestId, parentTestId)
+  }
+)
 
-Then('节点{string}应该有{int}个子节点', async function (
-  this: BDDWorld,
-  parentTestId: string,
-  expectedCount: number
-) {
-  await this.verifyNodeChildrenCount(parentTestId, expectedCount)
-})
+Then(
+  '节点{string}应该有{int}个子节点',
+  async function (this: BDDWorld, parentTestId: string, expectedCount: number) {
+    await this.verifyNodeChildrenCount(parentTestId, expectedCount)
+  }
+)
 
 // 特殊操作验证
 Then('应该显示提示信息{string}', async function (this: BDDWorld, message: string) {
   if (!this.page) throw new Error('Page not initialized')
-  
+
   // 等待提示信息出现
   await expect(this.page.locator(`text=${message}`)).toBeVisible({ timeout: 5000 })
 })
@@ -548,10 +545,10 @@ Then('应该显示提示信息{string}', async function (this: BDDWorld, message
 Then('不应该创建任何新节点', async function (this: BDDWorld) {
   // 记录当前所有节点的test-id
   const currentNodes = await this.getAllNodeTestIds()
-  
+
   // 等待一段时间，确保没有新节点创建
   await this.page?.waitForTimeout(1000)
-  
+
   // 再次获取节点列表，应该没有变化
   const afterNodes = await this.getAllNodeTestIds()
   expect(afterNodes).toEqual(currentNodes)
@@ -590,7 +587,7 @@ Then('主节点应该退出编辑模式', async function (this: BDDWorld) {
   // 验证根节点不在编辑状态
   const element = await this.findNodeByTestId('root')
   if (!element) throw new Error('找不到根节点')
-  
+
   const inputElement = await element.$('input')
   expect(inputElement).toBeNull()
 })

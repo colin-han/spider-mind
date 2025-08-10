@@ -240,7 +240,6 @@ export class BDDWorld {
     return inputCount === 0 || !(await this.page.locator('input[type="text"]').first().isVisible())
   }
 
-
   async clickSaveButton() {
     if (!this.page) throw new Error('Page not initialized')
 
@@ -1185,7 +1184,7 @@ export class BDDWorld {
    */
   async findNodeByTestId(testId: string): Promise<any> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     try {
       // 等待节点出现
       await this.page.waitForSelector(`[data-testid="${testId}"]`, { timeout: 5000 })
@@ -1201,12 +1200,12 @@ export class BDDWorld {
    */
   async getCurrentSelectedNodeTestId(): Promise<string | null> {
     if (!this.page) return null
-    
+
     try {
       // 查找选中状态的节点
       const selectedElement = await this.page.$('[data-node-selected="true"]')
       if (!selectedElement) return null
-      
+
       return await selectedElement.getAttribute('data-testid')
     } catch (error) {
       console.log('获取当前选中节点test-id失败:', error)
@@ -1220,11 +1219,10 @@ export class BDDWorld {
   async selectNodeByTestId(testId: string): Promise<void> {
     const element = await this.findNodeByTestId(testId)
     if (!element) throw new Error(`找不到test-id为"${testId}"的节点`)
-    
+
     await element.click()
     await this.page?.waitForTimeout(100)
   }
-
 
   // 清理测试期间创建的思维导图
   async cleanupMindMaps() {
@@ -1269,7 +1267,7 @@ export class BDDWorld {
     console.log('清理流程完成')
   }
 
-  // ===========================  
+  // ===========================
   // 键盘快捷键支持方法
   // ===========================
 
@@ -1279,13 +1277,13 @@ export class BDDWorld {
 
     // 根据父节点test-id预测子节点test-id模式
     const expectedChildPattern = `${parentTestId}-`
-    
+
     // 等待新子节点出现
     await this.page.waitForTimeout(1000)
-    
+
     // 查找所有节点，找到新的子节点
     const allNodes = await this.page.locator('[data-testid*="rf__node"]').all()
-    
+
     for (const node of allNodes) {
       const testId = await node.getAttribute('data-testid')
       if (testId && testId.startsWith(expectedChildPattern)) {
@@ -1293,28 +1291,28 @@ export class BDDWorld {
         return testId.replace('rf__node-', '')
       }
     }
-    
+
     throw new Error(`未能找到${parentTestId}的新子节点`)
   }
 
   // 点击空白区域取消所有节点选中
   async clickBlankArea() {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 点击思维导图容器的空白区域
     const mindMapContainer = this.page.locator('.react-flow')
     await mindMapContainer.click({ position: { x: 50, y: 50 } })
-    
+
     await this.page.waitForTimeout(300)
   }
 
   // 获取所有节点的test-id列表
   async getAllNodeTestIds(): Promise<string[]> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     const nodeElements = await this.page.locator('[data-testid*="rf__node"]').all()
     const testIds: string[] = []
-    
+
     for (const element of nodeElements) {
       const fullTestId = await element.getAttribute('data-testid')
       if (fullTestId) {
@@ -1323,7 +1321,7 @@ export class BDDWorld {
         testIds.push(testId)
       }
     }
-    
+
     return testIds
   }
 
@@ -1331,13 +1329,15 @@ export class BDDWorld {
   async verifyNodeInEditingState(testId: string) {
     const element = await this.findNodeByTestId(testId)
     if (!element) throw new Error(`找不到节点: ${testId}`)
-    
+
     // 检查节点是否包含输入框
     const inputElement = await element.$('input')
     expect(inputElement).not.toBeNull()
-    
+
     // 验证输入框是否获得焦点
-    const isFocused = await inputElement?.evaluate((el: HTMLElement) => el === document.activeElement)
+    const isFocused = await inputElement?.evaluate(
+      (el: HTMLElement) => el === document.activeElement
+    )
     expect(isFocused).toBe(true)
   }
 
@@ -1352,7 +1352,7 @@ export class BDDWorld {
   // 验证节点不存在
   async verifyNodeNotExists(testId: string): Promise<void> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     const element = await this.findNodeByTestId(testId)
     if (element !== null) {
       throw new Error(`节点"${testId}"仍然存在，但期望它应该被删除`)
@@ -1363,12 +1363,14 @@ export class BDDWorld {
   async verifyNodeSelected(testId: string): Promise<void> {
     const element = await this.findNodeByTestId(testId)
     if (!element) throw new Error(`找不到节点"${testId}"`)
-    
+
     // 检查多种选中状态的指示
-    const hasSelectedClass = await element.evaluate((el: Element) => el.classList.contains('selected'))
+    const hasSelectedClass = await element.evaluate((el: Element) =>
+      el.classList.contains('selected')
+    )
     const hasSelectedAttribute = await element.getAttribute('data-node-selected')
     const hasRingClass = await element.locator('.ring-2.ring-primary').count()
-    
+
     if (!hasSelectedClass && hasSelectedAttribute !== 'true' && hasRingClass === 0) {
       throw new Error(`节点"${testId}"未被选中`)
     }
@@ -1378,12 +1380,14 @@ export class BDDWorld {
   async verifyNodeNotSelected(testId: string): Promise<void> {
     const element = await this.findNodeByTestId(testId)
     if (!element) throw new Error(`找不到节点"${testId}"`)
-    
+
     // 检查多种选中状态的指示都不存在
-    const hasSelectedClass = await element.evaluate((el: Element) => el.classList.contains('selected'))
+    const hasSelectedClass = await element.evaluate((el: Element) =>
+      el.classList.contains('selected')
+    )
     const hasSelectedAttribute = await element.getAttribute('data-node-selected')
     const hasRingClass = await element.locator('.ring-2.ring-primary').count()
-    
+
     if (hasSelectedClass || hasSelectedAttribute === 'true' || hasRingClass > 0) {
       throw new Error(`节点"${testId}"被选中了，但期望它应该未被选中`)
     }
@@ -1393,7 +1397,7 @@ export class BDDWorld {
   async verifyNodeContent(testId: string, expectedContent: string): Promise<void> {
     const element = await this.findNodeByTestId(testId)
     if (!element) throw new Error(`找不到节点"${testId}"`)
-    
+
     const content = await element.textContent()
     if (content?.trim() !== expectedContent) {
       throw new Error(`节点"${testId}"的内容是"${content?.trim()}"，期望是"${expectedContent}"`)
@@ -1406,7 +1410,7 @@ export class BDDWorld {
     if (!childTestId.startsWith(`${parentTestId}-`)) {
       throw new Error(`节点"${childTestId}"不是节点"${parentTestId}"的子节点`)
     }
-    
+
     // 验证节点确实存在
     await this.verifyNodeExists(childTestId)
     await this.verifyNodeExists(parentTestId)
@@ -1415,11 +1419,11 @@ export class BDDWorld {
   // 验证节点子节点数量
   async verifyNodeChildrenCount(parentTestId: string, expectedCount: number): Promise<void> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 查找所有直接子节点（只匹配一级子节点，不包括孙节点）
     const childPattern = `${parentTestId}-\\d+$`
     const allElements = await this.page.locator('[data-testid*="rf__node"]').all()
-    
+
     const directChildren: string[] = []
     for (const element of allElements) {
       const fullTestId = await element.getAttribute('data-testid')
@@ -1430,9 +1434,11 @@ export class BDDWorld {
         }
       }
     }
-    
+
     if (directChildren.length !== expectedCount) {
-      throw new Error(`节点"${parentTestId}"有${directChildren.length}个子节点，期望是${expectedCount}个`)
+      throw new Error(
+        `节点"${parentTestId}"有${directChildren.length}个子节点，期望是${expectedCount}个`
+      )
     }
   }
 
@@ -1440,7 +1446,7 @@ export class BDDWorld {
   async doubleClickNode(testId: string): Promise<void> {
     const element = await this.findNodeByTestId(testId)
     if (!element) throw new Error(`找不到节点"${testId}"`)
-    
+
     await element.dblclick()
     await this.page?.waitForTimeout(300)
   }
