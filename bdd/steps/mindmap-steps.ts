@@ -7,6 +7,7 @@ Given('我是一个已登录的用户', async function (this: BDDWorld) {
   await this.loginAsTestUser()
 })
 
+// 兼容性：将旧表述映射到新的统一表述
 Given('用户已经登录系统', async function (this: BDDWorld) {
   await this.loginAsTestUser()
 })
@@ -99,6 +100,32 @@ When('我点击对话框外部区域', async function (this: BDDWorld) {
   await this.page.waitForTimeout(500)
 })
 
+// 统一的按键处理 - 支持多种按键名称格式
+When('我按下{string}键', async function (this: BDDWorld, keyName: string) {
+  if (!this.page) throw new Error('Page not initialized')
+
+  // 按键名称映射表
+  const keyMap: { [key: string]: string } = {
+    ESC: 'Escape',
+    Esc: 'Escape',
+    esc: 'Escape',
+    Escape: 'Escape',
+    Enter: 'Enter',
+    enter: 'Enter',
+    Tab: 'Tab',
+    tab: 'Tab',
+    Delete: 'Delete',
+    delete: 'Delete',
+    F2: 'F2',
+    f2: 'F2',
+  }
+
+  const actualKey = keyMap[keyName] || keyName
+  await this.page.keyboard.press(actualKey)
+  await this.page.waitForTimeout(500)
+})
+
+// 兼容性：保留原有的特定按键步骤
 When('我按下ESC键', async function (this: BDDWorld) {
   if (!this.page) throw new Error('Page not initialized')
 
@@ -253,6 +280,13 @@ Then('思维导图列表刷新移除不存在的条目', async function (this: B
   expect(listRefreshed).toBe(true)
 })
 
+// 统一的编辑页面验证 - 主要版本
+Then('我应该进入思维导图编辑页面', async function (this: BDDWorld) {
+  const isOnEditPage = await this.verifyOnEditPage()
+  expect(isOnEditPage).toBe(true)
+})
+
+// 兼容性：将不同表述映射到统一步骤
 Then('我应该自动进入思维导图编辑页面', async function (this: BDDWorld) {
   const isOnEditPage = await this.verifyOnEditPage()
   expect(isOnEditPage).toBe(true)
@@ -278,14 +312,18 @@ Then('当前思维导图应该有一个默认的主节点', async function (this
   expect(hasDefaultNode).toBe(true)
 })
 
+// 统一的主节点选中验证 - 主要版本
+Then('主节点应该被选中', async function (this: BDDWorld) {
+  await this.verifyNodeSelected('root')
+})
+
+// 兼容性：将旧表述映射到新的统一表述
 Then('主节点应该是选中状态', async function (this: BDDWorld) {
-  const isSelected = await this.verifyMainNodeSelected()
-  expect(isSelected).toBe(true)
+  await this.verifyNodeSelected('root')
 })
 
 Then('当前思维导图的主节点应该是选中状态', async function (this: BDDWorld) {
-  const isSelected = await this.verifyMainNodeSelected()
-  expect(isSelected).toBe(true)
+  await this.verifyNodeSelected('root')
 })
 
 Then('主节点应该显示选中的视觉反馈', async function (this: BDDWorld) {
@@ -556,18 +594,6 @@ Then('不应该创建任何新节点', async function (this: BDDWorld) {
 
 // 兼容性Steps：将旧的术语映射到新的test-id系统
 Given('当前思维导图的主节点应该是选中状态', async function (this: BDDWorld) {
-  await this.verifyNodeSelected('root')
-})
-
-Then('当前思维导图应该有一个默认的主节点', async function (this: BDDWorld) {
-  await this.verifyNodeExists('root')
-})
-
-Then('当前思维导图的主节点应该是选中状态', async function (this: BDDWorld) {
-  await this.verifyNodeSelected('root')
-})
-
-Then('主节点应该显示选中的视觉反馈', async function (this: BDDWorld) {
   await this.verifyNodeSelected('root')
 })
 
