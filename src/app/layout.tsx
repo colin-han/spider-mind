@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Theme } from '@radix-ui/themes'
 import { AuthProvider } from '@/contexts/auth-context'
+import { ToastProvider } from '@/components/ui/toast-provider'
 import './globals.css'
 import '@radix-ui/themes/styles.css'
 
@@ -29,7 +30,11 @@ export default function RootLayout({
     <html lang="zh" className="dark">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased dark`}>
         <Theme accentColor="violet" grayColor="sand" appearance="dark">
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </AuthProvider>
         </Theme>
       </body>
     </html>
