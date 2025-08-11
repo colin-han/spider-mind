@@ -323,20 +323,8 @@ Then('主节点应该是选中状态', async function (this: BDDWorld) {
 })
 
 Then('当前思维导图的主节点应该是选中状态', async function (this: BDDWorld) {
-  // 动态查找第一个节点组件的test-id
-  if (!this.page) throw new Error('Page not initialized')
-
-  const nodeTestId = await this.page.evaluate(() => {
-    const nodeElement = document.querySelector('[data-testid^="node-"]')
-    return nodeElement?.getAttribute('data-testid')
-  })
-
-  if (!nodeTestId) {
-    throw new Error('未找到任何节点组件')
-  }
-
-  console.log('使用test-id:', nodeTestId)
-  await this.verifyNodeSelected(nodeTestId)
+  // 直接验证根节点的选中状态
+  await this.verifyNodeSelected('root')
 })
 
 Then('主节点应该显示选中的视觉反馈', async function (this: BDDWorld) {
@@ -440,7 +428,9 @@ Then('子节点应该显示选中的视觉反馈', async function (this: BDDWorl
   if (!this.page) throw new Error('Page not initialized')
 
   // 检查子节点的选中状态视觉反馈
-  const childNode = this.page.locator('[data-testid*="rf__node"]').nth(1)
+  const childNode = this.page
+    .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
+    .nth(1)
   const visualFeedback = await childNode.locator('.ring-2.ring-primary').count()
 
   if (visualFeedback > 0) {
@@ -470,12 +460,43 @@ When('我为节点{string}添加子节点', async function (this: BDDWorld, pare
   // 先选中目标节点
   await this.selectNodeByTestId(parentTestId)
 
-  // 点击添加节点按钮（使用test-id避免依赖文本）
   if (!this.page) throw new Error('Page not initialized')
+
+  // 等待一下确保节点选中状态生效
+  await this.page.waitForTimeout(500)
+
+  // 检查添加节点按钮是否存在
+  const buttonExists = await this.page.locator('[data-testid="add-node-button"]').count()
+  if (buttonExists === 0) {
+    throw new Error('找不到添加节点按钮')
+  }
+
+  // 点击添加节点按钮
   await this.page.click('[data-testid="add-node-button"]')
 
-  // 等待新子节点出现
-  await this.waitForNewChildNode(parentTestId)
+  // 等待一下让页面处理
+  await this.page.waitForTimeout(1000)
+
+  // 检查是否已经创建了子节点
+  const finalNodeTestIds = await this.page.evaluate(() => {
+    const nodes = document.querySelectorAll(
+      '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
+    )
+    return Array.from(nodes)
+      .map(node => node.getAttribute('data-testid'))
+      .filter(id => id)
+  })
+
+  // 查找新创建的子节点
+  const expectedChildTestId = `${parentTestId}-0`
+  const hasChildNode = finalNodeTestIds.includes(expectedChildTestId)
+
+  if (hasChildNode) {
+    return // 直接返回，不需要等待
+  } else {
+    // 等待新子节点出现
+    await this.waitForNewChildNode(parentTestId)
+  }
 })
 
 // 快捷键操作

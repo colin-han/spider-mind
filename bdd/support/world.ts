@@ -140,10 +140,15 @@ export class BDDWorld {
     if (!this.page) throw new Error('Page not initialized')
 
     // 等待思维导图加载完成
-    await this.page.waitForSelector('[data-testid*="rf__node"]', { timeout: 10000 })
+    await this.page.waitForSelector(
+      '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]',
+      { timeout: 10000 }
+    )
 
     // 验证是否有默认节点
-    const nodes = await this.page.locator('[data-testid*="rf__node"]').count()
+    const nodes = await this.page
+      .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
+      .count()
     return nodes >= 1
   }
 
@@ -196,7 +201,9 @@ export class BDDWorld {
     await this.page.waitForTimeout(1000)
 
     // 检查节点数量是否增加到2个
-    const nodeCount = await this.page.locator('[data-testid*="rf__node"]').count()
+    const nodeCount = await this.page
+      .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
+      .count()
     return nodeCount >= 2
   }
 
@@ -211,8 +218,8 @@ export class BDDWorld {
   async doubleClickMainNode() {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 找到并双击主节点
-    const mainNode = this.page.locator('[data-testid*="rf__node"]').first()
+    // 找到并双击主节点（根节点）
+    const mainNode = this.page.locator('[data-testid="root"]')
     await mainNode.dblclick()
 
     // 等待编辑模式激活
@@ -370,7 +377,10 @@ export class BDDWorld {
 
     await this.clickFirstMindMapCard()
     // 等待思维导图组件加载完成（页面跳转已经在clickFirstMindMapCard中处理）
-    await this.page.waitForSelector('[data-testid*="rf__node"]', { timeout: 15000 })
+    await this.page.waitForSelector(
+      '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]',
+      { timeout: 15000 }
+    )
     // 等待React组件完全初始化
     await this.page.waitForTimeout(1000)
   }
@@ -385,7 +395,9 @@ export class BDDWorld {
     if (!this.page) throw new Error('Page not initialized')
 
     // 点击第二个节点（子节点）
-    const childNode = this.page.locator('[data-testid*="rf__node"]').nth(1)
+    const childNode = this.page
+      .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
+      .nth(1)
     await childNode.click()
     await this.page.waitForTimeout(50)
   }
@@ -394,8 +406,8 @@ export class BDDWorld {
   async clickMainNode() {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 点击第一个节点（主节点）
-    const mainNode = this.page.locator('[data-testid*="rf__node"]').first()
+    // 点击主节点（根节点）
+    const mainNode = this.page.locator('[data-testid="root"]')
     await mainNode.click()
     await this.page.waitForTimeout(50)
   }
@@ -406,14 +418,23 @@ export class BDDWorld {
 
     // 检查选中状态的视觉反馈
     const visualFeedback = await this.page
-      .locator('[data-testid*="rf__node"] .ring-2.ring-primary')
+      .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
+      .locator('.ring-2.ring-primary')
       .count()
 
     if (visualFeedback > 0) return true
 
-    // 也检查ReactFlow的内置选中状态样式
-    const reactFlowSelected = await this.page.locator('[data-testid*="rf__node"].selected').count()
-    return reactFlowSelected > 0
+    // 也检查选中状态样式
+    const selectedNodes = await this.page
+      .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
+      .evaluateAll(nodes =>
+        nodes.some(
+          node =>
+            node.classList.contains('selected') ||
+            node.getAttribute('data-node-selected') === 'true'
+        )
+      )
+    return selectedNodes
   }
 
   // 验证节点处于编辑模式
@@ -425,7 +446,7 @@ export class BDDWorld {
       'input[type="text"]',
       'input',
       '.mindmap-node input',
-      '[data-testid*="rf__node"] input',
+      '[data-testid="root"] input, [data-testid*="root-"] input, [data-testid*="float-"] input',
     ]
 
     for (const selector of selectors) {
@@ -454,7 +475,7 @@ export class BDDWorld {
       'input[type="text"]',
       'input',
       '.mindmap-node input',
-      '[data-testid*="rf__node"] input',
+      '[data-testid="root"] input, [data-testid*="root-"] input, [data-testid*="float-"] input',
     ]
 
     let inputFound = false
@@ -484,30 +505,32 @@ export class BDDWorld {
   async verifyChildNodeSelected() {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 检查子节点是否有选中样式
-    const childNode = this.page.locator('[data-testid*="rf__node"]').nth(1)
+    // 检查子节点是否有选中样式（第二个节点，通常是root-0）
+    const childNode = this.page
+      .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
+      .nth(1)
     const hasSelectedClass = await childNode.locator('.ring-2.ring-primary').count()
 
     if (hasSelectedClass > 0) return true
 
-    // 也检查ReactFlow的选中状态
-    const isReactFlowSelected = await childNode.getAttribute('class')
-    return isReactFlowSelected?.includes('selected') || false
+    // 也检查选中状态属性
+    const isSelected = await childNode.getAttribute('data-node-selected')
+    return isSelected === 'true'
   }
 
   // 验证主节点未被选中
   async verifyMainNodeNotSelected() {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 检查主节点是否没有选中样式
-    const mainNode = this.page.locator('[data-testid*="rf__node"]').first()
+    // 检查主节点（根节点）是否没有选中样式
+    const mainNode = this.page.locator('[data-testid="root"]')
     const hasSelectedClass = await mainNode.locator('.ring-2.ring-primary').count()
 
     if (hasSelectedClass > 0) return false
 
-    // 也检查ReactFlow的选中状态
-    const isReactFlowSelected = await mainNode.getAttribute('class')
-    return !isReactFlowSelected?.includes('selected')
+    // 也检查选中状态属性
+    const isSelected = await mainNode.getAttribute('data-node-selected')
+    return isSelected !== 'true'
   }
 
   // 验证子节点未被选中
@@ -515,14 +538,16 @@ export class BDDWorld {
     if (!this.page) throw new Error('Page not initialized')
 
     // 检查子节点是否没有选中样式
-    const childNode = this.page.locator('[data-testid*="rf__node"]').nth(1)
+    const childNode = this.page
+      .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
+      .nth(1)
     const hasSelectedClass = await childNode.locator('.ring-2.ring-primary').count()
 
     if (hasSelectedClass > 0) return false
 
-    // 也检查ReactFlow的选中状态
-    const isReactFlowSelected = await childNode.getAttribute('class')
-    return !isReactFlowSelected?.includes('selected')
+    // 也检查选中状态属性
+    const isSelected = await childNode.getAttribute('data-node-selected')
+    return isSelected !== 'true'
   }
 
   // =========================
@@ -1286,29 +1311,55 @@ export class BDDWorld {
   async waitForNewChildNode(parentTestId: string): Promise<string> {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 记录添加前的节点数量
-    const initialNodeCount = await this.page.locator('[data-testid*="rf__node"]').count()
+    // 获取当前所有思维导图节点的test-id列表
+    const getNodeTestIds = () => {
+      const nodes = document.querySelectorAll(
+        '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
+      )
+      return Array.from(nodes)
+        .map(node => node.getAttribute('data-testid'))
+        .filter(id => id)
+    }
 
-    // 等待新子节点出现
-    await this.page.waitForTimeout(2000)
+    const initialNodeTestIds = await this.page.evaluate(getNodeTestIds)
 
-    // 等待节点数量增加
+    // 等待出现新的节点test-id
     await this.page.waitForFunction(
-      initialCount => {
-        return document.querySelectorAll('[data-testid*="rf__node"]').length > initialCount
+      initialTestIds => {
+        const currentTestIds = Array.from(
+          document.querySelectorAll(
+            '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
+          )
+        )
+          .map(node => node.getAttribute('data-testid'))
+          .filter(id => id)
+
+        // Check if new nodes have been added
+
+        return currentTestIds.length > initialTestIds.length
       },
-      initialNodeCount,
-      { timeout: 5000 }
+      initialNodeTestIds,
+      { timeout: 10000, polling: 500 }
     )
 
-    // 获取新增的节点（最后一个节点通常是新添加的）
-    const allNodes = await this.page.locator('[data-testid*="rf__node"]').all()
-    if (allNodes.length > initialNodeCount) {
-      const newNode = allNodes[allNodes.length - 1]
-      const testId = await newNode.getAttribute('data-testid')
-      if (testId) {
-        return testId.replace('rf__node-', '')
+    // 等待一点时间确保节点完全渲染
+    await this.page.waitForTimeout(1000)
+
+    // 获取最终的节点test-id列表
+    const finalNodeTestIds = await this.page.evaluate(getNodeTestIds)
+
+    // 找出新增的节点
+    const newTestIds = finalNodeTestIds.filter(testId => !initialNodeTestIds.includes(testId))
+
+    if (newTestIds.length > 0) {
+      // 优先返回父节点的子节点
+      const childNode = newTestIds.find(testId => testId.startsWith(`${parentTestId}-`))
+      if (childNode) {
+        return childNode
       }
+
+      // 如果没有找到子节点，返回第一个新节点
+      return newTestIds[0]
     }
 
     throw new Error(`未能找到${parentTestId}的新子节点`)
@@ -1329,14 +1380,14 @@ export class BDDWorld {
   async getAllNodeTestIds(): Promise<string[]> {
     if (!this.page) throw new Error('Page not initialized')
 
-    const nodeElements = await this.page.locator('[data-testid*="rf__node"]').all()
+    const nodeElements = await this.page
+      .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
+      .all()
     const testIds: string[] = []
 
     for (const element of nodeElements) {
-      const fullTestId = await element.getAttribute('data-testid')
-      if (fullTestId) {
-        // 移除'rf__node-'前缀，只保留实际的节点ID
-        const testId = fullTestId.replace('rf__node-', '')
+      const testId = await element.getAttribute('data-testid')
+      if (testId) {
         testIds.push(testId)
       }
     }
@@ -1437,7 +1488,12 @@ export class BDDWorld {
       el.classList.contains('selected')
     )
     const hasSelectedAttribute = await element.getAttribute('data-node-selected')
-    const hasRingClass = await element.locator('.ring-2.ring-primary').count()
+
+    // 使用page.locator来检查ring class，因为element句柄没有locator方法
+    if (!this.page) throw new Error('Page not initialized')
+    const hasRingClass = await this.page
+      .locator(`[data-testid="${testId}"] .ring-2.ring-primary`)
+      .count()
 
     if (hasSelectedClass || hasSelectedAttribute === 'true' || hasRingClass > 0) {
       throw new Error(`节点"${testId}"被选中了，但期望它应该未被选中`)
@@ -1490,20 +1546,19 @@ export class BDDWorld {
   async verifyNodeChildrenCount(parentTestId: string, expectedCount: number): Promise<void> {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 查找所有直接子节点（只匹配一级子节点，不包括孙节点）
-    const childPattern = `${parentTestId}-\\d+$`
-    const allElements = await this.page.locator('[data-testid*="rf__node"]').all()
+    // 获取所有思维导图节点的test-ids
+    const allNodeTestIds = await this.page.evaluate(() => {
+      const nodes = document.querySelectorAll(
+        '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
+      )
+      return Array.from(nodes)
+        .map(node => node.getAttribute('data-testid'))
+        .filter(id => id)
+    })
 
-    const directChildren: string[] = []
-    for (const element of allElements) {
-      const fullTestId = await element.getAttribute('data-testid')
-      if (fullTestId) {
-        const testId = fullTestId.replace('rf__node-', '')
-        if (new RegExp(childPattern).test(testId)) {
-          directChildren.push(testId)
-        }
-      }
-    }
+    // 查找所有直接子节点（只匹配一级子节点，不包括孙节点）
+    const childPattern = new RegExp(`^${parentTestId}-\\d+$`)
+    const directChildren = allNodeTestIds.filter(testId => childPattern.test(testId))
 
     if (directChildren.length !== expectedCount) {
       throw new Error(

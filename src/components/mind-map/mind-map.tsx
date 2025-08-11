@@ -118,7 +118,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         // 更新ReactFlow节点
         const reactFlowNodes: Node[] = layoutNodesList.map(layoutNode => {
           const testId = testIdGenerator.getTestId(layoutNode.id)
-          const nodeInfo = testIdGenerator.getNodeInfo(layoutNode.id)
 
           return {
             id: layoutNode.id,
@@ -189,32 +188,17 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         // 应用自动布局
         applyAutoLayout(updatedLayoutNodes)
 
-        // 如果添加的是子节点，保持父节点选中状态
-        if (parentNodeId) {
-          // 延迟设置选中状态，确保节点已经渲染完成
-          setTimeout(() => {
-            setSelectedNodes([parentNodeId])
-            // 确保ReactFlow也知道这个选择状态
-            setNodes(prevNodes =>
-              prevNodes.map(node => ({
-                ...node,
-                selected: node.id === parentNodeId,
-              }))
-            )
-          }, 100)
-        } else {
-          // 如果是根节点，选中新创建的节点
-          setTimeout(() => {
-            setSelectedNodes([newNodeId])
-            // 确保ReactFlow也知道这个选择状态
-            setNodes(prevNodes =>
-              prevNodes.map(node => ({
-                ...node,
-                selected: node.id === newNodeId,
-              }))
-            )
-          }, 100)
-        }
+        // 自动选中新创建的节点
+        setTimeout(() => {
+          setSelectedNodes([newNodeId])
+          // 确保ReactFlow也知道这个选择状态
+          setNodes(prevNodes =>
+            prevNodes.map(node => ({
+              ...node,
+              selected: node.id === newNodeId,
+            }))
+          )
+        }, 100)
 
         // TODO: 通过API保存节点数据，而不是直接调用数据库
         // 当前由页面级的onChange处理保存逻辑
@@ -248,11 +232,12 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           content: '新节点',
         }
 
-        // 生成test-id
+        // 生成test-id - 如果父节点是null(即为根节点添加同级)，则创建浮动节点
+        const isFloating = parentNodeId === null
         const nodeStructureInfo: NodeStructureInfo = {
           id: newNodeId,
           parentId: parentNodeId,
-          isFloating: false,
+          isFloating: isFloating,
           sortOrder: sortOrder,
         }
         const testId = testIdGenerator.registerNode(nodeStructureInfo, '新节点')
@@ -498,7 +483,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
       if (selectedNodes.length !== 1) return
 
       const selectedNodeId = selectedNodes[0]
-      const nodeElement = document.querySelector(`[data-testid="rf__node-${selectedNodeId}"]`)
+      const nodeElement = document.querySelector(`[data-testid="${selectedNodeId}"]`)
       if (nodeElement) {
         // 触发双击事件进入编辑模式
         const event = new MouseEvent('dblclick', { bubbles: true })

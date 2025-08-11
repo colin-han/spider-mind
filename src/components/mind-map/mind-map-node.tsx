@@ -80,7 +80,8 @@ export function MindMapNode({ id, data, selected }: NodeProps) {
             : // 如果nodeRole也没有，基于nodeLevel判断
               nodeData.nodeLevel === 0 || nodeData.nodeLevel === undefined
               ? 'root'
-              : `node-${id}`)
+              : // 临时fallback，理论上不应该到达这里，因为TestIdGenerator应该生成所有test-id
+                `unknown-node-${id}`)
         }
         data-node-role={nodeData.nodeRole}
         data-node-level={nodeData.nodeLevel}

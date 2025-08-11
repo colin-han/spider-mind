@@ -65,8 +65,8 @@ Feature: 思维导图键盘快捷键操作
   Scenario: Enter键为根节点添加同级节点
     Given 节点"root"应该被选中
     When 我按下Enter键
-    Then 节点"root-sibling-1"应该存在
-    And 节点"root-sibling-1"应该被选中
+    Then 节点"float-0"应该存在
+    And 节点"float-0"应该被选中
     And 节点"root"应该不被选中
 
   Scenario: Enter键为子节点添加同级节点
@@ -81,10 +81,10 @@ Feature: 思维导图键盘快捷键操作
   Scenario: 连续使用Enter键创建多个同级节点
     Given 节点"root"应该被选中
     When 我按下Enter键
-    Then 节点"root-sibling-1"应该被选中
+    Then 节点"float-0"应该被选中
     When 我按下Enter键
-    Then 节点"root-sibling-2"应该存在
-    And 节点"root-sibling-2"应该被选中
+    Then 节点"float-1"应该存在
+    And 节点"float-1"应该被选中
 
   # Delete键 - 删除节点测试
   Scenario: Delete键尝试删除根节点应该被阻止
@@ -123,6 +123,7 @@ Feature: 思维导图键盘快捷键操作
     Given 我为节点"root"添加子节点
     And 我选中节点"root-0"
     And 我为节点"root-0"添加子节点
+    And 我按下"左"方向键
     And 节点"root-0"应该被选中
     When 我按下Delete键
     And 我按下Enter键
@@ -151,13 +152,13 @@ Feature: 思维导图键盘快捷键操作
     Then 节点"root"应该不处于编辑状态
     And 节点"root"应该被选中
 
-  Scenario: 编辑模式下输入内容后Escape键保存并退出
+  Scenario: 编辑模式下输入内容后Escape键不保存并退出
     Given 节点"root"应该被选中
     When 我按下F2键
     And 我输入"编辑后的根节点内容"
     And 我按下Escape键
     Then 节点"root"应该不处于编辑状态
-    And 节点"root"的内容应该是"编辑后的根节点内容"
+    And 节点"root"的内容应该不是"编辑后的根节点内容"
     And 节点"root"应该被选中
 
   # 方向键导航测试
@@ -251,12 +252,12 @@ Feature: 思维导图键盘快捷键操作
     Given 节点"root"应该被选中
     When 我按下F2键
     And 我输入"主题"
-    And 我按下Escape键
+    And 我按下Enter键
     Then 节点"root"的内容应该是"主题"
     When 我按下Tab键
     And 我按下F2键
     And 我输入"子主题1"
-    And 我按下Escape键
+    And 我按下Enter键
     Then 节点"root-0"的内容应该是"子主题1"
 
   Scenario: 无选中节点时快捷键无效

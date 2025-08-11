@@ -223,7 +223,7 @@ function MindMapDetailPage() {
           )}
 
           {/* 思维导图操作按钮 */}
-          <Button variant="ghost" size="sm" onClick={handleAddNode}>
+          <Button variant="ghost" size="sm" onClick={handleAddNode} data-testid="add-node-button">
             <Plus className="h-4 w-4 mr-2" />
             添加节点
           </Button>

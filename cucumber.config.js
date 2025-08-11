@@ -15,7 +15,7 @@ module.exports = {
     require: ['bdd/steps/**/*.ts', 'bdd/support/**/*.ts'],
 
     // 格式化器
-    format: ['progress'],
+    // format: ['progress'],
 
     // 重试失败的场景
     retry: 1,
