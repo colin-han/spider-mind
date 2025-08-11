@@ -369,20 +369,20 @@ export class BDDWorld {
   async openExistingMindMap() {
     // 如果不在思维导图列表页，先导航过去
     if (!this.page?.url().endsWith('/mindmaps')) {
-      await this.page.goto('/mindmaps')
+      await this.page?.goto('/mindmaps')
     }
 
     // 等待思维导图卡片加载
-    await this.page.waitForSelector('a[href*="/mindmaps/"]', { timeout: 10000 })
+    await this.page?.waitForSelector('a[href*="/mindmaps/"]', { timeout: 10000 })
 
     await this.clickFirstMindMapCard()
     // 等待思维导图组件加载完成（页面跳转已经在clickFirstMindMapCard中处理）
-    await this.page.waitForSelector(
+    await this.page?.waitForSelector(
       '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]',
       { timeout: 15000 }
     )
     // 等待React组件完全初始化
-    await this.page.waitForTimeout(1000)
+    await this.page?.waitForTimeout(1000)
   }
 
   // 从列表中打开思维导图
@@ -1353,13 +1353,16 @@ export class BDDWorld {
 
     if (newTestIds.length > 0) {
       // 优先返回父节点的子节点
-      const childNode = newTestIds.find(testId => testId.startsWith(`${parentTestId}-`))
+      const childNode = newTestIds.find(testId => testId && testId.startsWith(`${parentTestId}-`))
       if (childNode) {
         return childNode
       }
 
       // 如果没有找到子节点，返回第一个新节点
-      return newTestIds[0]
+      const firstNewNode = newTestIds[0]
+      if (firstNewNode) {
+        return firstNewNode
+      }
     }
 
     throw new Error(`未能找到${parentTestId}的新子节点`)
@@ -1530,6 +1533,35 @@ export class BDDWorld {
     }
   }
 
+  async verifyNodeContentNot(testId: string, notExpectedContent: string): Promise<void> {
+    if (!this.page) throw new Error('Page not initialized')
+
+    // 直接使用Locator API定位到节点
+    const nodeLocator = this.page.locator(`[data-testid="${testId}"]`)
+
+    // 等待节点加载
+    await nodeLocator.waitFor({ timeout: 5000 })
+
+    // 优先检查是否有输入框（编辑模式）
+    const inputLocator = nodeLocator.locator('input')
+    const inputExists = await inputLocator.count()
+
+    let content: string | null
+    if (inputExists > 0) {
+      // 编辑模式：获取输入框的值
+      content = await inputLocator.inputValue()
+    } else {
+      // 非编辑模式：通过data-node-content属性获取内容
+      const contentDiv = nodeLocator.locator('[data-node-content]')
+      content = await contentDiv.textContent()
+    }
+
+    // 检查内容是否不包含指定的文本
+    if (content?.trim().includes(notExpectedContent)) {
+      throw new Error(`节点"${testId}"的内容是"${content?.trim()}"，不应该包含"${notExpectedContent}"`)
+    }
+  }
+
   // 验证父子关系
   async verifyParentChildRelationship(childTestId: string, parentTestId: string): Promise<void> {
     // 通过test-id结构验证父子关系
@@ -1558,7 +1590,7 @@ export class BDDWorld {
 
     // 查找所有直接子节点（只匹配一级子节点，不包括孙节点）
     const childPattern = new RegExp(`^${parentTestId}-\\d+$`)
-    const directChildren = allNodeTestIds.filter(testId => childPattern.test(testId))
+    const directChildren = allNodeTestIds.filter(testId => testId && childPattern.test(testId))
 
     if (directChildren.length !== expectedCount) {
       throw new Error(

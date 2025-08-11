@@ -164,14 +164,14 @@ Feature: 思维导图键盘快捷键操作
   # 方向键导航测试
   Scenario: 右方向键从父节点导航到子节点
     Given 我为节点"root"添加子节点
-    And 节点"root"应该被选中
+    And 我选中节点"root"
     When 我按下"右"方向键
     Then 节点"root-0"应该被选中
     And 节点"root"应该不被选中
 
   Scenario: 左方向键从子节点导航到父节点
     Given 我为节点"root"添加子节点
-    And 节点"root-0"应该被选中
+    And 我选中节点"root-0"
     When 我按下"左"方向键
     Then 节点"root"应该被选中
     And 节点"root-0"应该不被选中
@@ -189,7 +189,7 @@ Feature: 思维导图键盘快捷键操作
     Given 我为节点"root"添加子节点
     And 我选中节点"root-0"
     And 我按下Enter键
-    And 节点"root-0"应该被选中
+    And 我选中节点"root-0"
     When 我按下"下"方向键
     Then 节点"root-1"应该被选中
     And 节点"root-0"应该不被选中
@@ -218,7 +218,7 @@ Feature: 思维导图键盘快捷键操作
 
   Scenario: 编辑模式下方向键不导航节点
     Given 我为节点"root"添加子节点
-    And 节点"root"应该被选中
+    And 我选中节点"root"
     When 我按下F2键
     Then 节点"root"应该处于编辑状态
     When 我按下"右"方向键
@@ -236,7 +236,7 @@ Feature: 思维导图键盘快捷键操作
 
   # 复杂场景测试
   Scenario: 复合操作创建复杂思维导图结构
-    Given 节点"root"应该被选中
+    Given 我选中节点"root"
     When 我按下Tab键
     Then 节点"root-0"应该被选中
     When 我按下Enter键
@@ -249,7 +249,7 @@ Feature: 思维导图键盘快捷键操作
     Then 节点"root-0"应该被选中
 
   Scenario: 快速编辑多个节点内容
-    Given 节点"root"应该被选中
+    Given 我选中节点"root"
     When 我按下F2键
     And 我输入"主题"
     And 我按下Enter键
@@ -261,9 +261,8 @@ Feature: 思维导图键盘快捷键操作
     Then 节点"root-0"的内容应该是"子主题1"
 
   Scenario: 无选中节点时快捷键无效
-    Given 节点"root"应该被选中
-    When 我点击思维导图的空白区域取消所有节点选中
-    And 我按下Tab键
+    Given 我点击思维导图的空白区域取消所有节点选中
+    When 我按下Tab键
     Then 不应该创建任何新节点
     When 我按下Enter键
     Then 不应该创建任何新节点

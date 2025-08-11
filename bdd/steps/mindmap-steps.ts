@@ -428,9 +428,7 @@ Then('子节点应该显示选中的视觉反馈', async function (this: BDDWorl
   if (!this.page) throw new Error('Page not initialized')
 
   // 检查子节点的选中状态视觉反馈
-  const childNode = this.page
-    .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
-    .nth(1)
+  const childNode = this.page.locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]').nth(1)
   const visualFeedback = await childNode.locator('.ring-2.ring-primary').count()
 
   if (visualFeedback > 0) {
@@ -461,7 +459,7 @@ When('我为节点{string}添加子节点', async function (this: BDDWorld, pare
   await this.selectNodeByTestId(parentTestId)
 
   if (!this.page) throw new Error('Page not initialized')
-
+  
   // 等待一下确保节点选中状态生效
   await this.page.waitForTimeout(500)
 
@@ -473,26 +471,22 @@ When('我为节点{string}添加子节点', async function (this: BDDWorld, pare
 
   // 点击添加节点按钮
   await this.page.click('[data-testid="add-node-button"]')
-
+  
   // 等待一下让页面处理
   await this.page.waitForTimeout(1000)
 
   // 检查是否已经创建了子节点
   const finalNodeTestIds = await this.page.evaluate(() => {
-    const nodes = document.querySelectorAll(
-      '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
-    )
-    return Array.from(nodes)
-      .map(node => node.getAttribute('data-testid'))
-      .filter(id => id)
+    const nodes = document.querySelectorAll('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
+    return Array.from(nodes).map(node => node.getAttribute('data-testid')).filter(id => id)
   })
 
   // 查找新创建的子节点
   const expectedChildTestId = `${parentTestId}-0`
   const hasChildNode = finalNodeTestIds.includes(expectedChildTestId)
-
+  
   if (hasChildNode) {
-    return // 直接返回，不需要等待
+    return  // 直接返回，不需要等待
   } else {
     // 等待新子节点出现
     await this.waitForNewChildNode(parentTestId)
@@ -577,6 +571,13 @@ Then(
   '节点{string}的内容应该是{string}',
   async function (this: BDDWorld, testId: string, expectedContent: string) {
     await this.verifyNodeContent(testId, expectedContent)
+  }
+)
+
+Then(
+  '节点{string}的内容应该不是{string}',
+  async function (this: BDDWorld, testId: string, notExpectedContent: string) {
+    await this.verifyNodeContentNot(testId, notExpectedContent)
   }
 )
 
