@@ -71,7 +71,14 @@ export function MindMapNode({ id, data, selected }: NodeProps) {
       />
 
       <Card
-        data-testid={nodeData.testId || `node-${id}`}
+        data-testid={
+          // 优先使用TestIdGenerator生成的testId
+          nodeData.testId || 
+          // 如果没有testId，基于nodeRole判断
+          (nodeData.nodeRole === 'root' ? 'root' : 
+           // 如果nodeRole也没有，基于nodeLevel判断 
+           ((nodeData.nodeLevel === 0 || nodeData.nodeLevel === undefined) ? 'root' : `node-${id}`))
+        }
         data-node-role={nodeData.nodeRole}
         data-node-level={nodeData.nodeLevel}
         data-node-floating={nodeData.isFloating || false}
@@ -94,7 +101,7 @@ export function MindMapNode({ id, data, selected }: NodeProps) {
             className="border-none p-0 h-auto text-center font-medium"
           />
         ) : (
-          <div className="text-center font-medium text-sm text-foreground break-words">
+          <div className="text-center font-medium text-sm text-foreground break-words" data-node-content>
             {content}
           </div>
         )}

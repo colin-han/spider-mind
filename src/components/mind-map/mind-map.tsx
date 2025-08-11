@@ -119,6 +119,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         const reactFlowNodes: Node[] = layoutNodesList.map(layoutNode => {
           const testId = testIdGenerator.getTestId(layoutNode.id)
           const nodeInfo = testIdGenerator.getNodeInfo(layoutNode.id)
+          
 
           return {
             id: layoutNode.id,
@@ -128,9 +129,9 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
               content: layoutNode.content,
               isEditing: false,
               testId,
-              nodeRole: nodeInfo?.parentId ? 'child' : 'root',
-              nodeLevel: nodeInfo?.level || 0,
-              isFloating: nodeInfo?.isFloating || false,
+              nodeRole: layoutNode.parent_node_id ? 'child' : 'root',
+              nodeLevel: layoutNode.node_level,
+              isFloating: false,
             },
           }
         })
@@ -626,8 +627,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
             isFloating: false,
             sortOrder: layoutNode.sort_order,
           }
-          const testId = testIdGenerator.registerNode(nodeStructureInfo, layoutNode.content)
-          console.log(`注册节点: UUID=${node.id}, TestId=${testId}, Content=${layoutNode.content}`)
+          testIdGenerator.registerNode(nodeStructureInfo, layoutNode.content)
 
           return layoutNode
         })

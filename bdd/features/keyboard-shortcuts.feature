@@ -31,8 +31,8 @@ Feature: 思维导图键盘快捷键操作
 
   Background:
     Given 我是一个已登录的用户
-    And 我已经打开了一个思维导图
-    And 节点"root"应该被选中
+    And 我点击"新建思维导图"按钮
+    Then 浏览器应该自动进入思维导图编辑页面
 
   # Tab键 - 添加子节点测试
   Scenario: Tab键为选中节点添加子节点
@@ -245,7 +245,7 @@ Feature: 思维导图键盘快捷键操作
     When 我按下"左"方向键
     Then 节点"root-1"应该被选中
     When 我按下"上"方向键
-    Then 节点"root-0"应要被选中
+    Then 节点"root-0"应该被选中
 
   Scenario: 快速编辑多个节点内容
     Given 节点"root"应该被选中

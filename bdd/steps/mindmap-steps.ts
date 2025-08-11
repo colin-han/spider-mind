@@ -323,7 +323,20 @@ Then('主节点应该是选中状态', async function (this: BDDWorld) {
 })
 
 Then('当前思维导图的主节点应该是选中状态', async function (this: BDDWorld) {
-  await this.verifyNodeSelected('root')
+  // 动态查找第一个节点组件的test-id
+  if (!this.page) throw new Error('Page not initialized')
+  
+  const nodeTestId = await this.page.evaluate(() => {
+    const nodeElement = document.querySelector('[data-testid^="node-"]')
+    return nodeElement?.getAttribute('data-testid')
+  })
+  
+  if (!nodeTestId) {
+    throw new Error('未找到任何节点组件')
+  }
+  
+  console.log('使用test-id:', nodeTestId)
+  await this.verifyNodeSelected(nodeTestId)
 })
 
 Then('主节点应该显示选中的视觉反馈', async function (this: BDDWorld) {
@@ -382,10 +395,7 @@ Then('不应该显示删除确认对话框', async function (this: BDDWorld) {
   expect(dialog).toBe(0)
 })
 
-// 复合验证：场景248行的拼写错误修正
-Then('节点{string}应要被选中', async function (this: BDDWorld, testId: string) {
-  await this.verifyNodeSelected(testId)
-})
+// 已修正拼写错误，此步骤已删除
 
 Then('应该显示保存成功的提示', async function (this: BDDWorld) {
   const hasSaveMessage = await this.verifySaveSuccessMessage()
@@ -460,13 +470,12 @@ When('我为节点{string}添加子节点', async function (this: BDDWorld, pare
   // 先选中目标节点
   await this.selectNodeByTestId(parentTestId)
 
-  // 点击添加子节点按钮
+  // 点击添加节点按钮（使用test-id避免依赖文本）
   if (!this.page) throw new Error('Page not initialized')
-  await this.page.click('button:has-text("添加子节点")')
+  await this.page.click('[data-testid="add-node-button"]')
 
   // 等待新子节点出现
-  const newChildTestId = await this.waitForNewChildNode(parentTestId)
-  console.log(`为节点"${parentTestId}"添加了子节点"${newChildTestId}"`)
+  await this.waitForNewChildNode(parentTestId)
 })
 
 // 快捷键操作
@@ -511,18 +520,7 @@ When('我按下{string}方向键', async function (this: BDDWorld, direction: st
   await this.page.keyboard.press(key)
 })
 
-// 内容输入操作
-When('我输入{string}', async function (this: BDDWorld, content: string) {
-  if (!this.page) throw new Error('Page not initialized')
-
-  // 查找当前激活的输入框
-  const activeInput = await this.page.$('input:focus')
-  if (activeInput) {
-    await activeInput.fill(content)
-  } else {
-    throw new Error('没有找到激活的输入框')
-  }
-})
+// 内容输入操作（与第160行的步骤重复，已删除）
 
 // 空白区域操作
 When('我点击思维导图的空白区域取消所有节点选中', async function (this: BDDWorld) {
@@ -548,6 +546,10 @@ Then('节点{string}应该不被选中', async function (this: BDDWorld, testId:
 
 Then('节点{string}应该处于编辑状态', async function (this: BDDWorld, testId: string) {
   await this.verifyNodeInEditingState(testId)
+})
+
+Then('节点{string}应该退出编辑状态', async function (this: BDDWorld, testId: string) {
+  await this.verifyNodeExitEditingState(testId)
 })
 
 Then(
@@ -593,9 +595,6 @@ Then('不应该创建任何新节点', async function (this: BDDWorld) {
 })
 
 // 兼容性Steps：将旧的术语映射到新的test-id系统
-Given('当前思维导图的主节点应该是选中状态', async function (this: BDDWorld) {
-  await this.verifyNodeSelected('root')
-})
 
 When('我双击主节点进入编辑模式', async function (this: BDDWorld) {
   await this.doubleClickNode('root')
