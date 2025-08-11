@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     // 创建根节点ID
     const rootNodeId = crypto.randomUUID()
-    
+
     // 创建思维导图对象
     const mindMap: MindMap = {
       id: mindMapId,
@@ -65,13 +65,13 @@ export async function POST(request: NextRequest) {
             id: rootNodeId,
             type: 'mindMapNode',
             position: { x: 400, y: 300 },
-            data: { 
-              content: title, 
+            data: {
+              content: title,
               isEditing: false,
               // 添加布局节点需要的字段，以便MindMap组件正确处理
               parent_node_id: null,
               sort_order: 0,
-              node_level: 0
+              node_level: 0,
             },
           },
         ],

@@ -119,7 +119,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         const reactFlowNodes: Node[] = layoutNodesList.map(layoutNode => {
           const testId = testIdGenerator.getTestId(layoutNode.id)
           const nodeInfo = testIdGenerator.getNodeInfo(layoutNode.id)
-          
 
           return {
             id: layoutNode.id,

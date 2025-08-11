@@ -32,10 +32,10 @@ export function MindMapToolbar({
   return (
     <Card className="absolute top-4 left-4 z-10 p-2">
       <div className="flex gap-2">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={onAddNode} 
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onAddNode}
           className="flex items-center gap-1"
           data-testid="add-node-button"
         >

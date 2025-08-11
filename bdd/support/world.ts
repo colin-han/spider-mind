@@ -162,7 +162,7 @@ export class BDDWorld {
     await this.page.waitForTimeout(200)
 
     const rootElement = this.page.locator('[data-testid="root"]')
-    
+
     // 检查是否有节点具有选中状态属性
     const hasSelectedAttribute = await rootElement.getAttribute('data-node-selected')
     if (hasSelectedAttribute === 'true') return true
@@ -172,11 +172,11 @@ export class BDDWorld {
     if (hasRingClass > 0) return true
 
     // 检查是否有选中的class
-    const hasSelectedClass = await rootElement.evaluate((el: Element) => 
+    const hasSelectedClass = await rootElement.evaluate((el: Element) =>
       el.classList.contains('selected')
     )
     if (hasSelectedClass) return true
-    
+
     throw new Error('主节点未被选中')
   }
 
@@ -364,10 +364,10 @@ export class BDDWorld {
     if (!this.page.url().endsWith('/mindmaps')) {
       await this.page.goto('/mindmaps')
     }
-    
+
     // 等待思维导图卡片加载
     await this.page.waitForSelector('a[href*="/mindmaps/"]', { timeout: 10000 })
-    
+
     await this.clickFirstMindMapCard()
     // 等待思维导图组件加载完成（页面跳转已经在clickFirstMindMapCard中处理）
     await this.page.waitForSelector('[data-testid*="rf__node"]', { timeout: 15000 })
@@ -533,7 +533,6 @@ export class BDDWorld {
   async clickDeleteButtonOnMindMapCard(mindMapName: string) {
     if (!this.page) throw new Error('Page not initialized')
 
-
     // 等待思维导图列表加载完成
     await this.page.waitForSelector(
       '[data-testid*="mindmap-card"], .mindmap-card, a[href*="/mindmaps/"]',
@@ -554,7 +553,6 @@ export class BDDWorld {
       try {
         const card = this.page.locator(cardSelector).first()
         if (await card.isVisible()) {
-
           // 悬停在卡片上以显示删除按钮
           await card.hover()
           await this.page.waitForTimeout(500)
@@ -758,7 +756,12 @@ export class BDDWorld {
     }
 
     // 检查对话框是否包含期望的内容
-    const contentSelectors = ['[data-testid="alert-dialog"]', '[role="dialog"]', '.dialog', '.modal']
+    const contentSelectors = [
+      '[data-testid="alert-dialog"]',
+      '[role="dialog"]',
+      '.dialog',
+      '.modal',
+    ]
 
     for (const selector of contentSelectors) {
       try {
@@ -786,12 +789,12 @@ export class BDDWorld {
       // 首先检查删除确认按钮文本是否显示进度状态
       const confirmButton = this.page.locator('[data-testid="alert-dialog-confirm"]')
       await confirmButton.waitFor({ state: 'visible', timeout: 1000 }).catch(() => {})
-      
+
       if (await confirmButton.isVisible()) {
         // 等待按钮文本更新
         try {
           await this.page.waitForFunction(
-            (expectedText) => {
+            expectedText => {
               const element = document.querySelector('[data-testid="alert-dialog-confirm"]')
               return element && element.textContent && element.textContent.includes(expectedText)
             },
@@ -1251,7 +1254,6 @@ export class BDDWorld {
 
     for (const mindMapId of this.createdMindMapIds) {
       try {
-
         // 通过API删除思维导图
         if (this.page) {
           await this.page.evaluate(async id => {
@@ -1266,7 +1268,6 @@ export class BDDWorld {
             }
           }, mindMapId)
         }
-
       } catch (error) {
         // 继续删除其他思维导图，不中断清理流程
       }
@@ -1287,13 +1288,13 @@ export class BDDWorld {
 
     // 记录添加前的节点数量
     const initialNodeCount = await this.page.locator('[data-testid*="rf__node"]').count()
-    
+
     // 等待新子节点出现
     await this.page.waitForTimeout(2000)
 
     // 等待节点数量增加
     await this.page.waitForFunction(
-      (initialCount) => {
+      initialCount => {
         return document.querySelectorAll('[data-testid*="rf__node"]').length > initialCount
       },
       initialNodeCount,
@@ -1350,7 +1351,7 @@ export class BDDWorld {
     // 直接使用Locator API
     const nodeLocator = this.page.locator(`[data-testid="${testId}"]`)
     const inputLocator = nodeLocator.locator('input')
-    
+
     // 等待输入框出现
     await inputLocator.waitFor({ timeout: 5000 })
 
@@ -1364,15 +1365,19 @@ export class BDDWorld {
   // 验证节点退出编辑状态
   async verifyNodeExitEditingState(testId: string) {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 等待输入框消失，确认退出编辑状态
-    await this.page.waitForFunction((id) => {
-      const element = document.querySelector(`[data-testid="${id}"]`)
-      if (!element) return false
-      const inputs = element.querySelectorAll('input')
-      return inputs.length === 0
-    }, testId, { timeout: 3000 })
-    
+    await this.page.waitForFunction(
+      id => {
+        const element = document.querySelector(`[data-testid="${id}"]`)
+        if (!element) return false
+        const inputs = element.querySelectorAll('input')
+        return inputs.length === 0
+      },
+      testId,
+      { timeout: 3000 }
+    )
+
     // 等待DOM更新完成
     await this.page.waitForTimeout(200)
   }
@@ -1398,13 +1403,13 @@ export class BDDWorld {
   // 验证节点被选中
   async verifyNodeSelected(testId: string): Promise<void> {
     if (!this.page) throw new Error('Page not initialized')
-    
+
     // 使用Locator而不是ElementHandle
     const elementLocator = this.page.locator(`[data-testid="${testId}"]`)
-    
+
     // 等待元素存在
     await elementLocator.waitFor({ timeout: 10000 })
-    
+
     // 等待节点状态更新（考虑到组件中的setTimeout延迟）
     await this.page.waitForTimeout(200)
 
@@ -1416,7 +1421,9 @@ export class BDDWorld {
     const hasRingClass = await elementLocator.locator('.ring-2.ring-primary').count()
 
     if (!hasSelectedClass && hasSelectedAttribute !== 'true' && hasRingClass === 0) {
-      throw new Error(`节点"${testId}"未被选中，检查结果: class=${hasSelectedClass}, attribute=${hasSelectedAttribute}, ringClass=${hasRingClass}`)
+      throw new Error(
+        `节点"${testId}"未被选中，检查结果: class=${hasSelectedClass}, attribute=${hasSelectedAttribute}, ringClass=${hasRingClass}`
+      )
     }
   }
 
@@ -1443,14 +1450,14 @@ export class BDDWorld {
 
     // 直接使用Locator API定位到节点
     const nodeLocator = this.page.locator(`[data-testid="${testId}"]`)
-    
+
     // 等待节点加载
     await nodeLocator.waitFor({ timeout: 5000 })
-    
+
     // 优先检查是否有输入框（编辑模式）
     const inputLocator = nodeLocator.locator('input')
     const inputExists = await inputLocator.count()
-    
+
     let content: string | null
     if (inputExists > 0) {
       // 编辑模式：获取输入框的值
@@ -1460,7 +1467,7 @@ export class BDDWorld {
       const contentDiv = nodeLocator.locator('[data-node-content]')
       content = await contentDiv.textContent()
     }
-    
+
     // 检查内容是否包含期望的文本（临时解决方案）
     if (!content?.trim().includes(expectedContent)) {
       throw new Error(`节点"${testId}"的内容是"${content?.trim()}"，期望包含"${expectedContent}"`)

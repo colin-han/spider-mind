@@ -325,16 +325,16 @@ Then('主节点应该是选中状态', async function (this: BDDWorld) {
 Then('当前思维导图的主节点应该是选中状态', async function (this: BDDWorld) {
   // 动态查找第一个节点组件的test-id
   if (!this.page) throw new Error('Page not initialized')
-  
+
   const nodeTestId = await this.page.evaluate(() => {
     const nodeElement = document.querySelector('[data-testid^="node-"]')
     return nodeElement?.getAttribute('data-testid')
   })
-  
+
   if (!nodeTestId) {
     throw new Error('未找到任何节点组件')
   }
-  
+
   console.log('使用test-id:', nodeTestId)
   await this.verifyNodeSelected(nodeTestId)
 })
