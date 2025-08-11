@@ -1558,7 +1558,9 @@ export class BDDWorld {
 
     // 检查内容是否不包含指定的文本
     if (content?.trim().includes(notExpectedContent)) {
-      throw new Error(`节点"${testId}"的内容是"${content?.trim()}"，不应该包含"${notExpectedContent}"`)
+      throw new Error(
+        `节点"${testId}"的内容是"${content?.trim()}"，不应该包含"${notExpectedContent}"`
+      )
     }
   }
 
