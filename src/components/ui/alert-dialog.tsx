@@ -27,17 +27,23 @@ export function AlertDialog({
   allowClickOutside = false,
 }: AlertDialogProps) {
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && open) {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!open) return
+
+      if (e.key === 'Escape') {
+        onOpenChange(false)
+      } else if (e.key === 'Enter') {
+        e.preventDefault()
+        onConfirm()
         onOpenChange(false)
       }
     }
 
     if (open) {
-      document.addEventListener('keydown', handleEscape)
-      return () => document.removeEventListener('keydown', handleEscape)
+      document.addEventListener('keydown', handleKeyDown)
+      return () => document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [open, onOpenChange])
+  }, [open, onOpenChange, onConfirm])
 
   if (!open) return null
 

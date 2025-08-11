@@ -368,7 +368,7 @@ export class BDDWorld {
   // 打开现有思维导图
   async openExistingMindMap() {
     // 如果不在思维导图列表页，先导航过去
-    if (!this.page.url().endsWith('/mindmaps')) {
+    if (!this.page?.url().endsWith('/mindmaps')) {
       await this.page.goto('/mindmaps')
     }
 

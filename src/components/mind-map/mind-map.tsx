@@ -352,10 +352,19 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         // 更新TestIdGenerator中的节点内容
         testIdGenerator.updateNodeContent(nodeId, content)
 
-        // 更新ReactFlow节点
+        // 更新ReactFlow节点，同时清除编辑状态
         setNodes(nds =>
           nds.map(node =>
-            node.id === nodeId ? { ...node, data: { ...node.data, content } } : node
+            node.id === nodeId
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    content,
+                    isEditing: false, // 编辑完成后清除编辑状态
+                  },
+                }
+              : node
           )
         )
 
@@ -368,7 +377,16 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         // 通过onChange回调通知父组件数据变更，让父组件处理保存
         const updatedData = {
           nodes: nodes.map(node =>
-            node.id === nodeId ? { ...node, data: { ...node.data, content } } : node
+            node.id === nodeId
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    content,
+                    isEditing: false, // 确保onChange回调中的数据也清除编辑状态
+                  },
+                }
+              : node
           ),
           edges,
         }
@@ -483,13 +501,51 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
       if (selectedNodes.length !== 1) return
 
       const selectedNodeId = selectedNodes[0]
-      const nodeElement = document.querySelector(`[data-testid="${selectedNodeId}"]`)
-      if (nodeElement) {
-        // 触发双击事件进入编辑模式
-        const event = new MouseEvent('dblclick', { bubbles: true })
-        nodeElement.dispatchEvent(event)
-      }
-    }, [selectedNodes])
+
+      // 方法1：直接更新节点状态，设置isEditing为true
+      setNodes(prevNodes =>
+        prevNodes.map(node => {
+          if (node.id === selectedNodeId) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                isEditing: true,
+              },
+            }
+          }
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              isEditing: false, // 确保其他节点不处于编辑状态
+            },
+          }
+        })
+      )
+
+      // 方法2：作为备用，也尝试触发双击事件
+      setTimeout(() => {
+        const testId = testIdGenerator.getTestId(selectedNodeId)
+        let nodeElement = null
+
+        if (testId) {
+          nodeElement = document.querySelector(`[data-testid="${testId}"]`)
+        }
+
+        if (!nodeElement) {
+          nodeElement = document.querySelector(`[data-testid="${selectedNodeId}"]`)
+        }
+
+        if (nodeElement) {
+          const event = new MouseEvent('dblclick', {
+            bubbles: true,
+            cancelable: true,
+          })
+          nodeElement.dispatchEvent(event)
+        }
+      }, 50) // 给React时间更新DOM
+    }, [selectedNodes, testIdGenerator, setNodes])
 
     // 键盘事件处理
     const handleKeyDown = useCallback(

@@ -22,6 +22,11 @@ export function MindMapNode({ id, data, selected }: NodeProps) {
   const [isEditing, setIsEditing] = useState(nodeData.isEditing || false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // 同步外部传入的编辑状态
+  useEffect(() => {
+    setIsEditing(nodeData.isEditing || false)
+  }, [nodeData.isEditing])
+
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus()
