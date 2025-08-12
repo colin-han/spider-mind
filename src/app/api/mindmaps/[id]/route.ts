@@ -76,11 +76,33 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params
     const body = await request.json()
 
-    // 简单返回更新成功
+    // 查找现有的思维导图
+    const mindMapIndex = global.mindMapsStorage.findIndex(map => map.id === id)
+
+    if (mindMapIndex === -1) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: '思维导图不存在',
+        },
+        { status: 404 }
+      )
+    }
+
+    // 更新思维导图数据
+    const updatedMindMap = {
+      ...global.mindMapsStorage[mindMapIndex],
+      ...body,
+      updated_at: new Date().toISOString(),
+    }
+
+    // 保存到内存存储
+    global.mindMapsStorage[mindMapIndex] = updatedMindMap
+
     return NextResponse.json({
       success: true,
       message: '思维导图更新成功',
-      data: { id: id, ...body, updated_at: new Date().toISOString() },
+      data: updatedMindMap,
     })
   } catch (error) {
     console.error('Failed to update mind map:', error)
