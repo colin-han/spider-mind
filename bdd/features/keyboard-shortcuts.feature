@@ -208,13 +208,12 @@ Feature: 思维导图键盘快捷键操作
     Then 节点"root-0"应该被选中
 
   # 编辑模式下快捷键行为测试
-  Scenario: 编辑模式下快捷键被禁用
+  Scenario: 编辑模式下Tab键应该退出编辑模式
     Given 节点"root"应该被选中
     When 我按下F2键
     Then 节点"root"应该处于编辑状态
     When 我按下Tab键
-    Then 不应该创建任何新节点
-    And 节点"root"应该处于编辑状态
+    Then 节点"root"应该不处于编辑状态
 
   Scenario: 编辑模式下方向键不导航节点
     Given 我为节点"root"添加子节点
