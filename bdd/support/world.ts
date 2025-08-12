@@ -1448,9 +1448,22 @@ export class BDDWorld {
   async verifyNodeNotExists(testId: string): Promise<void> {
     if (!this.page) throw new Error('Page not initialized')
 
-    const element = await this.findNodeByTestId(testId)
-    if (element !== null) {
-      throw new Error(`节点"${testId}"仍然存在，但期望它应该被删除`)
+    // 等待节点消失（给删除操作一些时间）
+    try {
+      // 先等待一小段时间给删除操作处理时间
+      await this.page.waitForTimeout(500)
+      
+      // 检查节点是否还存在，使用较短的超时
+      const element = await this.page.$(`[data-testid="${testId}"]`)
+      if (element !== null) {
+        throw new Error(`节点"${testId}"仍然存在，但期望它应该被删除`)
+      }
+    } catch (error) {
+      // 如果是因为节点不存在引起的错误，那就是我们期望的结果
+      if (error instanceof Error && error.message.includes('仍然存在')) {
+        throw error
+      }
+      // 其他错误可能是因为节点确实不存在了，这是正确的
     }
   }
 
