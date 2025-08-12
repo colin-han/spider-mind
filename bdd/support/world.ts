@@ -1452,7 +1452,7 @@ export class BDDWorld {
     try {
       // 先等待一小段时间给删除操作处理时间
       await this.page.waitForTimeout(500)
-      
+
       // 检查节点是否还存在，使用较短的超时
       const element = await this.page.$(`[data-testid="${testId}"]`)
       if (element !== null) {
