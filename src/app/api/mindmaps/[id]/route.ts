@@ -1,56 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-interface MindMap {
-  id: string
-  title: string
-  content: Record<string, unknown>
-  user_id: string
-  is_public: boolean
-  created_at: string
-  updated_at: string
-}
-
-// 导入内存存储（模拟外部导入）
-declare global {
-  var mindMapsStorage: MindMap[]
-}
-
-if (!global.mindMapsStorage) {
-  global.mindMapsStorage = []
-}
+import { MindMapService } from '@/lib/database-postgres'
 
 // 获取单个思维导图
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    // 从内存存储中查找
-    let mindMap = global.mindMapsStorage.find(map => map.id === id)
+    // 从数据库中查找
+    let mindMap = await MindMapService.getMindMap(id)
 
     if (!mindMap) {
       // 如果没有找到，创建一个默认的思维导图
-      mindMap = {
-        id: id,
+      const rootNodeId = crypto.randomUUID()
+      const defaultMindMapData = {
+        id: id, // 使用传入的ID
         title: '新思维导图',
-        content: {
-          nodes: [
-            {
-              id: crypto.randomUUID(),
-              type: 'mindMapNode',
-              position: { x: 400, y: 300 },
-              data: { content: '新思维导图', isEditing: false },
-              selected: true, // 默认选中主节点
-            },
-          ],
-          edges: [],
-        },
         user_id: '11111111-1111-1111-1111-111111111111',
         is_public: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       }
 
-      // 保存到全局存储
-      global.mindMapsStorage.push(mindMap)
+      // 创建思维导图
+      mindMap = await MindMapService.createMindMap(defaultMindMapData)
+
+      // 准备根节点数据
+      const rootNodeContent = {
+        nodes: [
+          {
+            id: rootNodeId,
+            type: 'mindMapNode',
+            position: { x: 400, y: 300 },
+            data: {
+              content: '新思维导图',
+              isEditing: false,
+              parent_node_id: null,
+              sort_order: 0,
+              node_level: 0,
+            },
+            selected: true, // 默认选中主节点
+          },
+        ],
+        edges: [],
+      }
+
+      // 同步节点数据到nodes表
+      await MindMapService.syncNodesFromContent(mindMap.id, rootNodeContent)
     }
 
     return NextResponse.json({
@@ -76,10 +68,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params
     const body = await request.json()
 
-    // 查找现有的思维导图
-    const mindMapIndex = global.mindMapsStorage.findIndex(map => map.id === id)
-
-    if (mindMapIndex === -1) {
+    // 检查思维导图是否存在
+    const existingMindMap = await MindMapService.getMindMap(id)
+    if (!existingMindMap) {
       return NextResponse.json(
         {
           success: false,
@@ -89,15 +80,19 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       )
     }
 
-    // 更新思维导图数据
-    const updatedMindMap = {
-      ...global.mindMapsStorage[mindMapIndex],
+    // 准备更新数据
+    const updateData = {
       ...body,
       updated_at: new Date().toISOString(),
     }
 
-    // 保存到内存存储
-    global.mindMapsStorage[mindMapIndex] = updatedMindMap
+    // 更新思维导图基本信息
+    const updatedMindMap = await MindMapService.updateMindMap(id, updateData)
+
+    // 如果更新了content，同步节点数据到nodes表
+    if (body.content) {
+      await MindMapService.syncNodesFromContent(id, body.content)
+    }
 
     return NextResponse.json({
       success: true,
@@ -122,12 +117,23 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const startTime = Date.now()
+  let requestId = `del-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  
+  console.log(`[${requestId}] DELETE request started for mindmap ID: ${JSON.stringify(await params)}`)
+  
   try {
     const { id } = await params
+    console.log(`[${requestId}] Processing delete for mindmap ID: ${id}`)
+    
     // 检查思维导图是否存在
-    const mindMapIndex = global.mindMapsStorage.findIndex(map => map.id === id)
-
-    if (mindMapIndex === -1) {
+    console.log(`[${requestId}] Checking if mindmap exists...`)
+    const checkStartTime = Date.now()
+    const existingMindMap = await MindMapService.getMindMap(id)
+    console.log(`[${requestId}] getMindMap completed in ${Date.now() - checkStartTime}ms, found: ${!!existingMindMap}`)
+    
+    if (!existingMindMap) {
+      console.log(`[${requestId}] Mindmap not found, returning 404`)
       return NextResponse.json(
         {
           success: false,
@@ -137,15 +143,28 @@ export async function DELETE(
       )
     }
 
-    // 从内存存储中删除
-    global.mindMapsStorage.splice(mindMapIndex, 1)
+    // 删除思维导图（级联删除节点）
+    console.log(`[${requestId}] Starting delete operation...`)
+    const deleteStartTime = Date.now()
+    await MindMapService.deleteMindMap(id)
+    console.log(`[${requestId}] deleteMindMap completed in ${Date.now() - deleteStartTime}ms`)
 
+    const totalTime = Date.now() - startTime
+    console.log(`[${requestId}] Delete operation successful, total time: ${totalTime}ms`)
+    
     return NextResponse.json({
       success: true,
       message: '思维导图删除成功',
     })
   } catch (error) {
-    console.error('Failed to delete mind map:', error)
+    const totalTime = Date.now() - startTime
+    console.error(`[${requestId}] Delete operation failed after ${totalTime}ms:`, error)
+    console.error(`[${requestId}] Error details:`, {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error', 
+      stack: error instanceof Error ? error.stack : 'No stack trace'
+    })
+    
     return NextResponse.json(
       {
         success: false,

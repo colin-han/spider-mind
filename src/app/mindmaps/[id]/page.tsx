@@ -53,7 +53,7 @@ function MindMapDetailPage() {
   useEffect(() => {
     const loadMindMap = async () => {
       try {
-        const response = await fetch(`/api/mindmaps/${mindMapId}`)
+        const response = await fetch(`/api/mindmaps/${mindMapId}/full`)
         const result = await response.json()
 
         if (result.success) {

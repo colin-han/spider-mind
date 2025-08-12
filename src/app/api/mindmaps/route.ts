@@ -1,23 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-interface MindMap {
-  id: string
-  title: string
-  content: Record<string, unknown>
-  user_id: string
-  is_public: boolean
-  created_at: string
-  updated_at: string
-}
-
-// 声明全局内存存储
-declare global {
-  var mindMapsStorage: MindMap[]
-}
-
-if (!global.mindMapsStorage) {
-  global.mindMapsStorage = []
-}
+import { MindMapService } from '@/lib/database-postgres'
 
 // 获取所有思维导图
 export async function GET(request: NextRequest) {
@@ -25,8 +7,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId') || '11111111-1111-1111-1111-111111111111' // 默认用户
 
-    // 过滤用户的思维导图
-    const userMindMaps = global.mindMapsStorage.filter(mindMap => mindMap.user_id === userId)
+    // 从Supabase获取用户的思维导图
+    const userMindMaps = await MindMapService.getUserMindMaps(userId)
 
     return NextResponse.json({
       success: true,
@@ -50,41 +32,42 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const title = body.title || '新思维导图'
-    const mindMapId = crypto.randomUUID()
+    const userId = body.userId || '11111111-1111-1111-1111-111111111111'
 
     // 创建根节点ID
     const rootNodeId = crypto.randomUUID()
 
-    // 创建思维导图对象
-    const mindMap: MindMap = {
-      id: mindMapId,
+    // 准备思维导图数据（只包含基本信息，不包含content字段）
+    const mindMapData = {
       title,
-      content: {
-        nodes: [
-          {
-            id: rootNodeId,
-            type: 'mindMapNode',
-            position: { x: 400, y: 300 },
-            data: {
-              content: title,
-              isEditing: false,
-              // 添加布局节点需要的字段，以便MindMap组件正确处理
-              parent_node_id: null,
-              sort_order: 0,
-              node_level: 0,
-            },
-          },
-        ],
-        edges: [],
-      },
-      user_id: body.userId || '11111111-1111-1111-1111-111111111111',
+      user_id: userId,
       is_public: body.is_public || false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     }
 
-    // 保存到全局内存存储
-    global.mindMapsStorage.push(mindMap)
+    // 创建思维导图
+    const mindMap = await MindMapService.createMindMap(mindMapData)
+
+    // 准备根节点数据
+    const rootNodeContent = {
+      nodes: [
+        {
+          id: rootNodeId,
+          type: 'mindMapNode',
+          position: { x: 400, y: 300 },
+          data: {
+            content: title,
+            isEditing: false,
+            parent_node_id: null,
+            sort_order: 0,
+            node_level: 0,
+          },
+        },
+      ],
+      edges: [],
+    }
+
+    // 同步节点数据到nodes表
+    await MindMapService.syncNodesFromContent(mindMap.id, rootNodeContent)
 
     return NextResponse.json({
       success: true,

@@ -46,11 +46,10 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
--- 思维导图表
+-- 思维导图表（移除content字段，节点数据存储在mind_map_nodes表中）
 CREATE TABLE IF NOT EXISTS mind_maps (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     title TEXT NOT NULL,
-    content JSONB NOT NULL DEFAULT '{}',
     user_id UUID REFERENCES users(id) NOT NULL,
     is_public BOOLEAN DEFAULT FALSE,
     embedding TEXT, -- 临时用TEXT存储向量，稍后改为VECTOR

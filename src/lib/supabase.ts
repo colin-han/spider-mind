@@ -1,9 +1,26 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+// 本地开发环境使用直接的PostgreSQL连接配置
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:8000'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  // 本地开发配置
+  db: {
+    schema: 'public',
+  },
+  auth: {
+    // 在本地开发环境禁用认证，直接使用测试用户ID
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+  global: {
+    headers: {
+      // 开发环境跳过认证
+      'Authorization': `Bearer ${supabaseAnonKey}`,
+    },
+  },
+})
 
 // 类型定义
 export type Database = {
