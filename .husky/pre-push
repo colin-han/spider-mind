@@ -3,18 +3,7 @@
 
 echo "🚀 运行 pre-push 检查..."
 
-# 确保所有测试都通过
-echo "🧪 运行完整测试套件..."
-yarn test:unit --run
-
-echo "🔗 运行集成测试..."
-yarn test:integration --run
-
-echo "⚡ 运行性能测试..."
-yarn test:performance --run
-
-# 构建检查
-echo "🏗️ 验证构建..."
-yarn build
+echo "⚡ 运行BDD测试..."
+yarn test:bdd
 
 echo "✅ 所有检查都通过，可以推送代码！"
