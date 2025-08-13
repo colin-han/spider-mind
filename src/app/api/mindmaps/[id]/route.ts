@@ -87,11 +87,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // 在单个事务中更新思维导图并同步节点数据（如果有的话）
-    const updatedMindMap = await MindMapService.updateMindMapWithNodes(
-      id, 
-      updateData,
-      body.content
-    )
+    const updatedMindMap = await MindMapService.updateMindMapWithNodes(id, updateData, body.content)
 
     return NextResponse.json({
       success: true,

@@ -130,13 +130,13 @@ export class MindMapService {
 
   // 在单个事务中更新思维导图并同步节点数据
   static async updateMindMapWithNodes(
-    id: string, 
+    id: string,
     updates: MindMapUpdate,
     content?: { nodes: unknown[]; edges: unknown[] }
   ): Promise<MindMap> {
     console.log(`[DB] Starting updateMindMapWithNodes for mindmap ${id}`)
     const startTime = Date.now()
-    
+
     return await transaction(async txQuery => {
       // 1. 更新思维导图基本信息
       const setClause = []
@@ -176,7 +176,7 @@ export class MindMapService {
       // 2. 如果有内容更新，同步节点数据
       if (content && content.nodes) {
         console.log(`[DB] Syncing ${content.nodes.length} nodes within transaction`)
-        
+
         // 构建父子关系映射
         const parentMap: { [nodeId: string]: string | null } = {}
         content.edges?.forEach((edge: unknown) => {
@@ -256,13 +256,15 @@ export class MindMapService {
           `
 
           await txQuery(insertSql, values)
-          console.log(`[DB] Insert ${nodesToInsert.length} nodes completed in ${Date.now() - insertStart}ms`)
+          console.log(
+            `[DB] Insert ${nodesToInsert.length} nodes completed in ${Date.now() - insertStart}ms`
+          )
         }
       }
 
       const totalTime = Date.now() - startTime
       console.log(`[DB] updateMindMapWithNodes completed in ${totalTime}ms`)
-      
+
       return updateResult[0]
     })
   }
