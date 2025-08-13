@@ -2,13 +2,12 @@
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Plus, Trash2, Save, Sparkles, Search, Download, Upload } from 'lucide-react'
+import { Plus, Trash2, Save, Search, Download, Upload } from 'lucide-react'
 
 export interface MindMapToolbarProps {
   onAddNode: () => void
   onDeleteSelected: () => void
   onSave: () => void
-  onAIAssist?: () => void
   onSearch?: () => void
   onExport?: () => void
   onImport?: () => void
@@ -20,7 +19,6 @@ export function MindMapToolbar({
   onAddNode,
   onDeleteSelected,
   onSave,
-  onAIAssist,
   onSearch,
   onExport,
   onImport,
@@ -56,17 +54,6 @@ export function MindMapToolbar({
 
         <div className="w-px bg-gray-300 mx-1" />
 
-        {onAIAssist && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onAIAssist}
-            className="flex items-center gap-1 text-purple-600 hover:text-purple-700"
-          >
-            <Sparkles className="w-4 h-4" />
-            AI助手
-          </Button>
-        )}
 
         <Button variant="outline" size="sm" onClick={onSearch} className="flex items-center gap-1">
           <Search className="w-4 h-4" />

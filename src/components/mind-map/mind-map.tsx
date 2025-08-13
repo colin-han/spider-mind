@@ -17,7 +17,6 @@ import '@xyflow/react/dist/style.css'
 
 import { MindMapNode } from './mind-map-node'
 import { MindMapToolbar } from './mind-map-toolbar'
-import { AIAssistant } from '@/components/ai/ai-assistant'
 import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog'
 import {
   calculateAutoLayout,
@@ -78,7 +77,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
     const [edges, setEdges, onEdgesChange] = useEdgesState(finalInitialEdges)
     const [selectedNodes, setSelectedNodes] = useState<string[]>([])
     const [selectedEdges, setSelectedEdges] = useState<string[]>([])
-    const [showAIAssistant, setShowAIAssistant] = useState(false)
     const [layoutNodes, setLayoutNodes] = useState<LayoutNode[]>([])
     const [testIdGenerator] = useState(() => new TestIdGenerator())
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -402,43 +400,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
       onSave?.(data)
     }, [nodes, edges, onChange, onSave])
 
-    const handleAISuggestionApply = useCallback(
-      (suggestion: {
-        type: string
-        content?: string
-        position?: { x: number; y: number }
-        connections?: string[]
-      }) => {
-        if (suggestion.type === 'node' && suggestion.content) {
-          const newId = `ai_node_${Date.now()}`
-          const newNode: Node = {
-            id: newId,
-            type: 'mindMapNode',
-            position: suggestion.position || {
-              x: Math.random() * 400 + 200,
-              y: Math.random() * 300 + 150,
-            },
-            data: {
-              content: suggestion.content,
-              isEditing: false,
-            },
-          }
-
-          setNodes(nds => [...nds, newNode])
-
-          // 如果有连接建议，创建连接
-          if (suggestion.connections && suggestion.connections.length > 0) {
-            const newEdges = suggestion.connections.map((targetId: string, index: number) => ({
-              id: `ai_edge_${newId}_${targetId}_${index}`,
-              source: newId,
-              target: targetId,
-            }))
-            setEdges(eds => [...eds, ...newEdges])
-          }
-        }
-      },
-      [setNodes, setEdges]
-    )
 
     // 节点导航功能
     const navigateToNode = useCallback(
@@ -551,7 +512,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
     const handleKeyDown = useCallback(
       (event: KeyboardEvent) => {
         // 如果显示对话框，不处理快捷键
-        if (showDeleteDialog || showAIAssistant) return
+        if (showDeleteDialog) return
 
         // 检查是否在编辑模式（任何输入框获得焦点）
         const isEditingNow =
@@ -623,7 +584,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
       [
         selectedNodes,
         showDeleteDialog,
-        showAIAssistant,
         addNode,
         addSiblingNode,
         deleteSelected,
@@ -632,8 +592,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
       ]
     )
 
-    const selectedNode =
-      selectedNodes.length === 1 ? nodes.find(n => n.id === selectedNodes[0]) : undefined
 
     // 暴露方法给父组件
     useImperativeHandle(
@@ -756,30 +714,12 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
             onAddNode={addNode}
             onDeleteSelected={deleteSelected}
             onSave={handleSave}
-            onAIAssist={() => setShowAIAssistant(true)}
+            onAIAssist={undefined}
             hasSelection={selectedNodes.length > 0 || selectedEdges.length > 0}
             selectedNodeCount={selectedNodes.length}
           />
         )}
 
-        {showAIAssistant && (
-          <AIAssistant
-            selectedNode={
-              selectedNode
-                ? {
-                    id: selectedNode.id,
-                    content: String(selectedNode.data.content || ''),
-                  }
-                : undefined
-            }
-            allNodes={nodes.map(n => ({
-              id: n.id,
-              content: String(n.data.content || ''),
-            }))}
-            onSuggestionApply={handleAISuggestionApply}
-            onClose={() => setShowAIAssistant(false)}
-          />
-        )}
 
         <ReactFlow
           nodes={nodes}

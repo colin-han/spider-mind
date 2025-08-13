@@ -118,7 +118,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const startTime = Date.now()
-  let requestId = `del-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  const requestId = `del-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   
   console.log(`[${requestId}] DELETE request started for mindmap ID: ${JSON.stringify(await params)}`)
   

@@ -133,49 +133,6 @@ export class MindMapService {
     return data || []
   }
 
-  // 通过向量搜索思维导图
-  static async searchMindMapsBySimilarity(
-    queryEmbedding: number[],
-    options: {
-      threshold?: number
-      limit?: number
-      userId?: string
-    } = {}
-  ) {
-    const { threshold = 0.78, limit = 10, userId } = options
-
-    const { data, error } = await supabase.rpc('search_mind_maps_by_similarity', {
-      query_embedding: queryEmbedding,
-      match_threshold: threshold,
-      match_count: limit,
-      user_id_filter: userId || null,
-    })
-
-    if (error) throw error
-    return data || []
-  }
-
-  // 通过向量搜索节点
-  static async searchNodesBySimilarity(
-    queryEmbedding: number[],
-    options: {
-      threshold?: number
-      limit?: number
-      userId?: string
-    } = {}
-  ) {
-    const { threshold = 0.78, limit = 20, userId } = options
-
-    const { data, error } = await supabase.rpc('search_nodes_by_similarity', {
-      query_embedding: queryEmbedding,
-      match_threshold: threshold,
-      match_count: limit,
-      user_id_filter: userId || null,
-    })
-
-    if (error) throw error
-    return data || []
-  }
 
   // 从ReactFlow格式的content同步节点数据到nodes表
   static async syncNodesFromContent(
@@ -228,7 +185,6 @@ export class MindMapService {
             node_level: calculateNodeLevel(nodeObj.id),
             node_type: nodeObj.type || 'mindMapNode',
             style: nodeObj.data?.style || {},
-            embedding: undefined, // embedding暂时为空
           }
         }
         return null

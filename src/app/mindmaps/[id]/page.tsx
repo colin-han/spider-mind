@@ -12,7 +12,6 @@ import {
   ArrowLeft,
   Save,
   Share,
-  Sparkles,
   Plus,
   Trash2,
   Search,
@@ -20,7 +19,6 @@ import {
   Upload,
 } from 'lucide-react'
 import { MindMap, type MindMapRef } from '@/components/mind-map/mind-map'
-import { AIAssistant } from '@/components/ai/ai-assistant'
 import type { Node, Edge } from '@xyflow/react'
 
 interface MindMapData {
@@ -45,7 +43,6 @@ function MindMapDetailPage() {
   const [saving, setSaving] = useState(false)
   const [title, setTitle] = useState('')
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
-  const [showAIAssistant, setShowAIAssistant] = useState(false)
   const [selectedNodes, setSelectedNodes] = useState<string[]>([])
   const mindMapRef = useRef<MindMapRef | null>(null)
 
@@ -135,14 +132,6 @@ function MindMapDetailPage() {
     }
   }
 
-  // 处理AI建议应用
-  const handleAISuggestionApply = async (suggestion: unknown) => {
-    // 这里可以实现AI建议的应用逻辑
-    console.log('Applying AI suggestion:', suggestion)
-
-    // 简化实现：关闭AI助手
-    setShowAIAssistant(false)
-  }
 
   // 新的工具栏操作函数
   const handleAddNode = () => {
@@ -246,10 +235,6 @@ function MindMapDetailPage() {
             搜索
           </Button>
 
-          <Button variant="ghost" size="sm" onClick={() => setShowAIAssistant(!showAIAssistant)}>
-            <Sparkles className="h-4 w-4 mr-2" />
-            AI助手
-          </Button>
 
           <div className="w-px h-6 bg-gray-300" />
 
@@ -288,24 +273,6 @@ function MindMapDetailPage() {
           showToolbar={false}
         />
 
-        {/* AI助手面板 */}
-        {showAIAssistant && (
-          <div className="absolute top-4 right-4 z-10">
-            <AIAssistant
-              allNodes={
-                mindMapData.content.nodes?.map((node: unknown) => {
-                  const nodeObj = node as { id?: string; data?: { content?: string } }
-                  return {
-                    id: nodeObj.id || '',
-                    content: nodeObj.data?.content || '',
-                  }
-                }) || []
-              }
-              onSuggestionApply={handleAISuggestionApply}
-              onClose={() => setShowAIAssistant(false)}
-            />
-          </div>
-        )}
       </div>
     </div>
   )
