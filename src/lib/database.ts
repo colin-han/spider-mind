@@ -133,7 +133,6 @@ export class MindMapService {
     return data || []
   }
 
-
   // 从ReactFlow格式的content同步节点数据到nodes表
   static async syncNodesFromContent(
     mindMapId: string,

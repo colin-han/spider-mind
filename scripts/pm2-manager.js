@@ -83,7 +83,7 @@ async function checkDatabase() {
 async function startDatabase() {
   console.log('🚀 启动PostgreSQL数据库...')
   try {
-    await execAsync('docker compose up -d postgres')
+    await execAsync('docker compose up -d postgres adminer')
 
     // 等待数据库启动完成
     console.log('⏳ 等待数据库启动完成...')

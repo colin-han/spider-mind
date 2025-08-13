@@ -54,7 +54,6 @@ export function MindMapToolbar({
 
         <div className="w-px bg-gray-300 mx-1" />
 
-
         <Button variant="outline" size="sm" onClick={onSearch} className="flex items-center gap-1">
           <Search className="w-4 h-4" />
           搜索

@@ -17,6 +17,7 @@ module.exports = {
       out_file: './logs/dev-out.log',
       error_file: './logs/dev-error.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      depends_on: ['spider-mind-db', 'spider-mind-adminer'],
     },
     {
       name: 'spider-mind-prod',
@@ -36,6 +37,7 @@ module.exports = {
       out_file: './logs/prod-out.log',
       error_file: './logs/prod-error.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      depends_on: ['spider-mind-db', 'spider-mind-adminer'],
     },
     {
       name: 'spider-mind-db',
@@ -51,6 +53,22 @@ module.exports = {
       log_file: './logs/db-combined.log',
       out_file: './logs/db-out.log',
       error_file: './logs/db-error.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    },
+    {
+      name: 'spider-mind-adminer',
+      script: 'docker',
+      args: 'compose up adminer',
+      cwd: __dirname,
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      env: {
+        COMPOSE_PROJECT_NAME: 'spider-mind',
+      },
+      log_file: './logs/adminer-combined.log',
+      out_file: './logs/adminer-out.log',
+      error_file: './logs/adminer-error.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
     },
   ],

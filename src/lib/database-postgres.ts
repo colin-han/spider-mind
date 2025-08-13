@@ -83,9 +83,9 @@ export class MindMapService {
       mindMap.title,
       mindMap.user_id,
       mindMap.is_public || false,
-      mindMap.embedding ? `[${mindMap.embedding.join(',')}]` : null
+      mindMap.embedding ? `[${mindMap.embedding.join(',')}]` : null,
     ]
-    
+
     const result = await query<MindMap>(sql, values)
     return result[0]
   }
@@ -111,7 +111,7 @@ export class MindMapService {
 
     setClause.push(`updated_at = $${paramIndex++}`)
     values.push(new Date().toISOString())
-    
+
     values.push(id) // WHERE条件的参数
 
     const sql = `
@@ -128,22 +128,165 @@ export class MindMapService {
     return result[0]
   }
 
+  // 在单个事务中更新思维导图并同步节点数据
+  static async updateMindMapWithNodes(
+    id: string, 
+    updates: MindMapUpdate,
+    content?: { nodes: unknown[]; edges: unknown[] }
+  ): Promise<MindMap> {
+    console.log(`[DB] Starting updateMindMapWithNodes for mindmap ${id}`)
+    const startTime = Date.now()
+    
+    return await transaction(async txQuery => {
+      // 1. 更新思维导图基本信息
+      const setClause = []
+      const values = []
+      let paramIndex = 1
+
+      if (updates.title !== undefined) {
+        setClause.push(`title = $${paramIndex++}`)
+        values.push(updates.title)
+      }
+      if (updates.is_public !== undefined) {
+        setClause.push(`is_public = $${paramIndex++}`)
+        values.push(updates.is_public)
+      }
+      if (updates.embedding !== undefined) {
+        setClause.push(`embedding = $${paramIndex++}`)
+        values.push(updates.embedding ? `[${updates.embedding.join(',')}]` : null)
+      }
+
+      setClause.push(`updated_at = $${paramIndex++}`)
+      values.push(new Date().toISOString())
+
+      values.push(id) // WHERE条件的参数
+
+      const updateSql = `
+        UPDATE mind_maps 
+        SET ${setClause.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `
+
+      const updateResult = await txQuery<MindMap>(updateSql, values)
+      if (updateResult.length === 0) {
+        throw new Error('思维导图不存在')
+      }
+
+      // 2. 如果有内容更新，同步节点数据
+      if (content && content.nodes) {
+        console.log(`[DB] Syncing ${content.nodes.length} nodes within transaction`)
+        
+        // 构建父子关系映射
+        const parentMap: { [nodeId: string]: string | null } = {}
+        content.edges?.forEach((edge: unknown) => {
+          const edgeObj = edge as { source?: string; target?: string }
+          if (edgeObj.source && edgeObj.target) {
+            parentMap[edgeObj.target] = edgeObj.source
+          }
+        })
+
+        // 计算节点层级
+        const calculateNodeLevel = (nodeId: string, visited = new Set()): number => {
+          if (visited.has(nodeId)) return 0 // 防止循环引用
+          visited.add(nodeId)
+
+          const parentId = parentMap[nodeId]
+          if (!parentId) return 0 // 根节点层级为0
+
+          return calculateNodeLevel(parentId, visited) + 1
+        }
+
+        // 删除现有节点
+        const deleteStart = Date.now()
+        await txQuery('DELETE FROM mind_map_nodes WHERE mind_map_id = $1', [id])
+        console.log(`[DB] Delete nodes completed in ${Date.now() - deleteStart}ms`)
+
+        // 准备插入新节点
+        const nodesToInsert = content.nodes
+          .map((node, index) => {
+            const nodeObj = node as {
+              id?: string
+              data?: { content?: string; style?: unknown }
+              type?: string
+            }
+            if (nodeObj && nodeObj.id) {
+              return {
+                id: nodeObj.id,
+                mind_map_id: id,
+                content: nodeObj.data?.content || '',
+                parent_node_id: parentMap[nodeObj.id] || null,
+                sort_order: index,
+                node_level: calculateNodeLevel(nodeObj.id),
+                node_type: nodeObj.type || 'mindMapNode',
+                style: nodeObj.data?.style || {},
+              }
+            }
+            return null
+          })
+          .filter(Boolean) as MindMapNodeInsert[]
+
+        // 批量插入新节点
+        if (nodesToInsert.length > 0) {
+          const insertStart = Date.now()
+          const values: (string | number | null)[] = []
+          const placeholders: string[] = []
+          let paramIndex = 1
+
+          nodesToInsert.forEach(node => {
+            placeholders.push(
+              `($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`
+            )
+            values.push(
+              node.id,
+              node.mind_map_id,
+              node.content,
+              node.parent_node_id,
+              node.sort_order,
+              node.node_level,
+              node.node_type,
+              JSON.stringify(node.style)
+            )
+          })
+
+          const insertSql = `
+            INSERT INTO mind_map_nodes 
+            (id, mind_map_id, content, parent_node_id, sort_order, node_level, node_type, style)
+            VALUES ${placeholders.join(', ')}
+          `
+
+          await txQuery(insertSql, values)
+          console.log(`[DB] Insert ${nodesToInsert.length} nodes completed in ${Date.now() - insertStart}ms`)
+        }
+      }
+
+      const totalTime = Date.now() - startTime
+      console.log(`[DB] updateMindMapWithNodes completed in ${totalTime}ms`)
+      
+      return updateResult[0]
+    })
+  }
+
   // 删除思维导图
   static async deleteMindMap(id: string): Promise<void> {
     const startTime = Date.now()
     console.log(`[DB] Starting deleteMindMap for ID: ${id}`)
-    
+
     try {
       const sql = 'DELETE FROM mind_maps WHERE id = $1'
       console.log(`[DB] Executing delete query: ${sql} with params: [${id}]`)
-      
+
       const result = await query(sql, [id])
       const duration = Date.now() - startTime
-      
-      console.log(`[DB] Delete query completed in ${duration}ms, affected rows: ${result.length || 'unknown'}`)
-      
+
+      console.log(
+        `[DB] Delete query completed in ${duration}ms, affected rows: ${result.length || 'unknown'}`
+      )
+
       if (duration > 1000) {
-        console.warn(`[DB] WARNING: Delete operation took ${duration}ms - potential connection issue`)
+        console.warn(
+          `[DB] WARNING: Delete operation took ${duration}ms - potential connection issue`
+        )
       }
     } catch (error) {
       const duration = Date.now() - startTime
@@ -169,7 +312,7 @@ export class MindMapService {
     console.log(`[DB] Starting upsertNodes for ${nodes.length} nodes`)
     const startTime = Date.now()
 
-    return await transaction(async (txQuery) => {
+    return await transaction(async txQuery => {
       // 批量构建VALUES子句，避免循环中的多次INSERT
       const values: any[] = []
       const placeholders: string[] = []
@@ -185,11 +328,13 @@ export class MindMapService {
           node.node_level || 0,
           node.node_type || 'mindMapNode',
           JSON.stringify(node.style || {}),
-          node.embedding ? `[${node.embedding.join(',')}]` : null
+          node.embedding ? `[${node.embedding.join(',')}]` : null,
         ]
-        
+
         values.push(...nodeValues)
-        placeholders.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8})`)
+        placeholders.push(
+          `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8})`
+        )
         paramIndex += 9
       }
 
@@ -208,15 +353,17 @@ export class MindMapService {
           updated_at = NOW()
         RETURNING *
       `
-      
+
       const result = await txQuery<MindMapNode>(sql, values)
       const duration = Date.now() - startTime
       console.log(`[DB] upsertNodes completed in ${duration}ms for ${nodes.length} nodes`)
-      
+
       if (duration > 1000) {
-        console.warn(`[DB] WARNING: upsertNodes took ${duration}ms for ${nodes.length} nodes - consider further optimization`)
+        console.warn(
+          `[DB] WARNING: upsertNodes took ${duration}ms for ${nodes.length} nodes - consider further optimization`
+        )
       }
-      
+
       return result
     })
   }
@@ -234,7 +381,10 @@ export class MindMapService {
   }
 
   // 获取节点的子节点
-  static async getChildNodes(mindMapId: string, parentNodeId: string | null): Promise<MindMapNode[]> {
+  static async getChildNodes(
+    mindMapId: string,
+    parentNodeId: string | null
+  ): Promise<MindMapNode[]> {
     let sql: string
     let values: any[]
 
@@ -345,7 +495,7 @@ export class MindMapService {
     const nodeCount = content.nodes?.length || 0
     console.log(`[DB] Starting syncNodesFromContent for mindmap ${mindMapId}, ${nodeCount} nodes`)
 
-    await transaction(async (txQuery) => {
+    await transaction(async txQuery => {
       // 构建父子关系映射
       const parentMap: { [nodeId: string]: string | null } = {}
       content.edges?.forEach((edge: unknown) => {
@@ -408,7 +558,7 @@ export class MindMapService {
 
       const totalTime = Date.now() - startTime
       console.log(`[DB] syncNodesFromContent completed in ${totalTime}ms (${nodeCount} nodes)`)
-      
+
       if (totalTime > 2000) {
         console.warn(`[DB] WARNING: syncNodesFromContent took ${totalTime}ms - performance issue`)
       }

@@ -8,16 +8,7 @@ import { Input } from '@/components/ui/input'
 import { ProtectedRoute } from '@/components/auth/protected-route'
 import { UserMenu } from '@/components/auth/user-menu'
 import { useAuth } from '@/contexts/auth-context'
-import {
-  ArrowLeft,
-  Save,
-  Share,
-  Plus,
-  Trash2,
-  Search,
-  Download,
-  Upload,
-} from 'lucide-react'
+import { ArrowLeft, Save, Share, Plus, Trash2, Search, Download, Upload } from 'lucide-react'
 import { MindMap, type MindMapRef } from '@/components/mind-map/mind-map'
 import type { Node, Edge } from '@xyflow/react'
 
@@ -132,7 +123,6 @@ function MindMapDetailPage() {
     }
   }
 
-
   // 新的工具栏操作函数
   const handleAddNode = () => {
     mindMapRef.current?.addNode()
@@ -235,7 +225,6 @@ function MindMapDetailPage() {
             搜索
           </Button>
 
-
           <div className="w-px h-6 bg-gray-300" />
 
           <Button variant="ghost" size="sm" onClick={() => saveMindMap()} disabled={saving}>
@@ -272,7 +261,6 @@ function MindMapDetailPage() {
           ref={mindMapRef}
           showToolbar={false}
         />
-
       </div>
     </div>
   )

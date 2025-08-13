@@ -86,13 +86,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       updated_at: new Date().toISOString(),
     }
 
-    // 更新思维导图基本信息
-    const updatedMindMap = await MindMapService.updateMindMap(id, updateData)
-
-    // 如果更新了content，同步节点数据到nodes表
-    if (body.content) {
-      await MindMapService.syncNodesFromContent(id, body.content)
-    }
+    // 在单个事务中更新思维导图并同步节点数据（如果有的话）
+    const updatedMindMap = await MindMapService.updateMindMapWithNodes(
+      id, 
+      updateData,
+      body.content
+    )
 
     return NextResponse.json({
       success: true,
@@ -119,19 +118,23 @@ export async function DELETE(
 ) {
   const startTime = Date.now()
   const requestId = `del-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-  
-  console.log(`[${requestId}] DELETE request started for mindmap ID: ${JSON.stringify(await params)}`)
-  
+
+  console.log(
+    `[${requestId}] DELETE request started for mindmap ID: ${JSON.stringify(await params)}`
+  )
+
   try {
     const { id } = await params
     console.log(`[${requestId}] Processing delete for mindmap ID: ${id}`)
-    
+
     // 检查思维导图是否存在
     console.log(`[${requestId}] Checking if mindmap exists...`)
     const checkStartTime = Date.now()
     const existingMindMap = await MindMapService.getMindMap(id)
-    console.log(`[${requestId}] getMindMap completed in ${Date.now() - checkStartTime}ms, found: ${!!existingMindMap}`)
-    
+    console.log(
+      `[${requestId}] getMindMap completed in ${Date.now() - checkStartTime}ms, found: ${!!existingMindMap}`
+    )
+
     if (!existingMindMap) {
       console.log(`[${requestId}] Mindmap not found, returning 404`)
       return NextResponse.json(
@@ -151,7 +154,7 @@ export async function DELETE(
 
     const totalTime = Date.now() - startTime
     console.log(`[${requestId}] Delete operation successful, total time: ${totalTime}ms`)
-    
+
     return NextResponse.json({
       success: true,
       message: '思维导图删除成功',
@@ -161,10 +164,10 @@ export async function DELETE(
     console.error(`[${requestId}] Delete operation failed after ${totalTime}ms:`, error)
     console.error(`[${requestId}] Error details:`, {
       name: error instanceof Error ? error.name : 'Unknown',
-      message: error instanceof Error ? error.message : 'Unknown error', 
-      stack: error instanceof Error ? error.stack : 'No stack trace'
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace',
     })
-    
+
     return NextResponse.json(
       {
         success: false,

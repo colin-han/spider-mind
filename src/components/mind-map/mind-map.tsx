@@ -400,7 +400,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
       onSave?.(data)
     }, [nodes, edges, onChange, onSave])
 
-
     // 节点导航功能
     const navigateToNode = useCallback(
       (direction: 'up' | 'down' | 'left' | 'right') => {
@@ -592,7 +591,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
       ]
     )
 
-
     // 暴露方法给父组件
     useImperativeHandle(
       ref,
@@ -719,7 +717,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
             selectedNodeCount={selectedNodes.length}
           />
         )}
-
 
         <ReactFlow
           nodes={nodes}

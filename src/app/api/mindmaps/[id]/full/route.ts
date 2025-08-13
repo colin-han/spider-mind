@@ -5,7 +5,7 @@ import { MindMapService } from '@/lib/database-postgres'
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    
+
     // 获取思维导图基本信息
     const mindMap = await MindMapService.getMindMap(id)
     if (!mindMap) {
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // 获取所有节点
     const nodes = await MindMapService.getMindMapNodes(id)
-    
+
     // 重构ReactFlow格式的数据
     const reactFlowNodes = nodes.map(node => ({
       id: node.id,

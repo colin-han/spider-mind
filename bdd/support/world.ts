@@ -1295,6 +1295,7 @@ export class BDDWorld {
         }
       } catch (error) {
         // 继续删除其他思维导图，不中断清理流程
+        console.error('删除思维导图失败:', error)
       }
     }
 
