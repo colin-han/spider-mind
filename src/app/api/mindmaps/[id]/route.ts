@@ -6,43 +6,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params
     // 从数据库中查找
-    let mindMap = await MindMapService.getMindMap(id)
+    const mindMap = await MindMapService.getMindMap(id)
 
     if (!mindMap) {
-      // 如果没有找到，创建一个默认的思维导图
-      const rootNodeId = crypto.randomUUID()
-      const defaultMindMapData = {
-        id: id, // 使用传入的ID
-        title: '新思维导图',
-        user_id: '11111111-1111-1111-1111-111111111111',
-        is_public: false,
-      }
-
-      // 创建思维导图
-      mindMap = await MindMapService.createMindMap(defaultMindMapData)
-
-      // 准备根节点数据
-      const rootNodeContent = {
-        nodes: [
-          {
-            id: rootNodeId,
-            type: 'mindMapNode',
-            position: { x: 400, y: 300 },
-            data: {
-              content: '新思维导图',
-              isEditing: false,
-              parent_node_id: null,
-              sort_order: 0,
-              node_level: 0,
-            },
-            selected: true, // 默认选中主节点
-          },
-        ],
-        edges: [],
-      }
-
-      // 同步节点数据到nodes表
-      await MindMapService.syncNodesFromContent(mindMap.id, rootNodeContent)
+      return NextResponse.json(
+        {
+          success: false,
+          message: '思维导图不存在',
+        },
+        { status: 404 }
+      )
     }
 
     return NextResponse.json({

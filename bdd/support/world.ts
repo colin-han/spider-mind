@@ -865,7 +865,7 @@ export class BDDWorld {
   // 验证删除API请求
   async verifyDeleteApiRequest(expectedUrl: string): Promise<boolean> {
     // 替换URL中的占位符
-    const actualExpectedUrl = expectedUrl.replace('{思维导图ID}', this.currentMindMapId || '')
+    const _actualExpectedUrl = expectedUrl.replace('{思维导图ID}', this.currentMindMapId || '')
 
     // 检查是否有匹配的删除请求
     return this.deleteRequests.some(
@@ -879,8 +879,13 @@ export class BDDWorld {
   async verifyMindMapCardNotVisible(mindMapName: string): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 等待页面更新
-    await this.page.waitForTimeout(2000)
+    // 等待网络请求完成
+    await this.page.waitForLoadState('networkidle')
+
+    // 等待页面更新 - 增加等待时间确保React状态更新完成
+    await this.page.waitForTimeout(3000)
+
+    console.log(`检查思维导图 "${mindMapName}" 是否已从列表中移除...`)
 
     // 检查思维导图卡片是否不再存在
     const cardSelectors = [
@@ -891,18 +896,41 @@ export class BDDWorld {
       `text="${mindMapName}"`,
     ]
 
-    for (const selector of cardSelectors) {
+    for (let i = 0; i < cardSelectors.length; i++) {
+      const selector = cardSelectors[i]
       try {
         const card = this.page.locator(selector)
-        const isVisible = await card.isVisible().catch(() => false)
+        const count = await card.count()
+        const isVisible =
+          count > 0
+            ? await card
+                .first()
+                .isVisible()
+                .catch(() => false)
+            : false
+
+        console.log(`选择器 ${i + 1}: "${selector}" -> 找到 ${count} 个元素, 可见: ${isVisible}`)
+
         if (isVisible) {
+          // 输出找到的元素的详细信息
+          const element = card.first()
+          const outerHTML = await element
+            .evaluate(el => el.outerHTML)
+            .catch(() => 'Cannot get HTML')
+          const textContent = await element.textContent().catch(() => 'Cannot get text')
+
+          console.log(`思维导图 "${mindMapName}" 仍然可见，删除未成功`)
+          console.log(`元素HTML: ${outerHTML}`)
+          console.log(`元素文本: ${textContent}`)
           return false
         }
-      } catch {
+      } catch (_error) {
+        console.log(`选择器 ${i + 1} 检查出错:`, _error)
         // 继续检查下一个选择器
       }
     }
 
+    console.log(`思维导图 "${mindMapName}" 已成功从列表中移除`)
     return true
   }
 
@@ -1231,7 +1259,7 @@ export class BDDWorld {
   /**
    * 根据test-id查找节点元素
    */
-  async findNodeByTestId(testId: string): Promise<any> {
+  async findNodeByTestId(testId: string): Promise<unknown> {
     if (!this.page) throw new Error('Page not initialized')
 
     try {
@@ -1255,7 +1283,7 @@ export class BDDWorld {
       if (!selectedElement) return null
 
       return await selectedElement.getAttribute('data-testid')
-    } catch (error) {
+    } catch (_error) {
       return null
     }
   }
