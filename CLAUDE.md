@@ -45,15 +45,11 @@ npm run format:fix      # 自动修复格式问题
 
 ```bash
 # 🧪 BDD端到端测试 (推荐用于功能验证)
-npm run test:bdd        # 运行所有BDD测试
-npm run test:bdd:watch  # 监听模式运行BDD测试  
-npm run test:bdd:html   # 生成HTML测试报告
+npm run test:bdd        # 运行指定的BDD测试
+npm run test:bdd:watch  # 监听模式运行BDD测试
 
-# 🔬 单元测试 (Vitest)
-npm run test            # 监听模式运行单元测试
-npm run test:run        # 单次运行所有单元测试
-npm run test:coverage   # 运行测试并生成覆盖率报告
-npm run test:ui         # 打开Vitest UI界面
+# 
+npm run test:all        # 运行全部测试
 ```
 
 **重要说明**：

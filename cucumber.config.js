@@ -18,7 +18,7 @@ module.exports = {
     // format: ['progress'],
 
     // 重试失败的场景
-    retry: 1,
+    // retry: 1,
 
     // 超时设置
     timeout: 60000,

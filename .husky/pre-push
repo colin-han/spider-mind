@@ -3,7 +3,7 @@
 
 echo "🚀 运行 pre-push 检查..."
 
-echo "⚡ 运行BDD测试..."
-yarn test:bdd
+echo "⚡ 运行全部测试..."
+yarn test:all
 
 echo "✅ 所有检查都通过，可以推送代码！"
