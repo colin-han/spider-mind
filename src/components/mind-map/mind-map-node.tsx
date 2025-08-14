@@ -76,18 +76,7 @@ export function MindMapNode({ id, data, selected }: NodeProps) {
       />
 
       <Card
-        data-testid={
-          // 优先使用TestIdGenerator生成的testId
-          nodeData.testId ||
-          // 如果没有testId，基于nodeRole判断
-          (nodeData.nodeRole === 'root'
-            ? 'root'
-            : // 如果nodeRole也没有，基于nodeLevel判断
-              nodeData.nodeLevel === 0 || nodeData.nodeLevel === undefined
-              ? 'root'
-              : // 临时fallback，理论上不应该到达这里，因为TestIdGenerator应该生成所有test-id
-                `unknown-node-${id}`)
-        }
+        data-testid={nodeData.testId || `unknown-node-${id}`}
         data-node-role={nodeData.nodeRole}
         data-node-level={nodeData.nodeLevel}
         data-node-floating={nodeData.isFloating || false}

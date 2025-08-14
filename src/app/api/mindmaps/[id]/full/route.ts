@@ -21,6 +21,53 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // 获取所有节点
     const nodes = await MindMapService.getMindMapNodes(id)
 
+    // 生成test-id的纯函数
+    const generateTestId = (
+      node: {
+        id: string
+        node_level: number
+        parent_node_id: string | null
+        sort_order: number
+      },
+      allNodes: typeof nodes
+    ): string => {
+      // 根级节点（node_level为0且没有父节点）
+      if (node.node_level === 0 && !node.parent_node_id) {
+        // 检查是否有多个根级节点
+        const rootNodes = allNodes.filter(n => !n.parent_node_id && n.node_level === 0)
+        if (rootNodes.length === 1) {
+          return 'root' // 单个根节点
+        } else {
+          // 多个根级节点，第一个是root，其他是浮动节点
+          const sortedRootNodes = rootNodes.sort((a, b) => a.sort_order - b.sort_order)
+          const rootIndex = sortedRootNodes.findIndex(n => n.id === node.id)
+          if (rootIndex === 0) {
+            return 'root'
+          } else {
+            return `float-${rootIndex - 1}`
+          }
+        }
+      }
+
+      // 子节点：基于父节点的test-id + 同级索引
+      if (node.parent_node_id) {
+        const parentNode = allNodes.find(n => n.id === node.parent_node_id)
+        if (!parentNode) return `unknown-${node.id}`
+
+        const parentTestId = generateTestId(parentNode, allNodes)
+
+        // 计算在同级节点中的索引
+        const siblings = allNodes
+          .filter(n => n.parent_node_id === node.parent_node_id)
+          .sort((a, b) => a.sort_order - b.sort_order)
+
+        const siblingIndex = siblings.findIndex(n => n.id === node.id)
+        return `${parentTestId}-${siblingIndex}`
+      }
+
+      return `unknown-${node.id}`
+    }
+
     // 重构ReactFlow格式的数据
     const reactFlowNodes = nodes.map(node => ({
       id: node.id,
@@ -32,6 +79,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         parent_node_id: node.parent_node_id,
         sort_order: node.sort_order,
         node_level: node.node_level,
+        testId: generateTestId(node, nodes), // 添加test-id
       },
       selected: node.node_level === 0, // 根节点默认选中
       style: typeof node.style === 'object' ? node.style : {},

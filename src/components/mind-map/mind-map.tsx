@@ -25,7 +25,7 @@ import {
   getNodeLevel,
   type LayoutNode,
 } from '@/lib/auto-layout'
-import { TestIdGenerator, type NodeStructureInfo } from '@/lib/test-id-generator'
+// 移除TestIdGenerator导入
 // 移除数据库直接访问，组件应该通过API调用进行数据操作
 
 const nodeTypes = {
@@ -78,7 +78,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
     const [selectedNodes, setSelectedNodes] = useState<string[]>([])
     const [selectedEdges, setSelectedEdges] = useState<string[]>([])
     const [layoutNodes, setLayoutNodes] = useState<LayoutNode[]>([])
-    const [testIdGenerator] = useState(() => new TestIdGenerator())
+    // 移除testIdGenerator状态
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
     const [isInEditMode, setIsInEditMode] = useState(false)
     // 移除未使用的mindMapId状态
@@ -100,23 +100,8 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         const positions = calculateAutoLayout(layoutNodesList)
         const autoEdges = generateEdges(layoutNodesList)
 
-        // 为每个布局节点生成test-id
-        layoutNodesList.forEach(layoutNode => {
-          if (!testIdGenerator.getTestId(layoutNode.id)) {
-            const nodeStructureInfo: NodeStructureInfo = {
-              id: layoutNode.id,
-              parentId: layoutNode.parent_node_id,
-              isFloating: false, // TODO: 后续支持浮动节点时可以调整
-              sortOrder: layoutNode.sort_order,
-            }
-            testIdGenerator.registerNode(nodeStructureInfo, layoutNode.content)
-          }
-        })
-
-        // 更新ReactFlow节点
+        // 更新ReactFlow节点（test-id现在在API层生成）
         const reactFlowNodes: Node[] = layoutNodesList.map(layoutNode => {
-          const testId = testIdGenerator.getTestId(layoutNode.id)
-
           return {
             id: layoutNode.id,
             type: 'mindMapNode',
@@ -124,7 +109,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
             data: {
               content: layoutNode.content,
               isEditing: false,
-              testId,
               nodeRole: layoutNode.parent_node_id ? 'child' : 'root',
               nodeLevel: layoutNode.node_level,
               isFloating: false,
@@ -149,7 +133,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         const data = { nodes: reactFlowNodes, edges: reactFlowEdges }
         onChange?.(data)
       },
-      [setNodes, setEdges, onChange, testIdGenerator]
+      [setNodes, setEdges, onChange]
     )
 
     const addNode = useCallback(async () => {
@@ -169,15 +153,8 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           content: '新节点',
         }
 
-        // 为新节点生成test-id
-        const nodeStructureInfo: NodeStructureInfo = {
-          id: newNodeId,
-          parentId: parentNodeId,
-          isFloating: false,
-          sortOrder: sortOrder,
-        }
-        const testId = testIdGenerator.registerNode(nodeStructureInfo, '新节点')
-        console.log(`创建新节点: UUID=${newNodeId}, TestId=${testId}`)
+        // test-id现在在API层动态生成，无需在此处生成
+        console.log(`创建新节点: UUID=${newNodeId}`)
 
         // 更新布局节点列表
         const updatedLayoutNodes = [...layoutNodes, newLayoutNode]
@@ -203,7 +180,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
       } catch (error) {
         console.error('添加节点失败:', error)
       }
-    }, [selectedNodes, layoutNodes, applyAutoLayout, testIdGenerator, setNodes])
+    }, [selectedNodes, layoutNodes, applyAutoLayout, setNodes])
 
     // 添加同级节点（Enter键功能）
     const addSiblingNode = useCallback(async () => {
@@ -230,16 +207,8 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           content: '新节点',
         }
 
-        // 生成test-id - 如果父节点是null(即为根节点添加同级)，则创建浮动节点
-        const isFloating = parentNodeId === null
-        const nodeStructureInfo: NodeStructureInfo = {
-          id: newNodeId,
-          parentId: parentNodeId,
-          isFloating: isFloating,
-          sortOrder: sortOrder,
-        }
-        const testId = testIdGenerator.registerNode(nodeStructureInfo, '新节点')
-        console.log(`创建同级节点: UUID=${newNodeId}, TestId=${testId}`)
+        // test-id现在在API层动态生成，无需在此处生成
+        console.log(`创建同级节点: UUID=${newNodeId}`)
 
         // 更新布局节点列表
         const updatedLayoutNodes = [...layoutNodes, newLayoutNode]
@@ -261,7 +230,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
       } catch (error) {
         console.error('添加同级节点失败:', error)
       }
-    }, [selectedNodes, layoutNodes, applyAutoLayout, testIdGenerator, setNodes])
+    }, [selectedNodes, layoutNodes, applyAutoLayout, setNodes])
 
     const deleteSelected = useCallback(async () => {
       if (selectedNodes.length === 0) return
@@ -292,11 +261,9 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         const nodesToDelete = layoutNodes.filter(node => selectedNodes.includes(node.id))
         const parentNodeId = nodesToDelete[0]?.parent_node_id
 
-        // 从TestIdGenerator中移除节点
+        // 不再需要从TestIdGenerator中移除节点，test-id现在是动态生成的
         selectedNodes.forEach(nodeId => {
-          const testId = testIdGenerator.getTestId(nodeId)
-          console.log(`删除节点: UUID=${nodeId}, TestId=${testId}`)
-          testIdGenerator.removeNode(nodeId)
+          console.log(`删除节点: UUID=${nodeId}`)
         })
 
         // 递归删除子节点
@@ -343,12 +310,11 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         console.error('删除节点失败:', error)
         setShowDeleteDialog(false)
       }
-    }, [selectedNodes, layoutNodes, applyAutoLayout, testIdGenerator, setNodes])
+    }, [selectedNodes, layoutNodes, applyAutoLayout, setNodes])
 
     const updateNodeContent = useCallback(
       async (nodeId: string, content: string) => {
-        // 更新TestIdGenerator中的节点内容
-        testIdGenerator.updateNodeContent(nodeId, content)
+        // 不再需要更新TestIdGenerator，test-id现在是动态生成的
 
         // 更新ReactFlow节点，同时清除编辑状态
         setNodes(nds =>
@@ -390,7 +356,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         }
         onChange?.(updatedData)
       },
-      [setNodes, layoutNodes, nodes, edges, onChange, testIdGenerator]
+      [setNodes, layoutNodes, nodes, edges, onChange]
     )
 
     const handleSave = useCallback(async () => {
@@ -484,28 +450,8 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         })
       )
 
-      // 方法2：作为备用，也尝试触发双击事件
-      setTimeout(() => {
-        const testId = testIdGenerator.getTestId(selectedNodeId)
-        let nodeElement = null
-
-        if (testId) {
-          nodeElement = document.querySelector(`[data-testid="${testId}"]`)
-        }
-
-        if (!nodeElement) {
-          nodeElement = document.querySelector(`[data-testid="${selectedNodeId}"]`)
-        }
-
-        if (nodeElement) {
-          const event = new MouseEvent('dblclick', {
-            bubbles: true,
-            cancelable: true,
-          })
-          nodeElement.dispatchEvent(event)
-        }
-      }, 50) // 给React时间更新DOM
-    }, [selectedNodes, testIdGenerator, setNodes])
+      // 进入编辑状态通过状态管理实现，不模拟DOM事件
+    }, [selectedNodes, setNodes])
 
     // 键盘事件处理
     const handleKeyDown = useCallback(
@@ -616,14 +562,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
             content: String(nodeData?.content || ''),
           }
 
-          // 为每个节点注册到TestIdGenerator
-          const nodeStructureInfo: NodeStructureInfo = {
-            id: node.id,
-            parentId: layoutNode.parent_node_id,
-            isFloating: false,
-            sortOrder: layoutNode.sort_order,
-          }
-          testIdGenerator.registerNode(nodeStructureInfo, layoutNode.content)
+          // test-id现在在API层动态生成，不需要在此注册
 
           return layoutNode
         })
@@ -655,15 +594,8 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           content: '中心主题',
         }
 
-        // 为根节点生成test-id
-        const nodeStructureInfo: NodeStructureInfo = {
-          id: rootNodeId,
-          parentId: null,
-          isFloating: false,
-          sortOrder: 0,
-        }
-        const testId = testIdGenerator.registerNode(nodeStructureInfo, '中心主题')
-        console.log(`创建根节点: UUID=${rootNodeId}, TestId=${testId}`)
+        // test-id现在在API层动态生成，不需要在此处生成
+        console.log(`创建根节点: UUID=${rootNodeId}`)
 
         setLayoutNodes([rootNode])
         applyAutoLayout([rootNode])
@@ -680,7 +612,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           )
         }, 100)
       }
-    }, [finalInitialNodes, layoutNodes.length, applyAutoLayout, setNodes, testIdGenerator])
+    }, [finalInitialNodes, layoutNodes.length, applyAutoLayout, setNodes])
 
     // 监听节点内容更新事件
     useEffect(() => {
