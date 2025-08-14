@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16.2
+    image: pgvector/pgvector:pg17
     container_name: spider-mind-db
     environment:
       POSTGRES_DB: spider_mind_dev
