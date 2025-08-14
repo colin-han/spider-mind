@@ -100,7 +100,33 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         const positions = calculateAutoLayout(layoutNodesList)
         const autoEdges = generateEdges(layoutNodesList)
 
-        // 更新ReactFlow节点（test-id现在在API层生成）
+        // 生成临时test-id的函数（用于前端新创建的节点）
+        const generateTempTestId = (layoutNode: LayoutNode, allNodes: LayoutNode[]): string => {
+          // 根节点
+          if (layoutNode.node_level === 0 && !layoutNode.parent_node_id) {
+            return 'root'
+          }
+
+          // 子节点：基于父节点的test-id + 同级索引
+          if (layoutNode.parent_node_id) {
+            const parentNode = allNodes.find(n => n.id === layoutNode.parent_node_id)
+            if (!parentNode) return `unknown-${layoutNode.id}`
+
+            const parentTestId = generateTempTestId(parentNode, allNodes)
+
+            // 计算在同级节点中的索引
+            const siblings = allNodes
+              .filter(n => n.parent_node_id === layoutNode.parent_node_id)
+              .sort((a, b) => a.sort_order - b.sort_order)
+
+            const siblingIndex = siblings.findIndex(n => n.id === layoutNode.id)
+            return `${parentTestId}-${siblingIndex}`
+          }
+
+          return `unknown-${layoutNode.id}`
+        }
+
+        // 更新ReactFlow节点（为前端新建节点生成临时test-id）
         const reactFlowNodes: Node[] = layoutNodesList.map(layoutNode => {
           return {
             id: layoutNode.id,
@@ -109,6 +135,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
             data: {
               content: layoutNode.content,
               isEditing: false,
+              testId: generateTempTestId(layoutNode, layoutNodesList), // 添加临时test-id
               nodeRole: layoutNode.parent_node_id ? 'child' : 'root',
               nodeLevel: layoutNode.node_level,
               isFloating: false,
