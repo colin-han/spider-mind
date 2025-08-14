@@ -361,6 +361,175 @@ Then('主节点的内容应该更新为{string}', async function (this: BDDWorld
   await this.verifyNodeContent('root', expectedContent)
 })
 
+// =========================
+// Test-ID 稳定性测试专用步骤
+// =========================
+
+When('我修改主节点内容为{string}', async function (this: BDDWorld, newContent: string) {
+  // 双击主节点进入编辑模式
+  await this.doubleClickNode('root')
+
+  // 使用现有的inputText方法，它已经处理了文本选择
+  await this.inputText(newContent)
+
+  // 按Enter确认修改
+  await this.page!.keyboard.press('Enter')
+})
+
+When(
+  '我为{string}节点创建多个子节点{string}',
+  async function (this: BDDWorld, parentTestId: string, childrenJson: string) {
+    // 解析子节点数组
+    const childrenNames: string[] = JSON.parse(childrenJson)
+
+    // 为每个子节点名称创建节点
+    for (const childName of childrenNames) {
+      // 选中父节点
+      await this.selectNodeByTestId(parentTestId)
+      await this.page!.waitForTimeout(500)
+
+      // 添加子节点
+      await this.page!.click('[data-testid="add-node-button"]')
+      await this.page!.waitForTimeout(1000)
+
+      // 找到新创建的子节点并设置内容
+      const childIndex = childrenNames.indexOf(childName)
+      const expectedChildTestId = `${parentTestId}-${childIndex}`
+
+      // 双击进入编辑模式
+      await this.doubleClickNode(expectedChildTestId)
+
+      // 输入内容，使用现有的inputText方法
+      await this.inputText(childName)
+      await this.page!.keyboard.press('Enter')
+    }
+  }
+)
+
+When(
+  '我为{string}节点创建以下子节点：',
+  { timeout: 60000 },
+  async function (this: BDDWorld, parentTestId: string, dataTable) {
+    // 从DataTable获取子节点名称列表
+    const rows = dataTable.raw()
+    const childrenNames: string[] = rows.map((row: string[]) => row[0])
+
+    console.log(`开始为节点 ${parentTestId} 创建 ${childrenNames.length} 个子节点:`, childrenNames)
+
+    // 为每个子节点名称创建节点 - 使用更简化的方式
+    for (let i = 0; i < childrenNames.length; i++) {
+      const childName = childrenNames[i]
+      console.log(`创建第 ${i + 1} 个子节点: ${childName}`)
+
+      // 选中父节点
+      await this.selectNodeByTestId(parentTestId)
+      await this.page!.waitForTimeout(300)
+
+      // 添加子节点 - 使用Tab键快捷方式
+      await this.page!.keyboard.press('Tab')
+      await this.page!.waitForTimeout(1500)
+
+      // 计算预期的子节点test-id
+      const expectedChildTestId = `${parentTestId}-${i}`
+      console.log(`期望的子节点test-id: ${expectedChildTestId}`)
+
+      // 等待子节点出现
+      try {
+        await this.page!.waitForSelector(`[data-testid="${expectedChildTestId}"]`, {
+          timeout: 8000,
+        })
+        console.log(`子节点 ${expectedChildTestId} 已创建`)
+      } catch (error) {
+        console.log(`等待子节点 ${expectedChildTestId} 超时`)
+        throw error
+      }
+
+      // 设置子节点内容
+      await this.doubleClickNode(expectedChildTestId)
+      await this.page!.waitForTimeout(300)
+
+      // 输入内容
+      await this.inputText(childName)
+      await this.page!.keyboard.press('Enter')
+      await this.page!.waitForTimeout(300)
+
+      console.log(`子节点 ${expectedChildTestId} 内容设置完成: ${childName}`)
+    }
+
+    console.log(`所有子节点创建完成`)
+  }
+)
+
+When('我删除节点{string}', async function (this: BDDWorld, testId: string) {
+  console.log(`开始删除节点: ${testId}`)
+
+  // 选中要删除的节点
+  await this.selectNodeByTestId(testId)
+  await this.page!.waitForTimeout(500)
+
+  // 记录删除前的所有节点
+  const beforeNodes = await this.page!.evaluate(() => {
+    const nodes = document.querySelectorAll(
+      '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
+    )
+    return Array.from(nodes).map(node => ({
+      testId: node.getAttribute('data-testid'),
+      content: node.textContent?.trim(),
+    }))
+  })
+  console.log('删除前的节点:', beforeNodes)
+
+  // 尝试删除节点 - 可能需要确认对话框
+  await this.page!.keyboard.press('Delete')
+
+  // 等待一下看是否有确认对话框
+  await this.page!.waitForTimeout(500)
+
+  // 检查是否有删除确认对话框
+  const hasConfirmDialog = await this.page!.locator(
+    '[data-testid*="confirm"], [data-testid*="dialog"]'
+  ).count()
+  if (hasConfirmDialog > 0) {
+    console.log('检测到确认对话框，点击确认')
+    // 尝试点击确认按钮
+    const confirmSelectors = [
+      '[data-testid="alert-dialog-confirm"]',
+      'button:has-text("确认")',
+      'button:has-text("删除")',
+      'button:has-text("Delete")',
+    ]
+
+    for (const selector of confirmSelectors) {
+      try {
+        const button = this.page!.locator(selector)
+        if (await button.isVisible()) {
+          await button.click()
+          console.log(`点击了确认按钮: ${selector}`)
+          break
+        }
+      } catch (_e) {
+        // 继续尝试下一个选择器
+      }
+    }
+  }
+
+  await this.page!.waitForTimeout(2000) // 增加等待时间
+
+  // 记录删除后的所有节点
+  const afterNodes = await this.page!.evaluate(() => {
+    const nodes = document.querySelectorAll(
+      '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
+    )
+    return Array.from(nodes).map(node => ({
+      testId: node.getAttribute('data-testid'),
+      content: node.textContent?.trim(),
+    }))
+  })
+  console.log('删除后的节点:', afterNodes)
+
+  console.log(`节点 ${testId} 删除完成`)
+})
+
 // ===========================
 // 键盘快捷键相关步骤定义
 // ===========================
