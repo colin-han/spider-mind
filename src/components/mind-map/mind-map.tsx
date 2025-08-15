@@ -671,7 +671,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
             onAddNode={addNode}
             onDeleteSelected={deleteSelected}
             onSave={handleSave}
-            onAIAssist={undefined}
             hasSelection={selectedNodes.length > 0 || selectedEdges.length > 0}
             selectedNodeCount={selectedNodes.length}
           />

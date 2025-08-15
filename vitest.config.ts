@@ -51,7 +51,6 @@ export default defineConfig({
     // 并行测试配置
     maxConcurrency: 5,
     // 报告器配置
-    reporter: ['default', 'json', 'junit'],
     outputFile: {
       json: './test-results/test-results.json',
       junit: './test-results/junit.xml',

@@ -32,7 +32,7 @@ export async function testConnection() {
 }
 
 // 执行查询的辅助函数
-export async function query<T = any>(text: string, params?: any[]): Promise<T[]> {
+export async function query<T = unknown>(text: string, params?: unknown[]): Promise<T[]> {
   const queryId = `q-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`
   const startTime = Date.now()
 
@@ -84,17 +84,17 @@ export async function query<T = any>(text: string, params?: any[]): Promise<T[]>
 }
 
 // 执行单行查询
-export async function queryOne<T = any>(text: string, params?: any[]): Promise<T | null> {
+export async function queryOne<T = unknown>(text: string, params?: unknown[]): Promise<T | null> {
   const rows = await query<T>(text, params)
   return rows.length > 0 ? rows[0] : null
 }
 
 // 执行事务
-export async function transaction<T>(callback: (query: typeof query) => Promise<T>): Promise<T> {
+export async function transaction<T>(callback: (txquery: typeof query) => Promise<T>): Promise<T> {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const txQuery = async <U = any>(text: string, params?: any[]): Promise<U[]> => {
+    const txQuery = async <U = unknown>(text: string, params?: unknown[]): Promise<U[]> => {
       const result = await client.query(text, params)
       return result.rows
     }

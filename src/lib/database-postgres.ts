@@ -44,7 +44,7 @@ export interface MindMapNodeInsert {
   id: string
   mind_map_id: string
   content: string
-  parent_node_id?: string | null
+  parent_node_id: string | null
   sort_order?: number
   node_level?: number
   node_type?: string
@@ -229,7 +229,7 @@ export class MindMapService {
         // 批量插入新节点
         if (nodesToInsert.length > 0) {
           const insertStart = Date.now()
-          const values: (string | number | null)[] = []
+          const values: (string | number | null | undefined)[] = []
           const placeholders: string[] = []
           let paramIndex = 1
 
@@ -316,7 +316,7 @@ export class MindMapService {
 
     return await transaction(async txQuery => {
       // 批量构建VALUES子句，避免循环中的多次INSERT
-      const values: any[] = []
+      const values: unknown[] = []
       const placeholders: string[] = []
       let paramIndex = 1
 
@@ -388,7 +388,7 @@ export class MindMapService {
     parentNodeId: string | null
   ): Promise<MindMapNode[]> {
     let sql: string
-    let values: any[]
+    let values: unknown[]
 
     if (parentNodeId === null) {
       sql = `
@@ -436,7 +436,7 @@ export class MindMapService {
       FROM mind_maps 
       WHERE embedding IS NOT NULL
     `
-    const values: any[] = [`[${queryEmbedding.join(',')}]`]
+    const values: unknown[] = [`[${queryEmbedding.join(',')}]`]
     let paramIndex = 2
 
     if (userId) {
@@ -471,7 +471,7 @@ export class MindMapService {
       JOIN mind_maps m ON n.mind_map_id = m.id
       WHERE n.embedding IS NOT NULL
     `
-    const values: any[] = [`[${queryEmbedding.join(',')}]`]
+    const values: unknown[] = [`[${queryEmbedding.join(',')}]`]
     let paramIndex = 2
 
     if (userId) {
@@ -582,7 +582,7 @@ export class ProfileService {
     }
   }
 
-  static async updateProfile(userId: string, updates: any) {
+  static async updateProfile(userId: string, updates: Record<string, unknown>) {
     // 暂时返回模拟数据
     return {
       id: userId,
@@ -606,7 +606,7 @@ export class AuthService {
     }
   }
 
-  static async signIn(email: string, password: string) {
+  static async signIn(email: string, _password: string) {
     // 暂时返回模拟数据
     return {
       user: {
@@ -637,7 +637,7 @@ export class AuthService {
     // 暂时不实现
   }
 
-  static onAuthStateChange(callback: (event: string, session: unknown) => void) {
+  static onAuthStateChange(_callback: (event: string, session: unknown) => void) {
     // 暂时不实现
     return { data: { subscription: null } }
   }

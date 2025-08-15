@@ -38,16 +38,16 @@ Given('该思维导图已被其他方式删除', async function (this: BDDWorld)
 
   // 通过API删除思维导图，模拟其他方式删除
   try {
-    const result = await this.page.evaluate(async mindMapId => {
+    await this.page.evaluate(async mindMapId => {
       const response = await fetch(`/api/mindmaps/${mindMapId}`, {
         method: 'DELETE',
       })
       return response.ok
     }, this.currentMindMapId)
 
-    console.log(`思维导图 ${this.currentMindMapId} 已通过API删除: ${result}`)
-  } catch (error) {
-    console.log(`删除思维导图时发生错误: ${error}`)
+    // 思维导图已删除
+  } catch {
+    // 删除过程中发生错误
   }
 })
 
@@ -414,12 +414,9 @@ When(
     const rows = dataTable.raw()
     const childrenNames: string[] = rows.map((row: string[]) => row[0])
 
-    console.log(`开始为节点 ${parentTestId} 创建 ${childrenNames.length} 个子节点:`, childrenNames)
-
     // 为每个子节点名称创建节点 - 使用更简化的方式
     for (let i = 0; i < childrenNames.length; i++) {
       const childName = childrenNames[i]
-      console.log(`创建第 ${i + 1} 个子节点: ${childName}`)
 
       // 选中父节点
       await this.selectNodeByTestId(parentTestId)
@@ -431,18 +428,11 @@ When(
 
       // 计算预期的子节点test-id
       const expectedChildTestId = `${parentTestId}-${i}`
-      console.log(`期望的子节点test-id: ${expectedChildTestId}`)
 
       // 等待子节点出现
-      try {
-        await this.page!.waitForSelector(`[data-testid="${expectedChildTestId}"]`, {
-          timeout: 8000,
-        })
-        console.log(`子节点 ${expectedChildTestId} 已创建`)
-      } catch (error) {
-        console.log(`等待子节点 ${expectedChildTestId} 超时`)
-        throw error
-      }
+      await this.page!.waitForSelector(`[data-testid="${expectedChildTestId}"]`, {
+        timeout: 8000,
+      })
 
       // 设置子节点内容
       await this.doubleClickNode(expectedChildTestId)
@@ -452,32 +442,14 @@ When(
       await this.inputText(childName)
       await this.page!.keyboard.press('Enter')
       await this.page!.waitForTimeout(300)
-
-      console.log(`子节点 ${expectedChildTestId} 内容设置完成: ${childName}`)
     }
-
-    console.log(`所有子节点创建完成`)
   }
 )
 
 When('我删除节点{string}', async function (this: BDDWorld, testId: string) {
-  console.log(`开始删除节点: ${testId}`)
-
   // 选中要删除的节点
   await this.selectNodeByTestId(testId)
   await this.page!.waitForTimeout(500)
-
-  // 记录删除前的所有节点
-  const beforeNodes = await this.page!.evaluate(() => {
-    const nodes = document.querySelectorAll(
-      '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
-    )
-    return Array.from(nodes).map(node => ({
-      testId: node.getAttribute('data-testid'),
-      content: node.textContent?.trim(),
-    }))
-  })
-  console.log('删除前的节点:', beforeNodes)
 
   // 尝试删除节点 - 可能需要确认对话框
   await this.page!.keyboard.press('Delete')
@@ -490,7 +462,6 @@ When('我删除节点{string}', async function (this: BDDWorld, testId: string) 
     '[data-testid*="confirm"], [data-testid*="dialog"]'
   ).count()
   if (hasConfirmDialog > 0) {
-    console.log('检测到确认对话框，点击确认')
     // 尝试点击确认按钮
     const confirmSelectors = [
       '[data-testid="alert-dialog-confirm"]',
@@ -504,7 +475,6 @@ When('我删除节点{string}', async function (this: BDDWorld, testId: string) 
         const button = this.page!.locator(selector)
         if (await button.isVisible()) {
           await button.click()
-          console.log(`点击了确认按钮: ${selector}`)
           break
         }
       } catch (_e) {

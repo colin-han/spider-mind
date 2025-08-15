@@ -1,5 +1,5 @@
 import { setWorldConstructor, Before, After } from '@cucumber/cucumber'
-import { BrowserContext, Page, Browser, expect } from '@playwright/test'
+import { BrowserContext, Page, Browser, expect, ElementHandle } from '@playwright/test'
 import { chromium } from '@playwright/test'
 
 export class BDDWorld {
@@ -55,9 +55,9 @@ export class BDDWorld {
 
     await this.page.waitForSelector('input[id="email"]', { timeout: 10000 })
 
-    // 填写测试用户信息
-    await this.page.fill('input[id="email"]', 'dev@test.com')
-    await this.page.fill('input[id="password"]', 'password')
+    // 填写autotester测试用户信息
+    await this.page.fill('input[id="email"]', 'autotester@test.com')
+    await this.page.fill('input[id="password"]', 'password123')
 
     // 点击登录按钮
     await this.page.click('button:has-text("登录")')
@@ -349,7 +349,7 @@ export class BDDWorld {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title,
-          userId: '11111111-1111-1111-1111-111111111111',
+          userId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
         }),
       })
       return response.json()
@@ -564,52 +564,80 @@ export class BDDWorld {
       { timeout: 10000 }
     )
 
-    // 尝试多种方式定位思维导图卡片
-    const cardSelectors = [
-      `[data-testid*="mindmap-card"]:has-text("${mindMapName}")`,
-      `.mindmap-card:has-text("${mindMapName}")`,
-      `a[href*="/mindmaps/"]:has-text("${mindMapName}")`,
-      `div:has(h3:text("${mindMapName}"))`,
-      `div:has(text("${mindMapName}"))`,
-    ]
+    // 查找思维导图进行删除操作
 
     let cardFound = false
-    for (const cardSelector of cardSelectors) {
+
+    // 如果有currentMindMapId，优先使用ID进行精确匹配
+    if (this.currentMindMapId) {
       try {
-        const card = this.page.locator(cardSelector).first()
-        if (await card.isVisible()) {
+        const cardByHref = this.page.locator(`a[href="/mindmaps/${this.currentMindMapId}"]`)
+        if ((await cardByHref.count()) > 0) {
           // 悬停在卡片上以显示删除按钮
-          await card.hover()
+          await cardByHref.hover()
           await this.page.waitForTimeout(500)
 
-          // 尝试多种删除按钮选择器
-          const deleteButtonSelectors = [
-            `${cardSelector} [data-testid*="delete"]`,
-            `${cardSelector} button[title*="删除"]`,
-            `${cardSelector} button:has-text("删除")`,
-            `${cardSelector} .delete-button`,
-            `${cardSelector} button[aria-label*="删除"]`,
-            `${cardSelector} svg[data-testid*="trash"]`,
-            `${cardSelector} [class*="delete"]`,
-          ]
-
-          for (const deleteSelector of deleteButtonSelectors) {
-            try {
-              const deleteButton = this.page.locator(deleteSelector).first()
-              if (await deleteButton.isVisible()) {
-                await deleteButton.click()
-                cardFound = true
-                break
-              }
-            } catch {
-              // 继续尝试下一个删除按钮选择器
-            }
+          // 查找删除按钮
+          const deleteButton = this.page.locator(
+            `a[href="/mindmaps/${this.currentMindMapId}"] button[title*="删除"]`
+          )
+          if (await deleteButton.isVisible()) {
+            await deleteButton.click()
+            cardFound = true
           }
-
-          if (cardFound) break
         }
       } catch {
-        // 继续尝试下一个卡片选择器
+        // 如果ID查找失败，使用名称匹配作为备选
+      }
+    }
+
+    // 如果通过ID没有找到，使用原有的名称匹配方式
+    if (!cardFound) {
+      const cardSelectors = [
+        `[data-testid*="mindmap-card"]:has-text("${mindMapName}")`,
+        `.mindmap-card:has-text("${mindMapName}")`,
+        `a[href*="/mindmaps/"]:has-text("${mindMapName}")`,
+        `div:has(h3:text("${mindMapName}"))`,
+        `div:has(text("${mindMapName}"))`,
+      ]
+
+      for (const cardSelector of cardSelectors) {
+        try {
+          const card = this.page.locator(cardSelector).first()
+          if (await card.isVisible()) {
+            // 悬停在卡片上以显示删除按钮
+            await card.hover()
+            await this.page.waitForTimeout(500)
+
+            // 尝试多种删除按钮选择器
+            const deleteButtonSelectors = [
+              `${cardSelector} [data-testid*="delete"]`,
+              `${cardSelector} button[title*="删除"]`,
+              `${cardSelector} button:has-text("删除")`,
+              `${cardSelector} .delete-button`,
+              `${cardSelector} button[aria-label*="删除"]`,
+              `${cardSelector} svg[data-testid*="trash"]`,
+              `${cardSelector} [class*="delete"]`,
+            ]
+
+            for (const deleteSelector of deleteButtonSelectors) {
+              try {
+                const deleteButton = this.page.locator(deleteSelector).first()
+                if (await deleteButton.isVisible()) {
+                  await deleteButton.click()
+                  cardFound = true
+                  break
+                }
+              } catch {
+                // 继续尝试下一个删除按钮选择器
+              }
+            }
+
+            if (cardFound) break
+          }
+        } catch {
+          // 继续尝试下一个卡片选择器
+        }
       }
     }
 
@@ -882,10 +910,29 @@ export class BDDWorld {
     // 等待网络请求完成
     await this.page.waitForLoadState('networkidle')
 
-    // 等待页面更新 - 增加等待时间确保React状态更新完成
-    await this.page.waitForTimeout(3000)
+    // 尝试等待页面的DOM变化
+    try {
+      await this.page.waitForFunction(
+        mindMapName => {
+          // 使用纯JavaScript查找包含特定文本的链接
+          const links = document.querySelectorAll('a[href*="/mindmaps/"]')
+          for (const link of links) {
+            if (link.textContent && link.textContent.includes(mindMapName)) {
+              return false // 找到包含该名称的链接，说明还没有删除
+            }
+          }
+          return true // 没有找到包含该名称的链接，说明已删除
+        },
+        mindMapName,
+        { timeout: 1000 }
+      )
+      // DOM变化检测成功
+    } catch (_error) {
+      // DOM变化检测超时
+    }
 
-    console.log(`检查思维导图 "${mindMapName}" 是否已从列表中移除...`)
+    // 等待页面更新完成
+    await this.page.waitForTimeout(1000)
 
     // 检查思维导图卡片是否不再存在
     const cardSelectors = [
@@ -909,28 +956,13 @@ export class BDDWorld {
                 .catch(() => false)
             : false
 
-        console.log(`选择器 ${i + 1}: "${selector}" -> 找到 ${count} 个元素, 可见: ${isVisible}`)
-
         if (isVisible) {
-          // 输出找到的元素的详细信息
-          const element = card.first()
-          const outerHTML = await element
-            .evaluate(el => el.outerHTML)
-            .catch(() => 'Cannot get HTML')
-          const textContent = await element.textContent().catch(() => 'Cannot get text')
-
-          console.log(`思维导图 "${mindMapName}" 仍然可见，删除未成功`)
-          console.log(`元素HTML: ${outerHTML}`)
-          console.log(`元素文本: ${textContent}`)
           return false
         }
       } catch (_error) {
-        console.log(`选择器 ${i + 1} 检查出错:`, _error)
         // 继续检查下一个选择器
       }
     }
-
-    console.log(`思维导图 "${mindMapName}" 已成功从列表中移除`)
     return true
   }
 
@@ -1259,7 +1291,7 @@ export class BDDWorld {
   /**
    * 根据test-id查找节点元素
    */
-  async findNodeByTestId(testId: string): Promise<unknown> {
+  async findNodeByTestId(testId: string): Promise<ElementHandle<Element> | null> {
     if (!this.page) throw new Error('Page not initialized')
 
     try {

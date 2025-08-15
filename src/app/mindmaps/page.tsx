@@ -117,29 +117,24 @@ export default function MindMapsListPage() {
         method: 'DELETE',
       })
 
-      console.log('Delete response status:', response.status)
-      console.log('Delete response ok:', response.ok)
-
       const result = await response.json()
-      console.log('Delete response result:', result)
 
       if (result.success) {
-        console.log('Delete success, updating state...')
-        console.log('Before delete - mindMaps count:', mindMaps.length)
-        console.log('Deleting mindMap ID:', deleteDialog.mindMap!.id)
-
         // 从列表中移除已删除的思维导图
         const updatedMindMaps = mindMaps.filter(m => m.id !== deleteDialog.mindMap!.id)
-        console.log('After delete - updatedMindMaps count:', updatedMindMaps.length)
 
-        setMindMaps(updatedMindMaps)
-        setFilteredMindMaps(
-          updatedMindMaps.filter(mindMap =>
-            mindMap.title.toLowerCase().includes(searchQuery.toLowerCase())
+        // 使用flushSync确保状态更新立即反映到DOM
+        const { flushSync } = await import('react-dom')
+
+        flushSync(() => {
+          setMindMaps(updatedMindMaps)
+          setFilteredMindMaps(
+            updatedMindMaps.filter(mindMap =>
+              mindMap.title.toLowerCase().includes(searchQuery.toLowerCase())
+            )
           )
-        )
-        setDeleteDialog({ open: false, mindMap: null })
-        console.log('State updated successfully')
+          setDeleteDialog({ open: false, mindMap: null })
+        })
       } else {
         console.error('删除失败:', result.message)
         setDeleteError(`删除失败: ${result.message}`)

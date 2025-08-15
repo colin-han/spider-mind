@@ -59,18 +59,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setIsLoading(true)
 
-      // 简化的认证逻辑：对于开发环境，直接使用测试用户
-      if (email === 'dev@test.com' && password === 'password') {
-        const testUser: User = {
-          id: '11111111-1111-1111-1111-111111111111',
-          email: 'dev@test.com',
-          full_name: '开发测试用户',
-          created_at: '2025-01-09T01:00:00.000Z',
-          updated_at: '2025-01-09T01:00:00.000Z',
-        }
+      // 支持多个测试用户的认证逻辑
+      const testUsers: Record<string, { user: User; password: string }> = {
+        'dev@test.com': {
+          user: {
+            id: '11111111-1111-1111-1111-111111111111',
+            email: 'dev@test.com',
+            full_name: '开发测试用户',
+            created_at: '2025-01-09T01:00:00.000Z',
+            updated_at: '2025-01-09T01:00:00.000Z',
+          },
+          password: 'password',
+        },
+        'autotester@test.com': {
+          user: {
+            id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+            email: 'autotester@test.com',
+            full_name: 'Auto Tester',
+            created_at: '2025-01-15T00:00:00.000Z',
+            updated_at: '2025-01-15T00:00:00.000Z',
+          },
+          password: 'password123',
+        },
+      }
 
-        setUser(testUser)
-        localStorage.setItem('spider-mind-user', JSON.stringify(testUser))
+      const testUserData = testUsers[email]
+      if (testUserData && testUserData.password === password) {
+        setUser(testUserData.user)
+        localStorage.setItem('spider-mind-user', JSON.stringify(testUserData.user))
         return true
       }
 
