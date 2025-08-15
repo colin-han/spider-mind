@@ -6,7 +6,7 @@
 module.exports = {
   default: {
     // 功能文件位置
-    features: ['bdd/features/**/*.feature'],
+    features: ['**/*.feature'],
 
     // TypeScript支持
     requireModule: ['ts-node/register'],

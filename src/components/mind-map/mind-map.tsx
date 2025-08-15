@@ -102,9 +102,15 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
 
         // 生成临时test-id的函数（用于前端新创建的节点）
         const generateTempTestId = (layoutNode: LayoutNode, allNodes: LayoutNode[]): string => {
-          // 根节点
+          // 根级节点：与后端一致的多根节点命名规则
           if (layoutNode.node_level === 0 && !layoutNode.parent_node_id) {
-            return 'root'
+            const rootNodes = allNodes.filter(n => !n.parent_node_id && n.node_level === 0)
+            if (rootNodes.length === 1) {
+              return 'root'
+            }
+            const sortedRootNodes = [...rootNodes].sort((a, b) => a.sort_order - b.sort_order)
+            const rootIndex = sortedRootNodes.findIndex(n => n.id === layoutNode.id)
+            return rootIndex === 0 ? 'root' : `float-${rootIndex - 1}`
           }
 
           // 子节点：基于父节点的test-id + 同级索引
@@ -128,6 +134,9 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
 
         // 更新ReactFlow节点（为前端新建节点生成临时test-id）
         const reactFlowNodes: Node[] = layoutNodesList.map(layoutNode => {
+          const testId = generateTempTestId(layoutNode, layoutNodesList)
+          const isRoot = layoutNode.node_level === 0 && !layoutNode.parent_node_id
+          const isFloating = isRoot && testId.startsWith('float-')
           return {
             id: layoutNode.id,
             type: 'mindMapNode',
@@ -135,10 +144,10 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
             data: {
               content: layoutNode.content,
               isEditing: false,
-              testId: generateTempTestId(layoutNode, layoutNodesList), // 添加临时test-id
-              nodeRole: layoutNode.parent_node_id ? 'child' : 'root',
+              testId, // 添加临时test-id
+              nodeRole: isRoot ? (isFloating ? 'floating' : 'root') : 'child',
               nodeLevel: layoutNode.node_level,
-              isFloating: false,
+              isFloating,
             },
           }
         })
