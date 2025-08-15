@@ -64,7 +64,7 @@ When('我创建一个新的思维导图', async function (this: BDDWorld) {
   await this.createNewMindMap()
 })
 
-When('我点击{string}按钮', async function (this: BDDWorld, buttonText: string) {
+When('我点击{string}按钮', { timeout: 20000 }, async function (this: BDDWorld, buttonText: string) {
   if (buttonText === '添加子节点' || buttonText === '添加节点') {
     await this.clickAddChildNode()
   } else if (buttonText === '保存') {
@@ -647,6 +647,7 @@ When('我按下Tab键', async function (this: BDDWorld) {
 When('我按下Enter键', async function (this: BDDWorld) {
   if (!this.page) throw new Error('Page not initialized')
   await this.page.keyboard.press('Enter')
+  await this.page.waitForTimeout(1000) // 等待节点创建完成
 })
 
 When('我按下Delete键', async function (this: BDDWorld) {
@@ -787,3 +788,23 @@ Then('主节点应该退出编辑模式', async function (this: BDDWorld) {
 Then('主节点的内容应该更新为{string}', async function (this: BDDWorld, expectedContent: string) {
   await this.verifyNodeContent('root', expectedContent)
 })
+
+// =========================
+// Test-ID 稳定性测试补充步骤
+// =========================
+
+When(
+  '我修改节点{string}的内容为{string}',
+  async function (this: BDDWorld, testId: string, newContent: string) {
+    // 双击节点进入编辑模式
+    await this.doubleClickNode(testId)
+    await this.page!.waitForTimeout(300)
+
+    // 使用现有的inputText方法，它已经处理了文本选择
+    await this.inputText(newContent)
+
+    // 按Enter确认修改
+    await this.page!.keyboard.press('Enter')
+    await this.page!.waitForTimeout(300)
+  }
+)

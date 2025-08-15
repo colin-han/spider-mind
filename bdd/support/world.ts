@@ -78,6 +78,12 @@ export class BDDWorld {
 
     // 提取并跟踪新创建的思维导图ID
     await this.extractAndTrackMindMapId()
+
+    // 等待思维导图组件和根节点加载完成
+    await this.page.waitForSelector('[data-testid="root"]', { timeout: 10000 })
+
+    // 等待一些额外时间确保组件完全初始化
+    await this.page.waitForTimeout(1000)
   }
 
   async clickNewMindMapButton() {
