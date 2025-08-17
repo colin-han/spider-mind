@@ -31,7 +31,6 @@ CREATE TABLE mind_map_nodes (
     content TEXT NOT NULL,
     parent_node_id UUID REFERENCES mind_map_nodes(id) ON DELETE CASCADE, -- 父节点ID
     sort_order INTEGER NOT NULL DEFAULT 0, -- 兄弟节点间排序
-    node_level INTEGER NOT NULL DEFAULT 0, -- 节点层级
     node_type TEXT DEFAULT 'mindMapNode',
     style JSONB DEFAULT '{}',
     embedding VECTOR(1536), -- 节点级别的向量嵌入
@@ -46,7 +45,7 @@ CREATE INDEX idx_mind_maps_created_at ON mind_maps(created_at);
 CREATE INDEX idx_mind_maps_is_public ON mind_maps(is_public);
 CREATE INDEX idx_mind_map_nodes_mind_map_id ON mind_map_nodes(mind_map_id);
 CREATE INDEX idx_mind_map_nodes_parent ON mind_map_nodes(parent_node_id);
-CREATE INDEX idx_mind_map_nodes_level ON mind_map_nodes(mind_map_id, node_level);
+-- node_level索引已移除，因为不再存储层级信息
 CREATE INDEX idx_mind_map_nodes_sort ON mind_map_nodes(mind_map_id, parent_node_id, sort_order);
 CREATE INDEX idx_mind_map_nodes_embedding ON mind_map_nodes USING ivfflat (embedding vector_cosine_ops);
 CREATE INDEX idx_mind_maps_embedding ON mind_maps USING ivfflat (embedding vector_cosine_ops);

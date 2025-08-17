@@ -25,16 +25,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const generateTestId = (
       node: {
         id: string
-        node_level: number
         parent_node_id: string | null
         sort_order: number
       },
       allNodes: typeof nodes
     ): string => {
-      // 根级节点（node_level为0且没有父节点）
-      if (node.node_level === 0 && !node.parent_node_id) {
+      // 根级节点（没有父节点）
+      if (!node.parent_node_id) {
         // 检查是否有多个根级节点
-        const rootNodes = allNodes.filter(n => !n.parent_node_id && n.node_level === 0)
+        const rootNodes = allNodes.filter(n => !n.parent_node_id)
         if (rootNodes.length === 1) {
           return 'root' // 单个根节点
         } else {
@@ -78,10 +77,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         isEditing: false,
         parent_node_id: node.parent_node_id,
         sort_order: node.sort_order,
-        node_level: node.node_level,
         testId: generateTestId(node, nodes), // 添加test-id
       },
-      selected: node.node_level === 0, // 根节点默认选中
+      selected: !node.parent_node_id, // 根节点默认选中
       style: typeof node.style === 'object' ? node.style : {},
     }))
 

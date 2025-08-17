@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { Pool } = require('pg')
 const fs = require('fs')
 const path = require('path')
@@ -27,7 +28,7 @@ async function runMigration() {
       'migrations',
       '001_initial_schema.sql'
     )
-    const migrationSQL = fs.readFileSync(migrationPath, 'utf8')
+    const _migrationSQL = fs.readFileSync(migrationPath, 'utf8')
 
     console.log('📄 执行数据库迁移...')
 
@@ -64,7 +65,6 @@ CREATE TABLE IF NOT EXISTS mind_map_nodes (
     content TEXT NOT NULL,
     parent_node_id UUID REFERENCES mind_map_nodes(id) ON DELETE CASCADE,
     sort_order INTEGER NOT NULL DEFAULT 0,
-    node_level INTEGER NOT NULL DEFAULT 0,
     node_type TEXT DEFAULT 'mindMapNode',
     style JSONB DEFAULT '{}',
     embedding TEXT, -- 临时用TEXT存储向量
@@ -78,7 +78,7 @@ CREATE INDEX IF NOT EXISTS idx_mind_maps_created_at ON mind_maps(created_at);
 CREATE INDEX IF NOT EXISTS idx_mind_maps_is_public ON mind_maps(is_public);
 CREATE INDEX IF NOT EXISTS idx_mind_map_nodes_mind_map_id ON mind_map_nodes(mind_map_id);
 CREATE INDEX IF NOT EXISTS idx_mind_map_nodes_parent ON mind_map_nodes(parent_node_id);
-CREATE INDEX IF NOT EXISTS idx_mind_map_nodes_level ON mind_map_nodes(mind_map_id, node_level);
+-- node_level索引已移除，因为不再存储层级信息
 CREATE INDEX IF NOT EXISTS idx_mind_map_nodes_sort ON mind_map_nodes(mind_map_id, parent_node_id, sort_order);
 
 -- 创建向量索引（如果数据量大的话）

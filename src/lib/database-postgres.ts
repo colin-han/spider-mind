@@ -32,7 +32,6 @@ export interface MindMapNode {
   content: string
   parent_node_id: string | null
   sort_order: number
-  node_level: number
   node_type: string
   style: object
   embedding?: number[]
@@ -46,7 +45,6 @@ export interface MindMapNodeInsert {
   content: string
   parent_node_id: string | null
   sort_order?: number
-  node_level?: number
   node_type?: string
   style?: object
   embedding?: number[]
@@ -186,17 +184,6 @@ export class MindMapService {
           }
         })
 
-        // 计算节点层级
-        const calculateNodeLevel = (nodeId: string, visited = new Set()): number => {
-          if (visited.has(nodeId)) return 0 // 防止循环引用
-          visited.add(nodeId)
-
-          const parentId = parentMap[nodeId]
-          if (!parentId) return 0 // 根节点层级为0
-
-          return calculateNodeLevel(parentId, visited) + 1
-        }
-
         // 删除现有节点
         const deleteStart = Date.now()
         await txQuery('DELETE FROM mind_map_nodes WHERE mind_map_id = $1', [id])
@@ -217,7 +204,6 @@ export class MindMapService {
                 content: nodeObj.data?.content || '',
                 parent_node_id: parentMap[nodeObj.id] || null,
                 sort_order: index,
-                node_level: calculateNodeLevel(nodeObj.id),
                 node_type: nodeObj.type || 'mindMapNode',
                 style: nodeObj.data?.style || {},
               }
@@ -243,7 +229,6 @@ export class MindMapService {
               node.content,
               node.parent_node_id,
               node.sort_order,
-              node.node_level,
               node.node_type,
               JSON.stringify(node.style)
             )
@@ -251,7 +236,7 @@ export class MindMapService {
 
           const insertSql = `
             INSERT INTO mind_map_nodes 
-            (id, mind_map_id, content, parent_node_id, sort_order, node_level, node_type, style)
+            (id, mind_map_id, content, parent_node_id, sort_order, node_type, style)
             VALUES ${placeholders.join(', ')}
           `
 
@@ -327,7 +312,6 @@ export class MindMapService {
           node.content,
           node.parent_node_id || null,
           node.sort_order || 0,
-          node.node_level || 0,
           node.node_type || 'mindMapNode',
           JSON.stringify(node.style || {}),
           node.embedding ? `[${node.embedding.join(',')}]` : null,
@@ -335,20 +319,19 @@ export class MindMapService {
 
         values.push(...nodeValues)
         placeholders.push(
-          `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8})`
+          `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7})`
         )
-        paramIndex += 9
+        paramIndex += 8
       }
 
       const sql = `
         INSERT INTO mind_map_nodes 
-        (id, mind_map_id, content, parent_node_id, sort_order, node_level, node_type, style, embedding)
+        (id, mind_map_id, content, parent_node_id, sort_order, node_type, style, embedding)
         VALUES ${placeholders.join(', ')}
         ON CONFLICT (id) DO UPDATE SET
           content = EXCLUDED.content,
           parent_node_id = EXCLUDED.parent_node_id,
           sort_order = EXCLUDED.sort_order,
-          node_level = EXCLUDED.node_level,
           node_type = EXCLUDED.node_type,
           style = EXCLUDED.style,
           embedding = EXCLUDED.embedding,
@@ -407,16 +390,6 @@ export class MindMapService {
     }
 
     return await query<MindMapNode>(sql, values)
-  }
-
-  // 获取指定层级的所有节点
-  static async getNodesByLevel(mindMapId: string, level: number): Promise<MindMapNode[]> {
-    const sql = `
-      SELECT * FROM mind_map_nodes 
-      WHERE mind_map_id = $1 AND node_level = $2
-      ORDER BY sort_order ASC
-    `
-    return await query<MindMapNode>(sql, [mindMapId, level])
   }
 
   // 通过向量搜索思维导图
@@ -507,17 +480,6 @@ export class MindMapService {
         }
       })
 
-      // 计算节点层级
-      const calculateNodeLevel = (nodeId: string, visited = new Set()): number => {
-        if (visited.has(nodeId)) return 0 // 防止循环引用
-        visited.add(nodeId)
-
-        const parentId = parentMap[nodeId]
-        if (!parentId) return 0 // 根节点层级为0
-
-        return calculateNodeLevel(parentId, visited) + 1
-      }
-
       // 使用更高效的删除方式 - 避免级联删除触发
       const deleteStart = Date.now()
       console.log(`[DB] Deleting existing nodes for mindmap ${mindMapId}`)
@@ -540,7 +502,6 @@ export class MindMapService {
               content: nodeObj.data?.content || '',
               parent_node_id: parentMap[nodeObj.id] || null,
               sort_order: index,
-              node_level: calculateNodeLevel(nodeObj.id),
               node_type: nodeObj.type || 'mindMapNode',
               style: nodeObj.data?.style || {},
               embedding: undefined, // embedding暂时为空

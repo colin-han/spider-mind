@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
             isEditing: false,
             parent_node_id: null,
             sort_order: 0,
-            node_level: 0,
           },
         },
       ],

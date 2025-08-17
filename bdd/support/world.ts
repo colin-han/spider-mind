@@ -1681,13 +1681,107 @@ export class BDDWorld {
     }
   }
 
-  // 双击节点进入编辑模式
+  // 双击节点进入编辑模式，处理minimap拦截问题
   async doubleClickNode(testId: string): Promise<void> {
+    if (!this.page) throw new Error('Page not initialized')
+
     const element = await this.findNodeByTestId(testId)
     if (!element) throw new Error(`找不到节点"${testId}"`)
 
-    await element.dblclick()
-    await this.page?.waitForTimeout(300)
+    try {
+      // 尝试双击节点
+      await element.dblclick()
+      await this.page.waitForTimeout(300)
+    } catch (error) {
+      console.log(`双击失败，尝试force选项: ${error}`)
+      // 如果仍然失败，使用force选项
+      await this.page.dblclick(`[data-testid="${testId}"]`, { force: true })
+      await this.page.waitForTimeout(300)
+    }
+  }
+
+  // 编辑指定 test-id 节点的内容：双击进入编辑、直接操作input元素、回车确认
+  async editNodeContent(testId: string, newContent: string): Promise<void> {
+    if (!this.page) throw new Error('Page not initialized')
+
+    // 检查并隐藏minimap，避免整个编辑过程中的事件拦截
+    const minimapExists = await this.page.locator('[data-testid="rf__minimap"]').count()
+    if (minimapExists > 0) {
+      console.log('检测到minimap，隐藏以避免编辑过程中的事件拦截')
+      await this.page.evaluate(() => {
+        const minimap = document.querySelector('[data-testid="rf__minimap"]') as HTMLElement
+        if (minimap) {
+          minimap.style.display = 'none'
+        }
+      })
+    }
+
+    try {
+      // 双击节点进入编辑模式
+      await this.doubleClickNode(testId)
+      await this.page.waitForTimeout(500)
+
+      // 查找节点内的input元素
+      const nodeElement = await this.findNodeByTestId(testId)
+      if (!nodeElement) throw new Error(`找不到节点"${testId}"`)
+
+      // 等待input元素出现
+      const inputElement = await this.page.waitForSelector(`[data-testid="${testId}"] input`, {
+        timeout: 5000,
+      })
+
+      if (!inputElement) {
+        throw new Error(`节点"${testId}"的input元素未找到`)
+      }
+
+      // 清空并填入新内容
+      await inputElement.click() // 确保input获得焦点
+      await inputElement.selectText() // 选中所有文本
+      await inputElement.fill(newContent) // 直接填入新内容
+
+      // 确认编辑
+      await this.page.keyboard.press('Enter')
+      await this.page.waitForTimeout(500)
+    } finally {
+      // 恢复minimap显示
+      if (minimapExists > 0) {
+        await this.page.evaluate(() => {
+          const minimap = document.querySelector('[data-testid="rf__minimap"]') as HTMLElement
+          if (minimap) {
+            minimap.style.display = ''
+          }
+        })
+      }
+    }
+  }
+
+  // 为指定节点创建多个子节点
+  async createMultipleChildNodes(parentTestId: string, childrenNames: string[]): Promise<void> {
+    if (!this.page) throw new Error('Page not initialized')
+
+    // 为每个子节点名称创建节点
+    for (let i = 0; i < childrenNames.length; i++) {
+      const childName = childrenNames[i]
+
+      // 选中父节点
+      await this.selectNodeByTestId(parentTestId)
+      await this.page.waitForTimeout(300)
+
+      // 添加子节点 - 使用Tab键快捷方式
+      await this.page.keyboard.press('Tab')
+      await this.page.waitForTimeout(1500)
+
+      // 计算预期的子节点test-id
+      const expectedChildTestId = `${parentTestId}-${i}`
+
+      // 等待子节点出现
+      await this.page.waitForSelector(`[data-testid="${expectedChildTestId}"]`, {
+        timeout: 8000,
+      })
+
+      // 编辑子节点内容
+      await this.editNodeContent(expectedChildTestId, childName)
+    }
   }
 }
 

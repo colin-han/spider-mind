@@ -22,7 +22,7 @@ import {
   calculateAutoLayout,
   generateEdges,
   getNextSortOrder,
-  getNodeLevel,
+  calculateNodeLevel,
   type LayoutNode,
 } from '@/lib/auto-layout'
 // 移除TestIdGenerator导入
@@ -102,9 +102,9 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
 
         // 生成临时test-id的函数（用于前端新创建的节点）
         const generateTempTestId = (layoutNode: LayoutNode, allNodes: LayoutNode[]): string => {
-          // 根级节点：与后端一致的多根节点命名规则
-          if (layoutNode.node_level === 0 && !layoutNode.parent_node_id) {
-            const rootNodes = allNodes.filter(n => !n.parent_node_id && n.node_level === 0)
+          // 根节点：与后端一致的多根节点命名规则
+          if (!layoutNode.parent_node_id) {
+            const rootNodes = allNodes.filter(n => !n.parent_node_id)
             if (rootNodes.length === 1) {
               return 'root'
             }
@@ -134,9 +134,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
 
         // 更新ReactFlow节点（为前端新建节点生成临时test-id）
         const reactFlowNodes: Node[] = layoutNodesList.map(layoutNode => {
-          const testId = generateTempTestId(layoutNode, layoutNodesList)
-          const isRoot = layoutNode.node_level === 0 && !layoutNode.parent_node_id
-          const isFloating = isRoot && testId.startsWith('float-')
           return {
             id: layoutNode.id,
             type: 'mindMapNode',
@@ -144,10 +141,10 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
             data: {
               content: layoutNode.content,
               isEditing: false,
-              testId, // 添加临时test-id
-              nodeRole: isRoot ? (isFloating ? 'floating' : 'root') : 'child',
-              nodeLevel: layoutNode.node_level,
-              isFloating,
+              testId: generateTempTestId(layoutNode, layoutNodesList), // 添加临时test-id
+              nodeRole: layoutNode.parent_node_id ? 'child' : 'root',
+              nodeLevel: calculateNodeLevel(layoutNode.id, layoutNodesList),
+              isFloating: false,
             },
           }
         })
@@ -177,7 +174,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         const selectedNodeId = selectedNodes.length === 1 ? selectedNodes[0] : null
         const parentNodeId = selectedNodeId
         const sortOrder = getNextSortOrder(layoutNodes, parentNodeId)
-        const nodeLevel = getNodeLevel(layoutNodes, parentNodeId)
 
         // 创建新的布局节点
         const newNodeId = crypto.randomUUID()
@@ -185,7 +181,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           id: newNodeId,
           parent_node_id: parentNodeId,
           sort_order: sortOrder,
-          node_level: nodeLevel,
           content: '新节点',
         }
 
@@ -229,7 +224,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
 
         // 为同级节点找到父节点ID和新的排序顺序
         const parentNodeId = selectedLayoutNode.parent_node_id
-        const nodeLevel = selectedLayoutNode.node_level
 
         // 如果是根节点，创建另一个根级节点
         const sortOrder = getNextSortOrder(layoutNodes, parentNodeId)
@@ -239,7 +233,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           id: newNodeId,
           parent_node_id: parentNodeId,
           sort_order: sortOrder,
-          node_level: nodeLevel,
           content: '新节点',
         }
 
@@ -321,6 +314,31 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
 
         // 更新布局节点数据
         const updatedLayoutNodes = layoutNodes.filter(node => !allNodesToDelete.includes(node.id))
+
+        // 重新排序兄弟节点以确保test-id稳定性
+        const affectedParents = new Set<string | null>()
+        nodesToDelete.forEach(node => {
+          affectedParents.add(node.parent_node_id)
+        })
+
+        // 对每个受影响的父节点，重新排序其子节点
+        affectedParents.forEach(parentId => {
+          const siblings = updatedLayoutNodes
+            .filter(node => node.parent_node_id === parentId)
+            .sort((a, b) => a.sort_order - b.sort_order)
+
+          // 重新分配连续的sort_order
+          siblings.forEach((sibling, index) => {
+            const nodeIndex = updatedLayoutNodes.findIndex(n => n.id === sibling.id)
+            if (nodeIndex !== -1) {
+              updatedLayoutNodes[nodeIndex] = {
+                ...updatedLayoutNodes[nodeIndex],
+                sort_order: index,
+              }
+            }
+          })
+        })
+
         setLayoutNodes(updatedLayoutNodes)
 
         // 重新应用布局
@@ -594,7 +612,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
             id: node.id,
             parent_node_id: (nodeData?.parent_node_id as string) || null,
             sort_order: (nodeData?.sort_order as number) || 0,
-            node_level: (nodeData?.node_level as number) || 0,
             content: String(nodeData?.content || ''),
           }
 
@@ -626,7 +643,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           id: rootNodeId,
           parent_node_id: null,
           sort_order: 0,
-          node_level: 0,
           content: '中心主题',
         }
 

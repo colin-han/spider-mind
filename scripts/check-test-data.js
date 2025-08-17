@@ -4,6 +4,7 @@
  * 检查数据库中测试数据残留的脚本
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { Client } = require('pg')
 const { config } = require('dotenv')
 
@@ -108,7 +109,7 @@ async function checkTestData() {
           `      内容: ${node.content?.substring(0, 50)}${node.content?.length > 50 ? '...' : ''}`
         )
         console.log(`      父节点ID: ${node.parent_node_id || 'null'}`)
-        console.log(`      层级: ${node.node_level}`)
+        // 层级现在通过父子关系计算，不再存储
         console.log(`      排序: ${node.sort_order}`)
         console.log(`      类型: ${node.node_type}`)
         console.log(`      创建时间: ${createdAt}`)

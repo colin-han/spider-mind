@@ -366,14 +366,7 @@ Then('主节点的内容应该更新为{string}', async function (this: BDDWorld
 // =========================
 
 When('我修改主节点内容为{string}', async function (this: BDDWorld, newContent: string) {
-  // 双击主节点进入编辑模式
-  await this.doubleClickNode('root')
-
-  // 使用现有的inputText方法，它已经处理了文本选择
-  await this.inputText(newContent)
-
-  // 按Enter确认修改
-  await this.page!.keyboard.press('Enter')
+  await this.editNodeContent('root', newContent)
 })
 
 When(
@@ -382,85 +375,99 @@ When(
     // 解析子节点数组
     const childrenNames: string[] = JSON.parse(childrenJson)
 
-    // 为每个子节点名称创建节点
-    for (const childName of childrenNames) {
-      // 选中父节点
-      await this.selectNodeByTestId(parentTestId)
-      await this.page!.waitForTimeout(500)
-
-      // 添加子节点
-      await this.page!.click('[data-testid="add-node-button"]')
-      await this.page!.waitForTimeout(1000)
-
-      // 找到新创建的子节点并设置内容
-      const childIndex = childrenNames.indexOf(childName)
-      const expectedChildTestId = `${parentTestId}-${childIndex}`
-
-      // 双击进入编辑模式
-      await this.doubleClickNode(expectedChildTestId)
-
-      // 输入内容，使用现有的inputText方法
-      await this.inputText(childName)
-      await this.page!.keyboard.press('Enter')
-    }
+    // 使用BDDWorld方法创建多个子节点
+    await this.createMultipleChildNodes(parentTestId, childrenNames)
   }
 )
 
 When(
   '我为{string}节点创建以下子节点：',
-  { timeout: 60000 },
   async function (this: BDDWorld, parentTestId: string, dataTable) {
     // 从DataTable获取子节点名称列表
     const rows = dataTable.raw()
     const childrenNames: string[] = rows.map((row: string[]) => row[0])
 
-    // 为每个子节点名称创建节点 - 使用更简化的方式
-    for (let i = 0; i < childrenNames.length; i++) {
-      const childName = childrenNames[i]
-
-      // 选中父节点
-      await this.selectNodeByTestId(parentTestId)
-      await this.page!.waitForTimeout(300)
-
-      // 添加子节点 - 使用Tab键快捷方式
-      await this.page!.keyboard.press('Tab')
-      await this.page!.waitForTimeout(1500)
-
-      // 计算预期的子节点test-id
-      const expectedChildTestId = `${parentTestId}-${i}`
-
-      // 等待子节点出现
-      await this.page!.waitForSelector(`[data-testid="${expectedChildTestId}"]`, {
-        timeout: 8000,
-      })
-
-      // 设置子节点内容
-      await this.doubleClickNode(expectedChildTestId)
-      await this.page!.waitForTimeout(300)
-
-      // 输入内容
-      await this.inputText(childName)
-      await this.page!.keyboard.press('Enter')
-      await this.page!.waitForTimeout(300)
-    }
+    // 使用BDDWorld方法创建多个子节点
+    await this.createMultipleChildNodes(parentTestId, childrenNames)
   }
 )
 
 When('我删除节点{string}', async function (this: BDDWorld, testId: string) {
+  // 记录删除前的所有节点
+  const beforeNodes = await this.page!.evaluate(() => {
+    const nodes = document.querySelectorAll(
+      '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
+    )
+    return Array.from(nodes).map(node => ({
+      testId: node.getAttribute('data-testid'),
+      content: node.textContent?.trim(),
+    }))
+  })
+  console.log('删除前的节点:', beforeNodes)
+
   // 选中要删除的节点
   await this.selectNodeByTestId(testId)
   await this.page!.waitForTimeout(500)
 
-  // 尝试删除节点 - 可能需要确认对话框
+  // 验证节点是否被选中
+  const isSelected = await this.page!.evaluate(testId => {
+    const node = document.querySelector(`[data-testid="${testId}"]`)
+    return node?.getAttribute('data-node-selected') === 'true'
+  }, testId)
+  console.log(`节点 ${testId} 是否被选中: ${isSelected}`)
+
+  // 确保思维导图容器获得焦点
+  await this.page!.click('.react-flow')
+  await this.page!.waitForTimeout(200)
+
+  // 方法1: 尝试使用Delete键删除节点
+  console.log(`按下Delete键删除节点: ${testId}`)
   await this.page!.keyboard.press('Delete')
 
+  await this.page!.waitForTimeout(1000)
+
+  // 检查是否有确认对话框出现
+  const hasDialog = await this.page!.locator(
+    '[data-testid*="confirm"], [data-testid*="dialog"]'
+  ).count()
+
+  // 如果Delete键没有效果，尝试工具栏删除按钮
+  if (hasDialog === 0) {
+    console.log(`Delete键无效，尝试工具栏删除按钮`)
+    const deleteButtonExists = await this.page!.locator('[data-testid="delete-button"]').count()
+    if (deleteButtonExists > 0) {
+      await this.page!.click('[data-testid="delete-button"]')
+      await this.page!.waitForTimeout(500)
+    } else {
+      console.log(`工具栏删除按钮不存在，尝试其他删除按钮`)
+      // 寻找其他可能的删除按钮
+      const deleteSelectors = [
+        'button:has-text("删除")',
+        'button:has-text("Delete")',
+        '[title*="删除"]',
+        '[aria-label*="删除"]',
+      ]
+
+      for (const selector of deleteSelectors) {
+        const buttonExists = await this.page!.locator(selector).count()
+        if (buttonExists > 0) {
+          console.log(`找到删除按钮: ${selector}`)
+          await this.page!.click(selector)
+          break
+        }
+      }
+    }
+  }
+
   // 等待一下看是否有确认对话框
-  await this.page!.waitForTimeout(500)
+  await this.page!.waitForTimeout(1000)
 
   // 检查是否有删除确认对话框
   const hasConfirmDialog = await this.page!.locator(
     '[data-testid*="confirm"], [data-testid*="dialog"]'
   ).count()
+  console.log(`最终是否有确认对话框: ${hasConfirmDialog > 0}`)
+
   if (hasConfirmDialog > 0) {
     // 尝试点击确认按钮
     const confirmSelectors = [
@@ -470,17 +477,21 @@ When('我删除节点{string}', async function (this: BDDWorld, testId: string) 
       'button:has-text("Delete")',
     ]
 
+    let confirmClicked = false
     for (const selector of confirmSelectors) {
       try {
         const button = this.page!.locator(selector)
         if (await button.isVisible()) {
+          console.log(`点击确认按钮: ${selector}`)
           await button.click()
+          confirmClicked = true
           break
         }
       } catch (_e) {
         // 继续尝试下一个选择器
       }
     }
+    console.log(`确认按钮是否被点击: ${confirmClicked}`)
   }
 
   await this.page!.waitForTimeout(2000) // 增加等待时间
@@ -796,15 +807,6 @@ Then('主节点的内容应该更新为{string}', async function (this: BDDWorld
 When(
   '我修改节点{string}的内容为{string}',
   async function (this: BDDWorld, testId: string, newContent: string) {
-    // 双击节点进入编辑模式
-    await this.doubleClickNode(testId)
-    await this.page!.waitForTimeout(300)
-
-    // 使用现有的inputText方法，它已经处理了文本选择
-    await this.inputText(newContent)
-
-    // 按Enter确认修改
-    await this.page!.keyboard.press('Enter')
-    await this.page!.waitForTimeout(300)
+    await this.editNodeContent(testId, newContent)
   }
 )

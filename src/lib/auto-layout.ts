@@ -4,7 +4,6 @@ export interface LayoutNode {
   id: string
   parent_node_id: string | null
   sort_order: number
-  node_level: number
   content: string
 }
 
@@ -24,6 +23,30 @@ const LAYOUT_CONFIG = {
   ROOT_START_Y: 200,
   // 最小垂直间距（避免节点重叠）
   MIN_VERTICAL_SPACING: 60,
+}
+
+/**
+ * 计算节点的层级
+ */
+export function calculateNodeLevel(nodeId: string, nodes: LayoutNode[]): number {
+  const nodeMap = new Map(nodes.map(n => [n.id, n]))
+
+  function getLevel(currentNodeId: string, visited = new Set<string>()): number {
+    // 防止循环引用
+    if (visited.has(currentNodeId)) {
+      return 0
+    }
+    visited.add(currentNodeId)
+
+    const node = nodeMap.get(currentNodeId)
+    if (!node || !node.parent_node_id) {
+      return 0 // 根节点层级为0
+    }
+
+    return 1 + getLevel(node.parent_node_id, visited)
+  }
+
+  return getLevel(nodeId)
 }
 
 /**
@@ -158,7 +181,6 @@ export function createLayoutNodes(
     id: string
     parent_node_id: string | null
     sort_order: number
-    node_level: number
     content: string
   }>
 ): LayoutNode[] {
@@ -166,7 +188,6 @@ export function createLayoutNodes(
     id: node.id,
     parent_node_id: node.parent_node_id,
     sort_order: node.sort_order,
-    node_level: node.node_level,
     content: node.content,
   }))
 }
@@ -214,13 +235,12 @@ export function getNextSortOrder(nodes: LayoutNode[], parentId: string | null): 
 }
 
 /**
- * 获取节点层级
+ * 获取节点层级（基于父子关系计算）
  */
 export function getNodeLevel(nodes: LayoutNode[], parentId: string | null): number {
   if (!parentId) {
     return 0 // 根节点层级为0
   }
 
-  const parentNode = nodes.find(n => n.id === parentId)
-  return parentNode ? parentNode.node_level + 1 : 0
+  return 1 + calculateNodeLevel(parentId, nodes)
 }
