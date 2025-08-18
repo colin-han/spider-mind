@@ -11,7 +11,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **UI**: Radix UI + TailwindCSS 4
 - **思维导图**: ReactFlow (@xyflow/react)
 - **数据库**: PostgreSQL + pgvector (向量搜索)
-- **认证**: Supabase Auth
 - **状态管理**: Zustand
 - **包管理器**: yarn (重要：必须使用yarn而不是npm)
 

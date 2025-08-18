@@ -2,8 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'spider-mind-dev',
-      script: 'npm',
-      args: 'run dev',
+      script: 'next',
+      args: 'dev',
       cwd: __dirname,
       instances: 1,
       autorestart: true,

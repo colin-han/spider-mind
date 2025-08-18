@@ -64,33 +64,6 @@ export class TestDataFactory {
   }
 }
 
-// Mock Supabase服务
-export class MockSupabaseService {
-  static mockMindMapService() {
-    return {
-      getMindMaps: vi.fn(() => Promise.resolve([TestDataFactory.createMindMap()])),
-      getMindMapById: vi.fn((id: string) => Promise.resolve(TestDataFactory.createMindMap({ id }))),
-      createMindMap: vi.fn((data: Record<string, unknown>) =>
-        Promise.resolve(TestDataFactory.createMindMap(data))
-      ),
-      updateMindMap: vi.fn((id: string, data: Record<string, unknown>) =>
-        Promise.resolve(TestDataFactory.createMindMap({ id, ...data }))
-      ),
-      deleteMindMap: vi.fn(() => Promise.resolve(true)),
-      searchMindMaps: vi.fn(() => Promise.resolve([])),
-    }
-  }
-
-  static mockAuthService() {
-    return {
-      getCurrentUser: vi.fn(() => Promise.resolve(TestDataFactory.createUser())),
-      signIn: vi.fn(() => Promise.resolve({ user: TestDataFactory.createUser() })),
-      signOut: vi.fn(() => Promise.resolve()),
-      signUp: vi.fn(() => Promise.resolve({ user: TestDataFactory.createUser() })),
-    }
-  }
-}
-
 // AI服务Mock
 export class MockAIService {
   static mockClaude() {

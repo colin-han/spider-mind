@@ -65,7 +65,7 @@ async function cleanupTestData() {
     )
     console.log(`删除了 ${deleteUsersResult.rowCount} 个用户记录`)
 
-    // 4. 如果有auth.users表的访问权限，也清理那里的数据（通常Supabase管理）
+    // 4. 如果有auth.users表的访问权限，也清理那里的数据
     // 注意：在本地PostgreSQL中，我们可能没有auth schema
     try {
       const deleteUsersResult = await client.query(

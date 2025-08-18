@@ -24,7 +24,7 @@ async function runMigration() {
     const migrationPath = path.join(
       __dirname,
       '..',
-      'supabase',
+      'database',
       'migrations',
       '001_initial_schema.sql'
     )
@@ -32,7 +32,6 @@ async function runMigration() {
 
     console.log('📄 执行数据库迁移...')
 
-    // 修改后的迁移SQL，移除Supabase特定内容
     const localMigrationSQL = `
 -- 启用必要的扩展
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

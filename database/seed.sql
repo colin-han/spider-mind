@@ -2,9 +2,9 @@
 
 -- 注意：这些数据仅用于开发环境，生产环境应删除
 
--- 示例用户（需要先在 Supabase Auth 中创建对应用户）
--- INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, created_at, updated_at)
--- VALUES ('550e8400-e29b-41d4-a716-446655440000', 'demo@example.com', crypt('password', gen_salt('bf')), NOW(), NOW(), NOW());
+-- 示例用户
+INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, created_at, updated_at)
+VALUES ('550e8400-e29b-41d4-a716-446655440000', 'demo@example.com', crypt('password', gen_salt('bf')), NOW(), NOW(), NOW());
 
 -- 示例profile（假设用户ID已存在）
 INSERT INTO profiles (id, email, full_name) VALUES 

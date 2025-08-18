@@ -4,8 +4,6 @@ import { cleanup } from '@testing-library/react'
 
 // 模拟环境变量
 beforeEach(() => {
-  process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-key'
   process.env.ANTHROPIC_API_KEY = 'test-anthropic-key'
   process.env.OPENAI_API_KEY = 'test-openai-key'
 })
@@ -78,28 +76,6 @@ vi.mock('next/navigation', () => ({
   }),
   usePathname: () => '/test',
   useSearchParams: () => new URLSearchParams(),
-}))
-
-// Mock Supabase客户端
-vi.mock('@/lib/supabase', () => ({
-  supabase: {
-    auth: {
-      getSession: vi.fn(() => Promise.resolve({ data: { session: null }, error: null })),
-      signIn: vi.fn(),
-      signOut: vi.fn(),
-      onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
-    },
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        })),
-      })),
-      insert: vi.fn(() => Promise.resolve({ data: null, error: null })),
-      update: vi.fn(() => Promise.resolve({ data: null, error: null })),
-      delete: vi.fn(() => Promise.resolve({ data: null, error: null })),
-    })),
-  },
 }))
 
 // Mock ReactFlow组件

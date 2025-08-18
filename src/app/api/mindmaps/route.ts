@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId') || '11111111-1111-1111-1111-111111111111' // 默认用户
 
-    // 从Supabase获取用户的思维导图
+    // 从数据库获取用户的思维导图
     const userMindMaps = await MindMapService.getUserMindMaps(userId)
 
     return NextResponse.json({
