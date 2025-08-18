@@ -16,7 +16,6 @@ CREATE TABLE profiles (
 CREATE TABLE mind_maps (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     title TEXT NOT NULL,
-    content JSONB NOT NULL DEFAULT '{}',
     user_id UUID REFERENCES auth.users(id) NOT NULL,
     is_public BOOLEAN DEFAULT FALSE,
     embedding VECTOR(1536), -- OpenAI text-embedding-3-small 向量维度

@@ -67,6 +67,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return `unknown-${node.id}`
     }
 
+    // 确定应该选中的节点（优先选择root节点）
+    const rootLevelNodes = nodes.filter(n => !n.parent_node_id)
+    const hasRootNode = rootLevelNodes.some(n => generateTestId(n, nodes) === 'root')
+
+    // 选中逻辑：优先选择root节点，如果没有root则选择第一个浮动节点
+    const selectedNodeTestId = hasRootNode ? 'root' : 'float-0'
+
     // 重构ReactFlow格式的数据
     const reactFlowNodes = nodes.map(node => ({
       id: node.id,
@@ -79,7 +86,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         sort_order: node.sort_order,
         testId: generateTestId(node, nodes), // 添加test-id
       },
-      selected: !node.parent_node_id, // 根节点默认选中
+      selected: generateTestId(node, nodes) === selectedNodeTestId, // 只选中指定的节点
       style: typeof node.style === 'object' ? node.style : {},
     }))
 

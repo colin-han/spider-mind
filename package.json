@@ -3,9 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start",
     "lint": "next lint",
     "test:bdd": "tsx scripts/pre-test-setup.ts && TS_NODE_PROJECT=tsconfig.bdd.json cucumber-js --config cucumber.config.js",
     "test:bdd:watch": "TS_NODE_PROJECT=tsconfig.bdd.json cucumber-js --config cucumber.config.js 'bdd/features/**/*.feature' --watch",

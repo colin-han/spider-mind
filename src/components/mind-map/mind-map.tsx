@@ -621,6 +621,9 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         })
         setLayoutNodes(initialLayoutNodes)
 
+        // 应用自动布局
+        applyAutoLayout(initialLayoutNodes)
+
         // 自动选中主节点（根节点）
         const mainNode = initialLayoutNodes.find(node => node.parent_node_id === null)
         if (mainNode) {

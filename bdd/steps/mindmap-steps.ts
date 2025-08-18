@@ -494,7 +494,14 @@ When('我删除节点{string}', async function (this: BDDWorld, testId: string) 
     console.log(`确认按钮是否被点击: ${confirmClicked}`)
   }
 
-  await this.page!.waitForTimeout(2000) // 增加等待时间
+  await this.page!.waitForTimeout(5000) // 给删除操作足够时间
+
+  // 检查删除操作是否完成
+  const nodeStillExists = await this.page!.evaluate(deletedTestId => {
+    const deletedNode = document.querySelector(`[data-testid="${deletedTestId}"]`)
+    return deletedNode !== null
+  }, testId)
+  console.log(`节点 ${testId} 是否仍然存在: ${nodeStillExists}`)
 
   // 记录删除后的所有节点
   const afterNodes = await this.page!.evaluate(() => {
@@ -759,6 +766,11 @@ Then('应该显示提示信息{string}', async function (this: BDDWorld, message
 
   // 等待提示信息出现
   await expect(this.page.locator(`text=${message}`)).toBeVisible({ timeout: 5000 })
+})
+
+// 创建测试思维导图步骤
+When('我创建一个新的思维导图如下：', async function (this: BDDWorld, docString: string) {
+  await this.createMindMapFromTreeStructure(docString)
 })
 
 Then('不应该创建任何新节点', async function (this: BDDWorld) {

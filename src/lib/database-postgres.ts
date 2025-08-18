@@ -194,7 +194,12 @@ export class MindMapService {
           .map((node, index) => {
             const nodeObj = node as {
               id?: string
-              data?: { content?: string; style?: unknown }
+              data?: {
+                content?: string
+                style?: unknown
+                parent_node_id?: string | null
+                sort_order?: number
+              }
               type?: string
             }
             if (nodeObj && nodeObj.id) {
@@ -202,8 +207,12 @@ export class MindMapService {
                 id: nodeObj.id,
                 mind_map_id: id,
                 content: nodeObj.data?.content || '',
-                parent_node_id: parentMap[nodeObj.id] || null,
-                sort_order: index,
+                parent_node_id:
+                  nodeObj.data?.parent_node_id !== undefined
+                    ? nodeObj.data.parent_node_id
+                    : parentMap[nodeObj.id] || null,
+                sort_order:
+                  nodeObj.data?.sort_order !== undefined ? nodeObj.data.sort_order : index,
                 node_type: nodeObj.type || 'mindMapNode',
                 style: nodeObj.data?.style || {},
               }
@@ -230,13 +239,14 @@ export class MindMapService {
               node.parent_node_id,
               node.sort_order,
               node.node_type,
-              JSON.stringify(node.style)
+              JSON.stringify(node.style),
+              null // embedding
             )
           })
 
           const insertSql = `
             INSERT INTO mind_map_nodes 
-            (id, mind_map_id, content, parent_node_id, sort_order, node_type, style)
+            (id, mind_map_id, content, parent_node_id, sort_order, node_type, style, embedding)
             VALUES ${placeholders.join(', ')}
           `
 
