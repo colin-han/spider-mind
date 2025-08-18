@@ -266,7 +266,8 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
 
       // 检查是否试图删除根节点
       const nodeToDelete = layoutNodes.find(
-        node => selectedNodes.includes(node.id) && node.parent_node_id === null
+        node =>
+          selectedNodes.includes(node.id) && node.parent_node_id === null && node.sort_order === 0
       )
 
       if (nodeToDelete) {

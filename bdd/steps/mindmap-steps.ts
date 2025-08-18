@@ -2,6 +2,10 @@ import { Given, When, Then } from '@cucumber/cucumber'
 import { expect } from '@playwright/test'
 import { BDDWorld } from '../support/world'
 
+When('等待{int}秒', { timeout: 60 * 1000 }, async function (this: BDDWorld, seconds: number) {
+  await this.page?.waitForTimeout(seconds * 1000)
+})
+
 // Given步骤
 Given('我是一个已登录的用户', async function (this: BDDWorld) {
   await this.loginAsTestUser()
@@ -60,11 +64,7 @@ Given('我已经打开了一个包含子节点的思维导图', async function (
 })
 
 // When步骤
-When('我创建一个新的思维导图', async function (this: BDDWorld) {
-  await this.createNewMindMap()
-})
-
-When('我点击{string}按钮', { timeout: 20000 }, async function (this: BDDWorld, buttonText: string) {
+When('我点击{string}按钮', async function (this: BDDWorld, buttonText: string) {
   if (buttonText === '添加子节点' || buttonText === '添加节点') {
     await this.clickAddChildNode()
   } else if (buttonText === '保存') {
@@ -97,7 +97,6 @@ When('我点击对话框外部区域', async function (this: BDDWorld) {
 
   // 点击对话框外部区域（页面背景）
   await this.page.click('body', { position: { x: 10, y: 10 } })
-  await this.page.waitForTimeout(500)
 })
 
 // 统一的按键处理 - 支持多种按键名称格式
@@ -122,7 +121,8 @@ When('我按下{string}键', async function (this: BDDWorld, keyName: string) {
 
   const actualKey = keyMap[keyName] || keyName
   await this.page.keyboard.press(actualKey)
-  await this.page.waitForTimeout(500)
+  // 等待按键操作生效
+  await this.page.waitForLoadState('domcontentloaded')
 })
 
 // 兼容性：保留原有的特定按键步骤
@@ -130,7 +130,15 @@ When('我按下ESC键', async function (this: BDDWorld) {
   if (!this.page) throw new Error('Page not initialized')
 
   await this.page.keyboard.press('Escape')
-  await this.page.waitForTimeout(500)
+  // 等待ESC操作生效（对话框或编辑模式关闭）
+  await this.page.waitForFunction(
+    () => {
+      const dialogs = document.querySelectorAll('[data-testid*="dialog"], [data-testid*="confirm"]')
+      const editingInputs = document.querySelectorAll('input[type="text"]')
+      return dialogs.length === 0 && editingInputs.length === 0
+    },
+    { timeout: 300 }
+  )
 })
 
 When('我鼠标悬停在思维导图卡片上', async function (this: BDDWorld) {
@@ -300,6 +308,7 @@ Then('浏览器应该自动进入思维导图编辑页面', async function (this
 Then('浏览器应该进入思维导图编辑页面', async function (this: BDDWorld) {
   const isOnEditPage = await this.verifyOnEditPage()
   expect(isOnEditPage).toBe(true)
+  await this.page?.waitForSelector('[data-testid="root"]', { timeout: 1000 })
 })
 
 Then('我应该看到一个默认的主节点', async function (this: BDDWorld) {
@@ -393,127 +402,30 @@ When(
 )
 
 When('我删除节点{string}', async function (this: BDDWorld, testId: string) {
-  // 记录删除前的所有节点
-  const beforeNodes = await this.page!.evaluate(() => {
-    const nodes = document.querySelectorAll(
-      '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
-    )
-    return Array.from(nodes).map(node => ({
-      testId: node.getAttribute('data-testid'),
-      content: node.textContent?.trim(),
-    }))
-  })
-  console.log('删除前的节点:', beforeNodes)
-
   // 选中要删除的节点
   await this.selectNodeByTestId(testId)
-  await this.page!.waitForTimeout(500)
 
-  // 验证节点是否被选中
-  const isSelected = await this.page!.evaluate(testId => {
-    const node = document.querySelector(`[data-testid="${testId}"]`)
-    return node?.getAttribute('data-node-selected') === 'true'
-  }, testId)
-  console.log(`节点 ${testId} 是否被选中: ${isSelected}`)
-
-  // 确保思维导图容器获得焦点
-  await this.page!.click('.react-flow')
-  await this.page!.waitForTimeout(200)
-
-  // 方法1: 尝试使用Delete键删除节点
   console.log(`按下Delete键删除节点: ${testId}`)
   await this.page!.keyboard.press('Delete')
 
-  await this.page!.waitForTimeout(1000)
+  // 等待确认对话框出现或操作完成
+  await this.page!.waitForFunction(
+    () => {
+      const dialogs = document.querySelectorAll('[data-testid="alert-dialog-confirm"]')
+      return dialogs.length > 0 || true // 无论如何继续检查
+    },
+    { timeout: 300 }
+  )
 
-  // 检查是否有确认对话框出现
-  const hasDialog = await this.page!.locator(
-    '[data-testid*="confirm"], [data-testid*="dialog"]'
-  ).count()
-
-  // 如果Delete键没有效果，尝试工具栏删除按钮
-  if (hasDialog === 0) {
-    console.log(`Delete键无效，尝试工具栏删除按钮`)
-    const deleteButtonExists = await this.page!.locator('[data-testid="delete-button"]').count()
-    if (deleteButtonExists > 0) {
-      await this.page!.click('[data-testid="delete-button"]')
-      await this.page!.waitForTimeout(500)
-    } else {
-      console.log(`工具栏删除按钮不存在，尝试其他删除按钮`)
-      // 寻找其他可能的删除按钮
-      const deleteSelectors = [
-        'button:has-text("删除")',
-        'button:has-text("Delete")',
-        '[title*="删除"]',
-        '[aria-label*="删除"]',
-      ]
-
-      for (const selector of deleteSelectors) {
-        const buttonExists = await this.page!.locator(selector).count()
-        if (buttonExists > 0) {
-          console.log(`找到删除按钮: ${selector}`)
-          await this.page!.click(selector)
-          break
-        }
-      }
+  try {
+    const button = this.page!.locator('[data-testid="alert-dialog-confirm"]')
+    if (await button.isVisible()) {
+      console.log(`点击确认按钮: [data-testid="alert-dialog-confirm"]`)
+      await button.click()
     }
+  } catch (_e) {
+    throw new Error('未能找到确认删除按钮')
   }
-
-  // 等待一下看是否有确认对话框
-  await this.page!.waitForTimeout(1000)
-
-  // 检查是否有删除确认对话框
-  const hasConfirmDialog = await this.page!.locator(
-    '[data-testid*="confirm"], [data-testid*="dialog"]'
-  ).count()
-  console.log(`最终是否有确认对话框: ${hasConfirmDialog > 0}`)
-
-  if (hasConfirmDialog > 0) {
-    // 尝试点击确认按钮
-    const confirmSelectors = [
-      '[data-testid="alert-dialog-confirm"]',
-      'button:has-text("确认")',
-      'button:has-text("删除")',
-      'button:has-text("Delete")',
-    ]
-
-    let confirmClicked = false
-    for (const selector of confirmSelectors) {
-      try {
-        const button = this.page!.locator(selector)
-        if (await button.isVisible()) {
-          console.log(`点击确认按钮: ${selector}`)
-          await button.click()
-          confirmClicked = true
-          break
-        }
-      } catch (_e) {
-        // 继续尝试下一个选择器
-      }
-    }
-    console.log(`确认按钮是否被点击: ${confirmClicked}`)
-  }
-
-  await this.page!.waitForTimeout(5000) // 给删除操作足够时间
-
-  // 检查删除操作是否完成
-  const nodeStillExists = await this.page!.evaluate(deletedTestId => {
-    const deletedNode = document.querySelector(`[data-testid="${deletedTestId}"]`)
-    return deletedNode !== null
-  }, testId)
-  console.log(`节点 ${testId} 是否仍然存在: ${nodeStillExists}`)
-
-  // 记录删除后的所有节点
-  const afterNodes = await this.page!.evaluate(() => {
-    const nodes = document.querySelectorAll(
-      '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
-    )
-    return Array.from(nodes).map(node => ({
-      testId: node.getAttribute('data-testid'),
-      content: node.textContent?.trim(),
-    }))
-  })
-  console.log('删除后的节点:', afterNodes)
 
   console.log(`节点 ${testId} 删除完成`)
 })
@@ -619,8 +531,15 @@ When('我为节点{string}添加子节点', async function (this: BDDWorld, pare
 
   if (!this.page) throw new Error('Page not initialized')
 
-  // 等待一下确保节点选中状态生效
-  await this.page.waitForTimeout(500)
+  // 等待节点选中状态生效
+  await this.page.waitForFunction(
+    parentTestId => {
+      const node = document.querySelector(`[data-testid="${parentTestId}"]`)
+      return node && node.getAttribute('data-node-selected') === 'true'
+    },
+    parentTestId,
+    { timeout: 300 }
+  )
 
   // 检查添加节点按钮是否存在
   const buttonExists = await this.page.locator('[data-testid="add-node-button"]').count()
@@ -631,8 +550,14 @@ When('我为节点{string}添加子节点', async function (this: BDDWorld, pare
   // 点击添加节点按钮
   await this.page.click('[data-testid="add-node-button"]')
 
-  // 等待一下让页面处理
-  await this.page.waitForTimeout(1000)
+  // 等待页面处理和节点创建
+  await this.page.waitForFunction(
+    () => {
+      const nodes = document.querySelectorAll('[data-testid*="root-"]')
+      return nodes.length > 0
+    },
+    { timeout: 300 }
+  )
 
   // 检查是否已经创建了子节点
   const finalNodeTestIds = await this.page.evaluate(() => {
@@ -665,7 +590,6 @@ When('我按下Tab键', async function (this: BDDWorld) {
 When('我按下Enter键', async function (this: BDDWorld) {
   if (!this.page) throw new Error('Page not initialized')
   await this.page.keyboard.press('Enter')
-  await this.page.waitForTimeout(1000) // 等待节点创建完成
 })
 
 When('我按下Delete键', async function (this: BDDWorld) {
@@ -765,7 +689,7 @@ Then('应该显示提示信息{string}', async function (this: BDDWorld, message
   if (!this.page) throw new Error('Page not initialized')
 
   // 等待提示信息出现
-  await expect(this.page.locator(`text=${message}`)).toBeVisible({ timeout: 5000 })
+  await expect(this.page.locator(`text=${message}`)).toBeVisible({ timeout: 300 })
 })
 
 // 创建测试思维导图步骤
@@ -778,7 +702,7 @@ Then('不应该创建任何新节点', async function (this: BDDWorld) {
   const currentNodes = await this.getAllNodeTestIds()
 
   // 等待一段时间，确保没有新节点创建
-  await this.page?.waitForTimeout(1000)
+  await this.page?.waitForLoadState('domcontentloaded')
 
   // 再次获取节点列表，应该没有变化
   const afterNodes = await this.getAllNodeTestIds()

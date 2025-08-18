@@ -1,4 +1,4 @@
-import { setWorldConstructor, Before, After } from '@cucumber/cucumber'
+import { setWorldConstructor, Before, After, setDefaultTimeout } from '@cucumber/cucumber'
 import { BrowserContext, Page, Browser, expect, ElementHandle } from '@playwright/test'
 import { chromium } from '@playwright/test'
 
@@ -53,7 +53,7 @@ export class BDDWorld {
     await this.page.goto(`${this.baseUrl}/login`)
     await this.page.waitForLoadState('networkidle')
 
-    await this.page.waitForSelector('input[id="email"]', { timeout: 10000 })
+    await this.page.waitForSelector('input[id="email"]', { timeout: 1000 })
 
     // 填写autotester测试用户信息
     await this.page.fill('input[id="email"]', 'autotester@test.com')
@@ -63,16 +63,16 @@ export class BDDWorld {
     await this.page.click('button:has-text("登录")')
 
     // 等待重定向到思维导图列表页面
-    await this.page.waitForURL('**/mindmaps', { timeout: 15000 })
+    await this.page.waitForURL('**/mindmaps', { timeout: 1000 })
   }
 
   // 思维导图操作方法
   async clickNewMindMapButtonOnly() {
     if (!this.page) throw new Error('Page not initialized')
 
-    await this.page.waitForSelector('button:has-text("新建思维导图")', { timeout: 10000 })
+    await this.page.waitForSelector('[data-testid="create-mindmap-button"]', { timeout: 10000 })
 
-    await this.page.click('button:has-text("新建思维导图")')
+    await this.page.click('[data-testid="create-mindmap-button"]')
 
     await this.page.waitForURL('**/mindmaps/**', { timeout: 15000 })
 
@@ -82,18 +82,14 @@ export class BDDWorld {
     // 等待思维导图组件和根节点加载完成
     await this.page.waitForSelector('[data-testid="root"]', { timeout: 10000 })
 
-    // 等待一些额外时间确保组件完全初始化
-    await this.page.waitForTimeout(1000)
-  }
-
-  async clickNewMindMapButton() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 点击新建思维导图按钮
-    await this.page.click('button:has-text("新建思维导图")')
-
-    // 等待新思维导图创建完成并出现在列表中
-    await this.page.waitForTimeout(3000)
+    // 等待思维导图组件完全加载（通过检查节点可交互性）
+    await this.page.waitForFunction(
+      () => {
+        const rootNode = document.querySelector('[data-testid="root"]') as HTMLElement
+        return rootNode && rootNode.offsetWidth > 0 && rootNode.offsetHeight > 0
+      },
+      { timeout: 3000 }
+    )
   }
 
   async clickFirstMindMapCard() {
@@ -124,12 +120,6 @@ export class BDDWorld {
         this.createdMindMapIds.push(mindMapId)
       }
     }
-  }
-
-  // 保持向后兼容的旧方法
-  async createNewMindMap() {
-    await this.clickNewMindMapButton()
-    await this.clickFirstMindMapCard()
   }
 
   async verifyOnEditPage() {
@@ -170,7 +160,14 @@ export class BDDWorld {
 
     // 等待根节点加载完成
     await this.page.waitForSelector('[data-testid="root"]', { timeout: 10000 })
-    await this.page.waitForTimeout(200)
+    // 等待根节点完全渲染并可交互
+    await this.page.waitForFunction(
+      () => {
+        const root = document.querySelector('[data-testid="root"]')
+        return root && root.getBoundingClientRect().width > 0
+      },
+      { timeout: 2000 }
+    )
 
     const rootElement = this.page.locator('[data-testid="root"]')
 
@@ -196,15 +193,27 @@ export class BDDWorld {
 
     await this.page.click('button:has-text("添加节点")')
 
-    // 等待新节点出现
-    await this.page.waitForTimeout(1000)
+    // 等待新节点出现在DOM中
+    await this.page.waitForFunction(
+      () => {
+        const nodes = document.querySelectorAll('[data-testid*="root-"]')
+        return nodes.length > 0
+      },
+      { timeout: 300 }
+    )
   }
 
   async verifyMainNodeHasChild() {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 等待节点更新
-    await this.page.waitForTimeout(1000)
+    // 等待节点更新完成
+    await this.page.waitForFunction(
+      () => {
+        const nodes = document.querySelectorAll('[data-testid="root"], [data-testid*="root-"]')
+        return nodes.length >= 2
+      },
+      { timeout: 300 }
+    )
 
     // 检查节点数量是否增加到2个
     const nodeCount = await this.page
@@ -228,8 +237,8 @@ export class BDDWorld {
     const mainNode = this.page.locator('[data-testid="root"]')
     await mainNode.dblclick()
 
-    // 等待编辑模式激活
-    await this.page.waitForTimeout(500)
+    // 等待编辑模式激活（输入框出现）
+    await this.page.waitForSelector('input[type="text"]', { timeout: 300 })
   }
 
   async inputText(text: string) {
@@ -248,8 +257,14 @@ export class BDDWorld {
   async verifyNodeExitEditMode() {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 等待编辑模式退出
-    await this.page.waitForTimeout(500)
+    // 等待编辑模式退出（输入框消失）
+    await this.page.waitForFunction(
+      () => {
+        const inputCount = document.querySelectorAll('input[type="text"]').length
+        return inputCount === 0
+      },
+      { timeout: 300 }
+    )
 
     // 检查是否还有输入框
     const inputCount = await this.page.locator('input[type="text"]').count()
@@ -286,15 +301,31 @@ export class BDDWorld {
       await this.page.keyboard.press('Control+S')
     }
 
-    // 等待保存完成
-    await this.page.waitForTimeout(2000)
+    // 等待保存操作完成（通过检查节点没有编辑状态）
+    await this.page.waitForFunction(
+      () => {
+        const editingNodes = document.querySelectorAll('input[type="text"]')
+        return editingNodes.length === 0
+      },
+      { timeout: 300 }
+    )
   }
 
   async verifySaveSuccessMessage() {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 等待保存操作完成
-    await this.page.waitForTimeout(2000)
+    // 等待保存操作完成（检查保存成功的表示）
+    await this.page.waitForFunction(
+      () => {
+        // 检查是否有保存成功的提示或节点内容已更新
+        const hasSuccessMsg = document.querySelector(
+          '.toast, [data-testid*="success"], [data-testid*="save"]'
+        )
+        const noEditingNodes = document.querySelectorAll('input[type="text"]').length === 0
+        return hasSuccessMsg !== null || noEditingNodes
+      },
+      { timeout: 300 }
+    )
 
     // 检查是否有保存成功的提示（可能是toast或文本）
     const saveMessages = [
@@ -387,8 +418,8 @@ export class BDDWorld {
       '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]',
       { timeout: 15000 }
     )
-    // 等待React组件完全初始化
-    await this.page?.waitForTimeout(1000)
+    // 等待React组件完全初始化（检查根节点加载）
+    await this.page?.waitForSelector('[data-testid="root"]', { timeout: 300 })
   }
 
   // 从列表中打开思维导图
@@ -405,7 +436,14 @@ export class BDDWorld {
       .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
       .nth(1)
     await childNode.click()
-    await this.page.waitForTimeout(50)
+    // 等待节点选中状态更新
+    await this.page.waitForFunction(
+      () => {
+        const selectedNodes = document.querySelectorAll('[data-node-selected="true"]')
+        return selectedNodes.length > 0
+      },
+      { timeout: 300 }
+    )
   }
 
   // 点击主节点
@@ -415,7 +453,14 @@ export class BDDWorld {
     // 点击主节点（根节点）
     const mainNode = this.page.locator('[data-testid="root"]')
     await mainNode.click()
-    await this.page.waitForTimeout(50)
+    // 等待主节点选中状态更新
+    await this.page.waitForFunction(
+      () => {
+        const rootNode = document.querySelector('[data-testid="root"]')
+        return rootNode && rootNode.getAttribute('data-node-selected') === 'true'
+      },
+      { timeout: 300 }
+    )
   }
 
   // 验证主节点视觉反馈
@@ -567,7 +612,7 @@ export class BDDWorld {
     // 等待思维导图列表加载完成
     await this.page.waitForSelector(
       '[data-testid*="mindmap-card"], .mindmap-card, a[href*="/mindmaps/"]',
-      { timeout: 10000 }
+      { timeout: 300 }
     )
 
     // 查找思维导图进行删除操作
@@ -581,11 +626,12 @@ export class BDDWorld {
         if ((await cardByHref.count()) > 0) {
           // 悬停在卡片上以显示删除按钮
           await cardByHref.hover()
-          await this.page.waitForTimeout(500)
+          // 等待删除按钮显示
+          await this.page.waitForSelector('[data-testid="delete-button"]', { timeout: 300 })
 
           // 查找删除按钮
           const deleteButton = this.page.locator(
-            `a[href="/mindmaps/${this.currentMindMapId}"] button[title*="删除"]`
+            `a[href="/mindmaps/${this.currentMindMapId}"] button[data-testid="delete-button"]`
           )
           if (await deleteButton.isVisible()) {
             await deleteButton.click()
@@ -599,60 +645,35 @@ export class BDDWorld {
 
     // 如果通过ID没有找到，使用原有的名称匹配方式
     if (!cardFound) {
-      const cardSelectors = [
-        `[data-testid*="mindmap-card"]:has-text("${mindMapName}")`,
-        `.mindmap-card:has-text("${mindMapName}")`,
-        `a[href*="/mindmaps/"]:has-text("${mindMapName}")`,
-        `div:has(h3:text("${mindMapName}"))`,
-        `div:has(text("${mindMapName}"))`,
-      ]
+      try {
+        const card = this.page
+          .locator(`[data-testid*="mindmap-card"]:has-text("${mindMapName}")`)
+          .first()
+        if (await card.isVisible()) {
+          // 悬停在卡片上以显示删除按钮
+          await card.hover()
+          // 等待删除按钮显示
+          await this.page.waitForSelector('[data-testid="delete-button"]', { timeout: 300 })
 
-      for (const cardSelector of cardSelectors) {
-        try {
-          const card = this.page.locator(cardSelector).first()
-          if (await card.isVisible()) {
-            // 悬停在卡片上以显示删除按钮
-            await card.hover()
-            await this.page.waitForTimeout(500)
-
-            // 尝试多种删除按钮选择器
-            const deleteButtonSelectors = [
-              `${cardSelector} [data-testid*="delete"]`,
-              `${cardSelector} button[title*="删除"]`,
-              `${cardSelector} button:has-text("删除")`,
-              `${cardSelector} .delete-button`,
-              `${cardSelector} button[aria-label*="删除"]`,
-              `${cardSelector} svg[data-testid*="trash"]`,
-              `${cardSelector} [class*="delete"]`,
-            ]
-
-            for (const deleteSelector of deleteButtonSelectors) {
-              try {
-                const deleteButton = this.page.locator(deleteSelector).first()
-                if (await deleteButton.isVisible()) {
-                  await deleteButton.click()
-                  cardFound = true
-                  break
-                }
-              } catch {
-                // 继续尝试下一个删除按钮选择器
-              }
+          try {
+            const deleteButton = card.locator('[data-testid="delete-button"]').first()
+            if (await deleteButton.isVisible()) {
+              await deleteButton.click()
+              cardFound = true
             }
-
-            if (cardFound) break
+          } catch {
+            throw new Error(`未能找到名为"${mindMapName}"的思维导图卡片中的删除按钮`)
           }
-        } catch {
-          // 继续尝试下一个卡片选择器
         }
+      } catch {
+        throw new Error(`未能找到名为"${mindMapName}"的思维导图卡片`)
       }
     }
 
-    if (!cardFound) {
-      throw new Error(`未能找到名为"${mindMapName}"的思维导图卡片或其删除按钮`)
-    }
-
     // 等待删除确认对话框出现
-    await this.page.waitForTimeout(500)
+    await this.page.waitForSelector('[data-testid*="dialog"], [data-testid*="confirm"]', {
+      timeout: 300,
+    })
   }
 
   // 点击确认删除按钮
@@ -730,7 +751,16 @@ export class BDDWorld {
       throw new Error('未能找到取消删除按钮')
     }
 
-    await this.page.waitForTimeout(500)
+    // 等待取消操作完成（对话框消失）
+    await this.page.waitForFunction(
+      () => {
+        const dialogs = document.querySelectorAll(
+          '[data-testid*="dialog"], [data-testid*="confirm"]'
+        )
+        return dialogs.length === 0
+      },
+      { timeout: 300 }
+    )
   }
 
   // 验证删除确认对话框是否显示
@@ -976,8 +1006,16 @@ export class BDDWorld {
   async verifyMindMapCardVisible(mindMapName: string): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 等待页面稳定
-    await this.page.waitForTimeout(1000)
+    // 等待页面稳定（检查卡片渲染完成）
+    await this.page.waitForFunction(
+      () => {
+        const cards = document.querySelectorAll(
+          'a[href*="/mindmaps/"], [data-testid*="mindmap-card"]'
+        )
+        return cards.length > 0 || document.querySelector('.no-mindmaps, .empty-state')
+      },
+      { timeout: 300 }
+    )
 
     // 检查思维导图卡片是否仍然存在
     const cardSelectors = [
@@ -1009,8 +1047,8 @@ export class BDDWorld {
   async verifyStatsUpdated(): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 等待统计信息更新
-    await this.page.waitForTimeout(1000)
+    // 等待统计信息更新（检查页面加载完成）
+    await this.page.waitForLoadState('networkidle')
 
     // 检查页面底部是否有统计信息并已更新
     const statsSelectors = [
@@ -1041,8 +1079,16 @@ export class BDDWorld {
   async verifyDeleteDialogClosed(): Promise<boolean> {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 等待对话框关闭
-    await this.page.waitForTimeout(1000)
+    // 等待对话框关闭（检查DOM更新）
+    await this.page.waitForFunction(
+      () => {
+        const dialogs = document.querySelectorAll(
+          '[data-testid*="dialog"], [data-testid*="confirm"]'
+        )
+        return dialogs.length === 0
+      },
+      { timeout: 300 }
+    )
 
     // 检查删除确认对话框是否已关闭
     return !(await this.verifyDeleteConfirmDialog())
@@ -1496,7 +1542,7 @@ export class BDDWorld {
         return inputs.length === 0
       },
       testId,
-      { timeout: 3000 }
+      { timeout: 300 }
     )
 
     // 等待DOM更新完成
@@ -1542,10 +1588,7 @@ export class BDDWorld {
     const elementLocator = this.page.locator(`[data-testid="${testId}"]`)
 
     // 等待元素存在
-    await elementLocator.waitFor({ timeout: 10000 })
-
-    // 等待节点状态更新（考虑到组件中的setTimeout延迟）
-    await this.page.waitForTimeout(200)
+    await elementLocator.waitFor({ timeout: 300 })
 
     // 检查多种选中状态的指示
     const hasSelectedClass = await elementLocator.evaluate((el: Element) =>
@@ -1704,55 +1747,31 @@ export class BDDWorld {
   async editNodeContent(testId: string, newContent: string): Promise<void> {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 检查并隐藏minimap，避免整个编辑过程中的事件拦截
-    const minimapExists = await this.page.locator('[data-testid="rf__minimap"]').count()
-    if (minimapExists > 0) {
-      console.log('检测到minimap，隐藏以避免编辑过程中的事件拦截')
-      await this.page.evaluate(() => {
-        const minimap = document.querySelector('[data-testid="rf__minimap"]') as HTMLElement
-        if (minimap) {
-          minimap.style.display = 'none'
-        }
-      })
+    // 双击节点进入编辑模式
+    await this.doubleClickNode(testId)
+    await this.page.waitForTimeout(500)
+
+    // 查找节点内的input元素
+    const nodeElement = await this.findNodeByTestId(testId)
+    if (!nodeElement) throw new Error(`找不到节点"${testId}"`)
+
+    // 等待input元素出现
+    const inputElement = await this.page.waitForSelector(`[data-testid="${testId}"] input`, {
+      timeout: 300,
+    })
+
+    if (!inputElement) {
+      throw new Error(`节点"${testId}"的input元素未找到`)
     }
 
-    try {
-      // 双击节点进入编辑模式
-      await this.doubleClickNode(testId)
-      await this.page.waitForTimeout(500)
+    // 清空并填入新内容
+    await inputElement.click() // 确保input获得焦点
+    await inputElement.selectText() // 选中所有文本
+    await inputElement.fill(newContent) // 直接填入新内容
 
-      // 查找节点内的input元素
-      const nodeElement = await this.findNodeByTestId(testId)
-      if (!nodeElement) throw new Error(`找不到节点"${testId}"`)
-
-      // 等待input元素出现
-      const inputElement = await this.page.waitForSelector(`[data-testid="${testId}"] input`, {
-        timeout: 5000,
-      })
-
-      if (!inputElement) {
-        throw new Error(`节点"${testId}"的input元素未找到`)
-      }
-
-      // 清空并填入新内容
-      await inputElement.click() // 确保input获得焦点
-      await inputElement.selectText() // 选中所有文本
-      await inputElement.fill(newContent) // 直接填入新内容
-
-      // 确认编辑
-      await this.page.keyboard.press('Enter')
-      await this.page.waitForTimeout(500)
-    } finally {
-      // 恢复minimap显示
-      if (minimapExists > 0) {
-        await this.page.evaluate(() => {
-          const minimap = document.querySelector('[data-testid="rf__minimap"]') as HTMLElement
-          if (minimap) {
-            minimap.style.display = ''
-          }
-        })
-      }
-    }
+    // 确认编辑
+    await this.page.keyboard.press('Enter')
+    await this.page.waitForTimeout(500)
   }
 
   // 为指定节点创建多个子节点
@@ -1947,6 +1966,10 @@ setWorldConstructor(BDDWorld)
 // Hooks
 Before(async function (this: BDDWorld) {
   await this.setupBrowser()
+})
+
+Before({ tags: '@longTimeout' }, function () {
+  setDefaultTimeout(60 * 1000) // 只对标记了 @longTimeout 的场景生效
 })
 
 After(async function (this: BDDWorld, scenario) {

@@ -3,8 +3,9 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 # 规范 **非常重要**
-- 禁止通过延长timeout时间来掩盖代码问题
+- 禁止通过延长timeout时间来掩盖代码问题（包括在测试代码中也禁止使用timeout来掩盖代码问题）
 - 禁止在业务代码中通过模拟dom事件来驱动业务逻辑 （此时应该抽取公共函数）
+- 在测试代码中不要使用冗余的查找逻辑，尽量使用test-id查找节点。如果目标节点确实没有test-id的，可以需改业务代码添加test-id。
 
 # 技术栈
 - **前端**: Next.js 15 + React 19 + TypeScript
@@ -84,6 +85,7 @@ yarn pm2:logs              # 查看PM2日志
 - Root节点: `root`
 - Float节点: `float-{index}`（独立排序）
 - Child节点: `{parent-test-id}-{index}`（按自己在父节点的子节点集合中的顺序）
+- 该test-id仅表示节点的存在位置，不和节点对应，删除或重新排列节点后test-id会变化。
 
 ## 测试环境设置
 运行测试前需要：

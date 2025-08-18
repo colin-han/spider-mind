@@ -171,7 +171,11 @@ export default function MindMapsListPage() {
             <p className="text-muted-foreground mt-2">管理和创建你的思维导图</p>
           </div>
           <div className="flex items-center gap-4">
-            <Button onClick={createNewMindMap} className="flex items-center gap-2">
+            <Button
+              onClick={createNewMindMap}
+              className="flex items-center gap-2"
+              data-testid="create-mindmap-button"
+            >
               <Plus className="h-4 w-4" />
               新建思维导图
             </Button>
@@ -203,7 +207,11 @@ export default function MindMapsListPage() {
               {searchQuery ? '尝试调整搜索关键词' : '创建你的第一个思维导图开始使用'}
             </p>
             {!searchQuery && (
-              <Button onClick={createNewMindMap} className="flex items-center gap-2 mx-auto">
+              <Button
+                onClick={createNewMindMap}
+                className="flex items-center gap-2 mx-auto"
+                data-testid="create-first-mindmap-button"
+              >
                 <Plus className="h-4 w-4" />
                 创建第一个思维导图
               </Button>
@@ -229,6 +237,7 @@ export default function MindMapsListPage() {
 
                         {/* 删除按钮 */}
                         <Button
+                          data-testid="delete-button"
                           variant="ghost"
                           size="sm"
                           className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
