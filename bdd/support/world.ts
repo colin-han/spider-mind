@@ -1,1963 +1,493 @@
 import { setWorldConstructor, Before, After, setDefaultTimeout } from '@cucumber/cucumber'
-import { BrowserContext, Page, Browser, expect, ElementHandle } from '@playwright/test'
-import { chromium } from '@playwright/test'
+import { ElementHandle } from '@playwright/test'
+import { BrowserManager } from './browser-manager'
+import { AuthNavigation } from './auth-navigation'
+import { MindMapOperations } from './mindmap-operations'
+import { DeleteOperations } from './delete-operations'
+import { NodeOperations } from './node-operations'
+import { DatabaseHelpers } from './database-helpers'
+import { VerificationHelpers } from './verification-helpers'
+import { DeleteVerification } from './delete-verification'
 
 export class BDDWorld {
-  public browser: Browser | undefined
-  public context: BrowserContext | undefined
-  public page: Page | undefined
   public currentMindMapId: string | undefined
   public createdMindMapIds: string[] = []
   public baseUrl: string
-  private deleteRequests: string[] = []
+
+  private browserManager: BrowserManager
+  private authNavigation: AuthNavigation | undefined
+  private mindMapOperations: MindMapOperations | undefined
+  private deleteOperations: DeleteOperations | undefined
+  private nodeOperations: NodeOperations | undefined
+  private databaseHelpers: DatabaseHelpers | undefined
+  private verificationHelpers: VerificationHelpers | undefined
+  private deleteVerification: DeleteVerification | undefined
 
   constructor(options: { parameters: { baseUrl: string } }) {
     this.baseUrl = options.parameters.baseUrl || 'http://localhost:3000'
+    this.browserManager = new BrowserManager()
+  }
+
+  // 代理属性访问器，便于向后兼容
+  get browser() {
+    return this.browserManager.browser
+  }
+  get context() {
+    return this.browserManager.context
+  }
+  get page() {
+    return this.browserManager.page
   }
 
   async setupBrowser() {
-    this.browser = await chromium.launch({
-      headless: process.env.HEADLESS !== 'false',
-      slowMo: 100,
-    })
-    this.context = await this.browser.newContext()
-    this.page = await this.context.newPage()
+    await this.browserManager.setupBrowser()
 
-    // 设置较长的超时时间
-    this.page.setDefaultTimeout(30000)
+    // 初始化其他模块
+    if (this.page) {
+      this.authNavigation = new AuthNavigation(this.page, this.baseUrl)
+      this.mindMapOperations = new MindMapOperations(
+        this.page,
+        this.baseUrl,
+        this.currentMindMapId,
+        this.createdMindMapIds
+      )
+      this.deleteOperations = new DeleteOperations(
+        this.page,
+        this.currentMindMapId,
+        this.browserManager.getDeleteRequests()
+      )
+      this.nodeOperations = new NodeOperations(this.page)
+      this.databaseHelpers = new DatabaseHelpers(
+        this.page,
+        this.baseUrl,
+        this.currentMindMapId,
+        this.createdMindMapIds
+      )
+      this.verificationHelpers = new VerificationHelpers(
+        this.page,
+        this.currentMindMapId,
+        this.browserManager.getDeleteRequests()
+      )
+      this.deleteVerification = new DeleteVerification(
+        this.page,
+        this.currentMindMapId,
+        this.browserManager.getDeleteRequests()
+      )
+    }
+  }
 
-    // 监听网络请求，用于验证删除API调用
-    this.page.on('request', request => {
-      if (request.method() === 'DELETE' && request.url().includes('/api/mindmaps/')) {
-        this.deleteRequests.push(request.url())
-      }
-    })
+  private syncMindMapIds() {
+    if (this.mindMapOperations) {
+      this.currentMindMapId = this.mindMapOperations.getCurrentMindMapId()
+      this.createdMindMapIds = this.mindMapOperations.getCreatedMindMapIds()
+    }
   }
 
   async cleanup() {
-    if (this.page) {
-      await this.page.close()
-    }
-    if (this.context) {
-      await this.context.close()
-    }
-    if (this.browser) {
-      await this.browser.close()
-    }
-  }
-
-  // 登录相关方法
-  async loginAsTestUser() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    await this.page.goto(`${this.baseUrl}/login`)
-    await this.page.waitForLoadState('networkidle')
-
-    await this.page.waitForSelector('input[id="email"]', { timeout: 1000 })
-
-    // 填写autotester测试用户信息
-    await this.page.fill('input[id="email"]', 'autotester@test.com')
-    await this.page.fill('input[id="password"]', 'password123')
-
-    // 点击登录按钮
-    await this.page.click('button:has-text("登录")')
-
-    // 等待重定向到思维导图列表页面
-    await this.page.waitForURL('**/mindmaps', { timeout: 1000 })
-  }
-
-  // 思维导图操作方法
-  async clickNewMindMapButtonOnly() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    await this.page.waitForSelector('[data-testid="create-mindmap-button"]', { timeout: 10000 })
-
-    await this.page.click('[data-testid="create-mindmap-button"]')
-
-    await this.page.waitForURL('**/mindmaps/**', { timeout: 15000 })
-
-    // 提取并跟踪新创建的思维导图ID
-    await this.extractAndTrackMindMapId()
-
-    // 等待思维导图组件和根节点加载完成
-    await this.page.waitForSelector('[data-testid="root"]', { timeout: 10000 })
-
-    // 等待思维导图组件完全加载（通过检查节点可交互性）
-    await this.page.waitForFunction(
-      () => {
-        const rootNode = document.querySelector('[data-testid="root"]') as HTMLElement
-        return rootNode && rootNode.offsetWidth > 0 && rootNode.offsetHeight > 0
-      },
-      { timeout: 3000 }
-    )
-  }
-
-  async clickFirstMindMapCard() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 点击第一个思维导图卡片进入编辑页面
-    await this.page.click('a[href*="/mindmaps/"]:first-child')
-
-    // 等待跳转到编辑页面
-    await this.page.waitForURL('**/mindmaps/**')
-
-    // 提取并跟踪思维导图ID
-    await this.extractAndTrackMindMapId()
-  }
-
-  async extractAndTrackMindMapId() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 从URL中提取思维导图ID
-    const url = this.page.url()
-    const matches = url.match(/\/mindmaps\/([^\/]+)/)
-    if (matches) {
-      const mindMapId = matches[1]
-      this.currentMindMapId = mindMapId
-
-      // 只有当ID还没有被跟踪时才添加到列表中
-      if (!this.createdMindMapIds.includes(mindMapId)) {
-        this.createdMindMapIds.push(mindMapId)
-      }
-    }
-  }
-
-  async verifyOnEditPage() {
-    if (!this.page) throw new Error('Page not initialized')
-    return this.page.url().includes('/mindmaps/') && !this.page.url().endsWith('/mindmaps')
-  }
-
-  async verifyOnListPage() {
-    if (!this.page) throw new Error('Page not initialized')
-    return this.page.url().endsWith('/mindmaps')
-  }
-
-  async verifyDefaultMainNode() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 等待思维导图加载完成
-    await this.page.waitForSelector(
-      '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]',
-      { timeout: 10000 }
-    )
-
-    // 验证是否有默认节点
-    const nodes = await this.page
-      .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
-      .count()
-    return nodes >= 1
-  }
-
-  async verifyMainNodeExists() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 等待根节点加载完成
-    await this.page.waitForSelector('[data-testid="root"]', { timeout: 10000 })
-  }
-
-  async verifyMainNodeSelected() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 等待根节点加载完成
-    await this.page.waitForSelector('[data-testid="root"]', { timeout: 10000 })
-    // 等待根节点完全渲染并可交互
-    await this.page.waitForFunction(
-      () => {
-        const root = document.querySelector('[data-testid="root"]')
-        return root && root.getBoundingClientRect().width > 0
-      },
-      { timeout: 2000 }
-    )
-
-    const rootElement = this.page.locator('[data-testid="root"]')
-
-    // 检查是否有节点具有选中状态属性
-    const hasSelectedAttribute = await rootElement.getAttribute('data-node-selected')
-    if (hasSelectedAttribute === 'true') return true
-
-    // 检查是否有节点带有选中状态的视觉反馈
-    const hasRingClass = await rootElement.locator('.ring-2.ring-primary').count()
-    if (hasRingClass > 0) return true
-
-    // 检查是否有选中的class
-    const hasSelectedClass = await rootElement.evaluate((el: Element) =>
-      el.classList.contains('selected')
-    )
-    if (hasSelectedClass) return true
-
-    throw new Error('主节点未被选中')
-  }
-
-  async clickAddChildNode() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    await this.page.click('button:has-text("添加节点")')
-
-    // 等待新节点出现在DOM中
-    await this.page.waitForFunction(
-      () => {
-        const nodes = document.querySelectorAll('[data-testid*="root-"]')
-        return nodes.length > 0
-      },
-      { timeout: 300 }
-    )
-  }
-
-  async verifyMainNodeHasChild() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 等待节点更新完成
-    await this.page.waitForFunction(
-      () => {
-        const nodes = document.querySelectorAll('[data-testid="root"], [data-testid*="root-"]')
-        return nodes.length >= 2
-      },
-      { timeout: 300 }
-    )
-
-    // 检查节点数量是否增加到2个
-    const nodeCount = await this.page
-      .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
-      .count()
-    return nodeCount >= 2
-  }
-
-  async verifyNodeConnection() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 检查是否有连接线
-    const edgeCount = await this.page.locator('.react-flow__edge').count()
-    return edgeCount >= 1
-  }
-
-  async doubleClickMainNode() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 找到并双击主节点（根节点）
-    const mainNode = this.page.locator('[data-testid="root"]')
-    await mainNode.dblclick()
-
-    // 等待编辑模式激活（输入框出现）
-    await this.page.waitForSelector('input[type="text"]', { timeout: 300 })
-  }
-
-  async inputText(text: string) {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 清空现有内容并输入新内容
-    await this.page.keyboard.press('Control+a')
-    await this.page.keyboard.type(text)
-  }
-
-  async pressEnter() {
-    if (!this.page) throw new Error('Page not initialized')
-    await this.page.keyboard.press('Enter')
-  }
-
-  async verifyNodeExitEditMode() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 等待编辑模式退出（输入框消失）
-    await this.page.waitForFunction(
-      () => {
-        const inputCount = document.querySelectorAll('input[type="text"]').length
-        return inputCount === 0
-      },
-      { timeout: 300 }
-    )
-
-    // 检查是否还有输入框
-    const inputCount = await this.page.locator('input[type="text"]').count()
-    return inputCount === 0 || !(await this.page.locator('input[type="text"]').first().isVisible())
-  }
-
-  async clickSaveButton() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 尝试多种保存按钮选择器
-    const saveButtonSelectors = [
-      'button:has-text("保存")',
-      'button[title*="保存"]',
-      'button:has-text("Save")',
-      '[data-testid*="save"]',
-      'button:has([data-icon="save"])',
-    ]
-
-    let clicked = false
-    for (const selector of saveButtonSelectors) {
-      try {
-        const button = this.page.locator(selector).first()
-        if (await button.isVisible()) {
-          await button.click()
-          clicked = true
-          break
-        }
-      } catch {
-        // 继续尝试下一个选择器
-      }
-    }
-
-    if (!clicked) {
-      await this.page.keyboard.press('Control+S')
-    }
-
-    // 等待保存操作完成（通过检查节点没有编辑状态）
-    await this.page.waitForFunction(
-      () => {
-        const editingNodes = document.querySelectorAll('input[type="text"]')
-        return editingNodes.length === 0
-      },
-      { timeout: 300 }
-    )
-  }
-
-  async verifySaveSuccessMessage() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 等待保存操作完成（检查保存成功的表示）
-    await this.page.waitForFunction(
-      () => {
-        // 检查是否有保存成功的提示或节点内容已更新
-        const hasSuccessMsg = document.querySelector(
-          '.toast, [data-testid*="success"], [data-testid*="save"]'
-        )
-        const noEditingNodes = document.querySelectorAll('input[type="text"]').length === 0
-        return hasSuccessMsg !== null || noEditingNodes
-      },
-      { timeout: 300 }
-    )
-
-    // 检查是否有保存成功的提示（可能是toast或文本）
-    const saveMessages = [
-      this.page.locator('text="保存成功"'),
-      this.page.locator('text="已保存"'),
-      this.page.locator('text="保存中..."'),
-      this.page.locator('[role="status"]'),
-      this.page.locator('.toast'),
-      // 也可能只是简单地验证页面没有报错
-    ]
-
-    for (const locator of saveMessages) {
-      const count = await locator.count()
-      if (count > 0) return true
-    }
-
-    // 如果没有明确的保存提示，检查是否至少没有错误信息
-    const errorCount = await this.page.locator('text="错误"').count()
-    return errorCount === 0
-  }
-
-  async refreshPage() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    await this.page.reload()
-    await this.page.waitForLoadState('networkidle')
-  }
-
-  async verifyStayOnCurrentMindMap() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 验证URL还是当前思维导图的编辑页面
-    const currentUrl = this.page.url()
-    return this.currentMindMapId ? currentUrl.includes(this.currentMindMapId) : false
+    await this.browserManager.cleanup()
   }
 
   async captureScreenshotOnFailure(scenario: { result?: { status: string } }) {
-    if (scenario.result?.status === 'FAILED' && this.page) {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-      await this.page.screenshot({
-        path: `test-results/failure-${timestamp}.png`,
-        fullPage: true,
-      })
-    }
-  }
-
-  // 创建包含主节点的思维导图
-  async createMindMapWithMainNode(name?: string) {
-    // 直接通过API创建思维导图，而不是通过UI
-    if (!this.page) throw new Error('Page not initialized')
-
-    const title = name || '新思维导图'
-
-    // 创建思维导图
-    const createResponse = await this.page.evaluate(async title => {
-      const response = await fetch('/api/mindmaps', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          userId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
-        }),
-      })
-      return response.json()
-    }, title)
-
-    if (createResponse.success) {
-      this.currentMindMapId = createResponse.data.id
-      this.createdMindMapIds.push(createResponse.data.id)
-    }
-
-    // 确保在首页
-    await this.page.goto(`${this.baseUrl}/mindmaps`)
-    await this.page.waitForLoadState('networkidle')
-  }
-
-  // 打开现有思维导图
-  async openExistingMindMap() {
-    // 如果不在思维导图列表页，先导航过去
-    if (!this.page?.url().endsWith('/mindmaps')) {
-      await this.page?.goto('/mindmaps')
-    }
-
-    // 等待思维导图卡片加载
-    await this.page?.waitForSelector('a[href*="/mindmaps/"]', { timeout: 10000 })
-
-    await this.clickFirstMindMapCard()
-    // 等待思维导图组件加载完成（页面跳转已经在clickFirstMindMapCard中处理）
-    await this.page?.waitForSelector(
-      '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]',
-      { timeout: 15000 }
-    )
-    // 等待React组件完全初始化（检查根节点加载）
-    await this.page?.waitForSelector('[data-testid="root"]', { timeout: 300 })
-  }
-
-  // 从列表中打开思维导图
-  async openMindMapFromList() {
-    await this.clickFirstMindMapCard()
-  }
-
-  // 点击子节点
-  async clickChildNode() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 点击第二个节点（子节点）
-    const childNode = this.page
-      .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
-      .nth(1)
-    await childNode.click()
-    // 等待节点选中状态更新
-    await this.page.waitForFunction(
-      () => {
-        const selectedNodes = document.querySelectorAll('[data-node-selected="true"]')
-        return selectedNodes.length > 0
-      },
-      { timeout: 300 }
-    )
-  }
-
-  // 点击主节点
-  async clickMainNode() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 点击主节点（根节点）
-    const mainNode = this.page.locator('[data-testid="root"]')
-    await mainNode.click()
-    // 等待主节点选中状态更新
-    await this.page.waitForFunction(
-      () => {
-        const rootNode = document.querySelector('[data-testid="root"]')
-        return rootNode && rootNode.getAttribute('data-node-selected') === 'true'
-      },
-      { timeout: 300 }
-    )
-  }
-
-  // 验证主节点视觉反馈
-  async verifyMainNodeVisualFeedback() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 检查选中状态的视觉反馈
-    const visualFeedback = await this.page
-      .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
-      .locator('.ring-2.ring-primary')
-      .count()
-
-    if (visualFeedback > 0) return true
-
-    // 也检查选中状态样式
-    const selectedNodes = await this.page
-      .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
-      .evaluateAll(nodes =>
-        nodes.some(
-          node =>
-            node.classList.contains('selected') ||
-            node.getAttribute('data-node-selected') === 'true'
-        )
-      )
-    return selectedNodes
-  }
-
-  // 验证节点处于编辑模式
-  async verifyNodeInEditMode() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 检查是否有输入框处于激活状态，尝试多种选择器
-    const selectors = [
-      'input[type="text"]',
-      'input',
-      '.mindmap-node input',
-      '[data-testid="root"] input, [data-testid*="root-"] input, [data-testid*="float-"] input',
-    ]
-
-    for (const selector of selectors) {
-      try {
-        const inputVisible = await this.page
-          .locator(selector)
-          .isVisible()
-          .catch(() => false)
-        if (inputVisible) {
-          return true
-        }
-      } catch {
-        // 继续尝试下一个选择器
-      }
-    }
-
-    return false
-  }
-
-  // 验证可以编辑节点内容
-  async verifyCanEditNodeContent() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 检查是否出现了输入框（假设已经在编辑模式）
-    const selectors = [
-      'input[type="text"]',
-      'input',
-      '.mindmap-node input',
-      '[data-testid="root"] input, [data-testid*="root-"] input, [data-testid*="float-"] input',
-    ]
-
-    let inputFound = false
-    for (const selector of selectors) {
-      try {
-        const inputVisible = await this.page
-          .locator(selector)
-          .isVisible()
-          .catch(() => false)
-        if (inputVisible) {
-          inputFound = true
-          break
-        }
-      } catch {
-        // 继续尝试下一个选择器
-      }
-    }
-
-    if (!inputFound) {
-      return false
-    }
-
-    return true
-  }
-
-  // 验证子节点被选中
-  async verifyChildNodeSelected() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 检查子节点是否有选中样式（第二个节点，通常是root-0）
-    const childNode = this.page
-      .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
-      .nth(1)
-    const hasSelectedClass = await childNode.locator('.ring-2.ring-primary').count()
-
-    if (hasSelectedClass > 0) return true
-
-    // 也检查选中状态属性
-    const isSelected = await childNode.getAttribute('data-node-selected')
-    return isSelected === 'true'
-  }
-
-  // 验证主节点未被选中
-  async verifyMainNodeNotSelected() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 检查主节点（根节点）是否没有选中样式
-    const mainNode = this.page.locator('[data-testid="root"]')
-    const hasSelectedClass = await mainNode.locator('.ring-2.ring-primary').count()
-
-    if (hasSelectedClass > 0) return false
-
-    // 也检查选中状态属性
-    const isSelected = await mainNode.getAttribute('data-node-selected')
-    return isSelected !== 'true'
-  }
-
-  // 验证子节点未被选中
-  async verifyChildNodeNotSelected() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 检查子节点是否没有选中样式
-    const childNode = this.page
-      .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
-      .nth(1)
-    const hasSelectedClass = await childNode.locator('.ring-2.ring-primary').count()
-
-    if (hasSelectedClass > 0) return false
-
-    // 也检查选中状态属性
-    const isSelected = await childNode.getAttribute('data-node-selected')
-    return isSelected !== 'true'
-  }
-
-  // =========================
-  // 删除功能相关方法
-  // =========================
-
-  // 点击思维导图卡片上的删除按钮
-  async clickDeleteButtonOnMindMapCard(mindMapName: string) {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 等待思维导图列表加载完成
-    await this.page.waitForSelector(
-      '[data-testid*="mindmap-card"], .mindmap-card, a[href*="/mindmaps/"]',
-      { timeout: 300 }
-    )
-
-    // 查找思维导图进行删除操作
-
-    let cardFound = false
-
-    // 如果有currentMindMapId，优先使用ID进行精确匹配
-    if (this.currentMindMapId) {
-      try {
-        const cardByHref = this.page.locator(`a[href="/mindmaps/${this.currentMindMapId}"]`)
-        if ((await cardByHref.count()) > 0) {
-          // 悬停在卡片上以显示删除按钮
-          await cardByHref.hover()
-          // 等待删除按钮显示
-          await this.page.waitForSelector('[data-testid="delete-button"]', { timeout: 300 })
-
-          // 查找删除按钮
-          const deleteButton = this.page.locator(
-            `a[href="/mindmaps/${this.currentMindMapId}"] button[data-testid="delete-button"]`
-          )
-          if (await deleteButton.isVisible()) {
-            await deleteButton.click()
-            cardFound = true
-          }
-        }
-      } catch {
-        // 如果ID查找失败，使用名称匹配作为备选
-      }
-    }
-
-    // 如果通过ID没有找到，使用原有的名称匹配方式
-    if (!cardFound) {
-      try {
-        const card = this.page
-          .locator(`[data-testid*="mindmap-card"]:has-text("${mindMapName}")`)
-          .first()
-        if (await card.isVisible()) {
-          // 悬停在卡片上以显示删除按钮
-          await card.hover()
-          // 等待删除按钮显示
-          await this.page.waitForSelector('[data-testid="delete-button"]', { timeout: 300 })
-
-          try {
-            const deleteButton = card.locator('[data-testid="delete-button"]').first()
-            if (await deleteButton.isVisible()) {
-              await deleteButton.click()
-              cardFound = true
-            }
-          } catch {
-            throw new Error(`未能找到名为"${mindMapName}"的思维导图卡片中的删除按钮`)
-          }
-        }
-      } catch {
-        throw new Error(`未能找到名为"${mindMapName}"的思维导图卡片`)
-      }
-    }
-
-    // 等待删除确认对话框出现
-    await this.page.waitForSelector('[data-testid*="dialog"], [data-testid*="confirm"]', {
-      timeout: 300,
-    })
-  }
-
-  // 点击确认删除按钮
-  async clickConfirmDeleteButton() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 清除之前的删除请求记录
-    this.deleteRequests = []
-
-    // 尝试多种确认按钮选择器
-    const confirmSelectors = [
-      '[data-testid="alert-dialog-confirm"]',
-      'button:has-text("确认")',
-      'button:has-text("删除")',
-      'button:has-text("Delete")',
-      'button:has-text("确定")',
-      '[data-testid*="confirm"]',
-      '[role="dialog"] button[variant="destructive"]',
-      '.dialog button:has-text("确认")',
-      'button[type="submit"]:has-text("确认")',
-    ]
-
-    let clicked = false
-    for (const selector of confirmSelectors) {
-      try {
-        const button = this.page.locator(selector).first()
-        if (await button.isVisible()) {
-          await button.click()
-          clicked = true
-          break
-        }
-      } catch {
-        // 继续尝试下一个选择器
-      }
-    }
-
-    if (!clicked) {
-      throw new Error('未能找到确认删除按钮')
-    }
-
-    // 稍微等待以确保状态更新
-    await this.page.waitForTimeout(100)
-  }
-
-  // 点击取消删除按钮
-  async clickCancelDeleteButton() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 尝试多种取消按钮选择器
-    const cancelSelectors = [
-      '[data-testid="alert-dialog-cancel"]',
-      'button:has-text("取消")',
-      'button:has-text("Cancel")',
-      '[data-testid*="cancel"]',
-      '[role="dialog"] button:not([variant="destructive"])',
-      '.dialog button:has-text("取消")',
-      'button[type="button"]:has-text("取消")',
-    ]
-
-    let clicked = false
-    for (const selector of cancelSelectors) {
-      try {
-        const button = this.page.locator(selector).first()
-        if (await button.isVisible()) {
-          await button.click()
-          clicked = true
-          break
-        }
-      } catch {
-        // 继续尝试下一个选择器
-      }
-    }
-
-    if (!clicked) {
-      throw new Error('未能找到取消删除按钮')
-    }
-
-    // 等待取消操作完成（对话框消失）
-    await this.page.waitForFunction(
-      () => {
-        const dialogs = document.querySelectorAll(
-          '[data-testid*="dialog"], [data-testid*="confirm"]'
-        )
-        return dialogs.length === 0
-      },
-      { timeout: 300 }
-    )
-  }
-
-  // 验证删除确认对话框是否显示
-  async verifyDeleteConfirmDialog(): Promise<boolean> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 尝试多种对话框选择器
-    const dialogSelectors = [
-      '[data-testid="alert-dialog"]',
-      '[role="dialog"]',
-      '.dialog',
-      '[data-testid*="delete-dialog"]',
-      '[data-testid*="confirm-dialog"]',
-      '.modal',
-      '.delete-confirmation',
-    ]
-
-    for (const selector of dialogSelectors) {
-      try {
-        const dialog = this.page.locator(selector)
-        if (await dialog.isVisible()) {
-          return true
-        }
-      } catch {
-        // 继续尝试下一个选择器
-      }
-    }
-
-    return false
-  }
-
-  // 验证对话框标题
-  async verifyDialogTitle(expectedTitle: string): Promise<boolean> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 尝试多种标题选择器
-    const titleSelectors = [
-      '[data-testid="alert-dialog-title"]',
-      '[role="dialog"] h1',
-      '[role="dialog"] h2',
-      '[role="dialog"] .dialog-title',
-      '.dialog h1',
-      '.dialog h2',
-      '.modal-title',
-      '[data-testid*="dialog-title"]',
-    ]
-
-    for (const selector of titleSelectors) {
-      try {
-        const titleElement = this.page.locator(selector)
-        if (await titleElement.isVisible()) {
-          const actualTitle = await titleElement.textContent()
-          if (actualTitle?.includes(expectedTitle)) {
-            return true
-          }
-        }
-      } catch {
-        // 继续尝试下一个选择器
-      }
-    }
-
-    // 也检查是否有包含期望标题的文本
-    const titleText = await this.page.locator(`text="${expectedTitle}"`).count()
-    return titleText > 0
-  }
-
-  // 验证对话框内容
-  async verifyDialogContent(expectedContent: string): Promise<boolean> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 首先检查具体的AlertDialog描述内容
-    try {
-      const descriptionElement = this.page.locator('[data-testid="alert-dialog-description"]')
-      if (await descriptionElement.isVisible()) {
-        const descriptionText = await descriptionElement.textContent()
-        if (descriptionText?.includes(expectedContent)) {
-          return true
-        }
-      }
-    } catch {
-      // 继续尝试其他方法
-    }
-
-    // 检查对话框是否包含期望的内容
-    const contentSelectors = [
-      '[data-testid="alert-dialog"]',
-      '[role="dialog"]',
-      '.dialog',
-      '.modal',
-    ]
-
-    for (const selector of contentSelectors) {
-      try {
-        const dialog = this.page.locator(selector)
-        if (await dialog.isVisible()) {
-          const dialogText = await dialog.textContent()
-          if (dialogText?.includes(expectedContent)) {
-            return true
-          }
-        }
-      } catch {
-        // 继续尝试下一个选择器
-      }
-    }
-
-    return false
-  }
-
-  // 验证删除进度状态
-  async verifyDeleteProgressStatus(expectedStatus: string): Promise<boolean> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 尝试在短时间内等待状态出现
-    try {
-      // 首先检查删除确认按钮文本是否显示进度状态
-      const confirmButton = this.page.locator('[data-testid="alert-dialog-confirm"]')
-      await confirmButton.waitFor({ state: 'visible', timeout: 1000 }).catch(() => {})
-
-      if (await confirmButton.isVisible()) {
-        // 等待按钮文本更新
-        try {
-          await this.page.waitForFunction(
-            expectedText => {
-              const element = document.querySelector('[data-testid="alert-dialog-confirm"]')
-              return element && element.textContent && element.textContent.includes(expectedText)
-            },
-            expectedStatus,
-            { timeout: 2000 }
-          )
-          return true
-        } catch {
-          // 如果等待超时，检查当前文本
-          const buttonText = await confirmButton.textContent()
-          if (buttonText?.includes(expectedStatus)) {
-            return true
-          }
-        }
-      }
-    } catch {
-      // 继续检查其他位置
-    }
-
-    // 检查是否在其他位置显示删除进度状态
-    const statusSelectors = [
-      `text="${expectedStatus}"`,
-      '[role="status"]',
-      '.loading',
-      '.progress',
-      '[data-testid*="status"]',
-    ]
-
-    for (const selector of statusSelectors) {
-      try {
-        const status = this.page.locator(selector)
-        if (await status.isVisible()) {
-          return true
-        }
-      } catch {
-        // 继续尝试下一个选择器
-      }
-    }
-
-    return false
-  }
-
-  // 验证删除API请求
-  async verifyDeleteApiRequest(expectedUrl: string): Promise<boolean> {
-    // 替换URL中的占位符
-    const _actualExpectedUrl = expectedUrl.replace('{思维导图ID}', this.currentMindMapId || '')
-
-    // 检查是否有匹配的删除请求
-    return this.deleteRequests.some(
-      url =>
-        url.includes('/api/mindmaps/') &&
-        (this.currentMindMapId ? url.includes(this.currentMindMapId) : true)
-    )
-  }
-
-  // 验证思维导图卡片不再可见
-  async verifyMindMapCardNotVisible(mindMapName: string): Promise<boolean> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 等待网络请求完成
-    await this.page.waitForLoadState('networkidle')
-
-    // 尝试等待页面的DOM变化
-    try {
-      await this.page.waitForFunction(
-        mindMapName => {
-          // 使用纯JavaScript查找包含特定文本的链接
-          const links = document.querySelectorAll('a[href*="/mindmaps/"]')
-          for (const link of links) {
-            if (link.textContent && link.textContent.includes(mindMapName)) {
-              return false // 找到包含该名称的链接，说明还没有删除
-            }
-          }
-          return true // 没有找到包含该名称的链接，说明已删除
-        },
-        mindMapName,
-        { timeout: 1000 }
-      )
-      // DOM变化检测成功
-    } catch (_error) {
-      // DOM变化检测超时
-    }
-
-    // 等待页面更新完成
-    await this.page.waitForTimeout(1000)
-
-    // 检查思维导图卡片是否不再存在
-    const cardSelectors = [
-      `[data-testid*="mindmap-card"]:has-text("${mindMapName}")`,
-      `.mindmap-card:has-text("${mindMapName}")`,
-      `a[href*="/mindmaps/"]:has-text("${mindMapName}")`,
-      `div:has(h3:text("${mindMapName}"))`,
-      `text="${mindMapName}"`,
-    ]
-
-    for (let i = 0; i < cardSelectors.length; i++) {
-      const selector = cardSelectors[i]
-      try {
-        const card = this.page.locator(selector)
-        const count = await card.count()
-        const isVisible =
-          count > 0
-            ? await card
-                .first()
-                .isVisible()
-                .catch(() => false)
-            : false
-
-        if (isVisible) {
-          return false
-        }
-      } catch (_error) {
-        // 继续检查下一个选择器
-      }
-    }
-    return true
-  }
-
-  // 验证思维导图卡片仍然可见
-  async verifyMindMapCardVisible(mindMapName: string): Promise<boolean> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 等待页面稳定（检查卡片渲染完成）
-    await this.page.waitForFunction(
-      () => {
-        const cards = document.querySelectorAll(
-          'a[href*="/mindmaps/"], [data-testid*="mindmap-card"]'
-        )
-        return cards.length > 0 || document.querySelector('.no-mindmaps, .empty-state')
-      },
-      { timeout: 300 }
-    )
-
-    // 检查思维导图卡片是否仍然存在
-    const cardSelectors = [
-      `text="${mindMapName}"`,
-      `h3:has-text("${mindMapName}")`,
-      `[title="${mindMapName}"]`,
-      `a[href*="/mindmaps/"]:has-text("${mindMapName}")`,
-      `div:has(h3:text("${mindMapName}"))`,
-      `[data-testid*="mindmap-card"]:has-text("${mindMapName}")`,
-      `.mindmap-card:has-text("${mindMapName}")`,
-    ]
-
-    for (const selector of cardSelectors) {
-      try {
-        const card = this.page.locator(selector)
-        const isVisible = await card.isVisible().catch(() => false)
-        if (isVisible) {
-          return true
-        }
-      } catch {
-        // 继续检查下一个选择器
-      }
-    }
-
-    return false
-  }
-
-  // 验证统计信息更新
-  async verifyStatsUpdated(): Promise<boolean> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 等待统计信息更新（检查页面加载完成）
-    await this.page.waitForLoadState('networkidle')
-
-    // 检查页面底部是否有统计信息并已更新
-    const statsSelectors = [
-      '.stats',
-      '.statistics',
-      '[data-testid*="stats"]',
-      'text*="总计"',
-      'text*="个思维导图"',
-      'footer',
-    ]
-
-    for (const selector of statsSelectors) {
-      try {
-        const stats = this.page.locator(selector)
-        if (await stats.isVisible()) {
-          return true
-        }
-      } catch {
-        // 继续尝试下一个选择器
-      }
-    }
-
-    // 如果没有明确的统计信息，认为更新成功
-    return true
-  }
-
-  // 验证删除对话框关闭
-  async verifyDeleteDialogClosed(): Promise<boolean> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 等待对话框关闭（检查DOM更新）
-    await this.page.waitForFunction(
-      () => {
-        const dialogs = document.querySelectorAll(
-          '[data-testid*="dialog"], [data-testid*="confirm"]'
-        )
-        return dialogs.length === 0
-      },
-      { timeout: 300 }
-    )
-
-    // 检查删除确认对话框是否已关闭
-    return !(await this.verifyDeleteConfirmDialog())
-  }
-
-  // 验证删除成功提示
-  async verifyDeleteSuccessMessage(expectedMessage: string): Promise<boolean> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 检查是否有成功提示
-    const messageSelectors = [
-      `text="${expectedMessage}"`,
-      '.toast',
-      '[role="status"]',
-      '.success-message',
-      '[data-testid*="success"]',
-      '.notification',
-    ]
-
-    for (const selector of messageSelectors) {
-      try {
-        const message = this.page.locator(selector)
-        if (await message.isVisible()) {
-          const messageText = await message.textContent()
-          if (messageText?.includes(expectedMessage)) {
-            return true
-          }
-        }
-      } catch {
-        // 继续尝试下一个选择器
-      }
-    }
-
-    return false
-  }
-
-  // 验证删除按钮可见
-  async verifyDeleteButtonVisible(): Promise<boolean> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 检查删除按钮是否可见（考虑opacity）
-    const deleteButtonSelectors = [
-      'button[title*="删除"]',
-      '[data-testid*="delete"]',
-      'button:has-text("删除")',
-      '.delete-button',
-      'svg[data-testid*="trash"]',
-    ]
-
-    for (const selector of deleteButtonSelectors) {
-      try {
-        const deleteButton = this.page.locator(selector).first()
-        if (await deleteButton.isVisible()) {
-          // 检查opacity属性，大于0表示真正可见
-          const opacity = await deleteButton
-            .evaluate(el => {
-              const style = window.getComputedStyle(el)
-              return parseFloat(style.opacity)
-            })
-            .catch(() => 1) // 默认为不透明
-
-          if (opacity > 0) {
-            return true
-          }
-        }
-      } catch {
-        // 继续尝试下一个选择器
-      }
-    }
-
-    return false
-  }
-
-  // 验证删除按钮隐藏
-  async verifyDeleteButtonHidden(): Promise<boolean> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 等待动画完成
-    await this.page.waitForTimeout(500)
-
-    // 检查删除按钮是否隐藏
-    return !(await this.verifyDeleteButtonVisible())
-  }
-
-  // 悬停在思维导图卡片上
-  async hoverOnMindMapCard() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 找到第一个思维导图卡片并悬停
-    const cardSelectors = [
-      '[data-testid*="mindmap-card"]',
-      '.mindmap-card',
-      'a[href*="/mindmaps/"]',
-    ]
-
-    for (const selector of cardSelectors) {
-      try {
-        const card = this.page.locator(selector).first()
-        if (await card.isVisible()) {
-          await card.hover()
-          await this.page.waitForTimeout(500)
-          return
-        }
-      } catch {
-        // 继续尝试下一个选择器
-      }
-    }
-
-    throw new Error('未找到可悬停的思维导图卡片')
-  }
-
-  // 鼠标移出思维导图卡片
-  async moveMouseAwayFromMindMapCard() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 将鼠标移动到页面的一个空白区域
-    await this.page.mouse.move(50, 50)
-    await this.page.waitForTimeout(500)
-  }
-
-  // 点击思维导图卡片内容区域（非删除按钮）
-  async clickMindMapCardContent() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 找到思维导图卡片并点击其内容区域
-    const cardSelectors = [
-      'a[href*="/mindmaps/"] h3',
-      'a[href*="/mindmaps/"]',
-      '[data-testid*="mindmap-card"] h3',
-      '.mindmap-card h3',
-      '[data-testid*="mindmap-card"] .title',
-      '.mindmap-card .title',
-    ]
-
-    for (const selector of cardSelectors) {
-      try {
-        const cardContent = this.page.locator(selector).first()
-        if (await cardContent.isVisible()) {
-          await cardContent.click()
-          // 等待页面跳转
-          await this.page.waitForURL('**/mindmaps/**', { timeout: 10000 })
-          return
-        }
-      } catch {
-        // 继续尝试下一个选择器
-      }
-    }
-
-    throw new Error('未找到可点击的思维导图卡片内容区域')
-  }
-
-  // 验证没有触发删除操作
-  async verifyNoDeleteTriggered(): Promise<boolean> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 检查是否没有删除确认对话框出现
-    const hasDialog = await this.verifyDeleteConfirmDialog()
-    if (hasDialog) {
-      return false
-    }
-
-    // 检查是否没有删除API请求
-    if (this.deleteRequests.length > 0) {
-      return false
-    }
-
-    return true
-  }
-
-  // 验证错误提示
-  async verifyErrorMessage(expectedErrorMessage: string): Promise<boolean> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 等待错误提示出现（可能需要时间）
-    await this.page.waitForTimeout(2000)
-
-    // 检查是否有错误提示
-    const errorSelectors = [
-      '[data-testid="delete-error-message"]',
-      `text="${expectedErrorMessage}"`,
-      '.error-message',
-      '.toast.error',
-      '[role="alert"]',
-      '[data-testid*="error"]',
-      '.notification.error',
-    ]
-
-    for (const selector of errorSelectors) {
-      try {
-        const error = this.page.locator(selector)
-        // 等待元素可见，最多5秒
-        await error.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
-        if (await error.isVisible()) {
-          const errorText = await error.textContent()
-          if (errorText?.includes(expectedErrorMessage)) {
-            return true
-          }
-        }
-      } catch {
-        // 继续尝试下一个选择器
-      }
-    }
-
-    return false
-  }
-
-  // 验证列表刷新移除不存在的条目
-  async verifyListRefreshedAfterError(): Promise<boolean> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 等待列表刷新
-    await this.page.waitForTimeout(2000)
-
-    // 检查页面是否重新加载了思维导图列表
-    const listSelectors = [
-      '[data-testid*="mindmap-card"]',
-      '.mindmap-card',
-      'a[href*="/mindmaps/"]',
-    ]
-
-    for (const selector of listSelectors) {
-      try {
-        const cards = this.page.locator(selector)
-        const count = await cards.count()
-        if (count > 0) {
-          return true
-        }
-      } catch {
-        // 继续尝试下一个选择器
-      }
-    }
-
-    // 如果没有卡片，也认为列表已刷新
-    return true
-  }
-
-  // 创建包含子节点的思维导图
-  async openMindMapWithChildNodes() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 复用现有方法
-    await this.openExistingMindMap()
-    // 等待加载完成后添加子节点
-    await this.page.waitForTimeout(2000)
-    await this.clickAddChildNode()
-  }
-
-  // =========================
-  // Test-ID 相关操作方法
-  // =========================
-
-  /**
-   * 根据test-id查找节点元素
-   */
-  async findNodeByTestId(testId: string): Promise<ElementHandle<Element> | null> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    try {
-      // 直接使用语义化test-id查找节点组件
-      await this.page.waitForSelector(`[data-testid="${testId}"]`, { timeout: 10000 })
-      return await this.page.$(`[data-testid="${testId}"]`)
-    } catch {
-      return null
-    }
-  }
-
-  /**
-   * 获取当前选中节点的test-id
-   */
-  async getCurrentSelectedNodeTestId(): Promise<string | null> {
-    if (!this.page) return null
-
-    try {
-      // 查找选中状态的节点
-      const selectedElement = await this.page.$('[data-node-selected="true"]')
-      if (!selectedElement) return null
-
-      return await selectedElement.getAttribute('data-testid')
-    } catch (_error) {
-      return null
-    }
-  }
-
-  /**
-   * 统一的节点选择方法
-   */
-  async selectNodeByTestId(testId: string): Promise<void> {
-    const element = await this.findNodeByTestId(testId)
-    if (!element) throw new Error(`找不到test-id为"${testId}"的节点`)
-
-    await element.click()
-    await this.page?.waitForTimeout(100)
+    return this.browserManager.captureScreenshotOnFailure(scenario)
   }
 
   // 清理测试期间创建的思维导图
   async cleanupMindMaps() {
-    if (this.createdMindMapIds.length === 0) {
-      return
+    if (this.mindMapOperations) {
+      await this.mindMapOperations.cleanupMindMaps()
+      this.browserManager.clearDeleteRequests()
     }
-
-    for (const mindMapId of this.createdMindMapIds) {
-      try {
-        // 通过API删除思维导图
-        if (this.page) {
-          await this.page.evaluate(async id => {
-            try {
-              const response = await fetch(`/api/mindmaps/${id}`, {
-                method: 'DELETE',
-              })
-              return response.ok
-            } catch (error) {
-              console.error('删除思维导图失败:', error)
-              return false
-            }
-          }, mindMapId)
-        }
-      } catch (error) {
-        // 继续删除其他思维导图，不中断清理流程
-        console.error('删除思维导图失败:', error)
-      }
-    }
-
-    // 清空跟踪列表
-    this.createdMindMapIds = []
-    this.deleteRequests = []
   }
 
-  // ===========================
-  // 键盘快捷键支持方法
-  // ===========================
+  // =========================================
+  // 代理方法 - 认证和导航
+  // =========================================
+  async loginAsTestUser() {
+    if (!this.authNavigation) throw new Error('AuthNavigation not initialized')
+    return this.authNavigation.loginAsTestUser()
+  }
 
-  // 等待新子节点出现并返回其test-id
+  async verifyOnEditPage() {
+    if (!this.authNavigation) throw new Error('AuthNavigation not initialized')
+    return this.authNavigation.verifyOnEditPage()
+  }
+
+  async verifyOnListPage() {
+    if (!this.authNavigation) throw new Error('AuthNavigation not initialized')
+    return this.authNavigation.verifyOnListPage()
+  }
+
+  async refreshPage() {
+    if (!this.authNavigation) throw new Error('AuthNavigation not initialized')
+    return this.authNavigation.refreshPage()
+  }
+
+  // =========================================
+  // 代理方法 - 思维导图操作
+  // =========================================
+  async clickNewMindMapButtonOnly() {
+    if (!this.mindMapOperations) throw new Error('MindMapOperations not initialized')
+    await this.mindMapOperations.clickNewMindMapButtonOnly()
+    this.syncMindMapIds()
+  }
+
+  async clickFirstMindMapCard() {
+    if (!this.mindMapOperations) throw new Error('MindMapOperations not initialized')
+    await this.mindMapOperations.clickFirstMindMapCard()
+    this.syncMindMapIds()
+  }
+
+  async extractAndTrackMindMapId() {
+    if (!this.mindMapOperations) throw new Error('MindMapOperations not initialized')
+    await this.mindMapOperations.extractAndTrackMindMapId()
+    this.syncMindMapIds()
+  }
+
+  async createMindMapWithMainNode(name?: string) {
+    if (!this.mindMapOperations) throw new Error('MindMapOperations not initialized')
+    await this.mindMapOperations.createMindMapWithMainNode(name)
+    this.syncMindMapIds()
+  }
+
+  async openExistingMindMap() {
+    if (!this.mindMapOperations) throw new Error('MindMapOperations not initialized')
+    await this.mindMapOperations.openExistingMindMap()
+    this.syncMindMapIds()
+  }
+
+  async openMindMapFromList() {
+    if (!this.mindMapOperations) throw new Error('MindMapOperations not initialized')
+    return this.mindMapOperations.openMindMapFromList()
+  }
+
+  async openMindMapWithChildNodes() {
+    if (!this.mindMapOperations) throw new Error('MindMapOperations not initialized')
+    return this.mindMapOperations.openMindMapWithChildNodes()
+  }
+
+  async clickAddChildNode() {
+    if (!this.mindMapOperations) throw new Error('MindMapOperations not initialized')
+    return this.mindMapOperations.clickAddChildNode()
+  }
+
+  async verifyStayOnCurrentMindMap() {
+    if (!this.mindMapOperations) throw new Error('MindMapOperations not initialized')
+    return this.mindMapOperations.verifyStayOnCurrentMindMap()
+  }
+
+  // =========================================
+  // 代理方法 - 删除操作
+  // =========================================
+  async clickDeleteButtonOnMindMapCard(mindMapName: string) {
+    if (!this.deleteOperations) throw new Error('DeleteOperations not initialized')
+    return this.deleteOperations.clickDeleteButtonOnMindMapCard(mindMapName)
+  }
+
+  async clickConfirmDeleteButton() {
+    if (!this.deleteOperations) throw new Error('DeleteOperations not initialized')
+    return this.deleteOperations.clickConfirmDeleteButton()
+  }
+
+  async clickCancelDeleteButton() {
+    if (!this.deleteOperations) throw new Error('DeleteOperations not initialized')
+    return this.deleteOperations.clickCancelDeleteButton()
+  }
+
+  async hoverOnMindMapCard() {
+    if (!this.deleteOperations) throw new Error('DeleteOperations not initialized')
+    return this.deleteOperations.hoverOnMindMapCard()
+  }
+
+  async moveMouseAwayFromMindMapCard() {
+    if (!this.deleteOperations) throw new Error('DeleteOperations not initialized')
+    return this.deleteOperations.moveMouseAwayFromMindMapCard()
+  }
+
+  async clickMindMapCardContent() {
+    if (!this.deleteOperations) throw new Error('DeleteOperations not initialized')
+    return this.deleteOperations.clickMindMapCardContent()
+  }
+
+  // =========================================
+  // 代理方法 - 节点操作
+  // =========================================
+  async findNodeByTestId(testId: string): Promise<ElementHandle<Element> | null> {
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.findNodeByTestId(testId)
+  }
+
+  async getCurrentSelectedNodeTestId(): Promise<string | null> {
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.getCurrentSelectedNodeTestId()
+  }
+
+  async selectNodeByTestId(testId: string): Promise<void> {
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.selectNodeByTestId(testId)
+  }
+
   async waitForNewChildNode(parentTestId: string): Promise<string> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 获取当前所有思维导图节点的test-id列表
-    const getNodeTestIds = () => {
-      const nodes = document.querySelectorAll(
-        '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
-      )
-      return Array.from(nodes)
-        .map(node => node.getAttribute('data-testid'))
-        .filter(id => id)
-    }
-
-    const initialNodeTestIds = await this.page.evaluate(getNodeTestIds)
-
-    // 等待出现新的节点test-id
-    await this.page.waitForFunction(
-      initialTestIds => {
-        const currentTestIds = Array.from(
-          document.querySelectorAll(
-            '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
-          )
-        )
-          .map(node => node.getAttribute('data-testid'))
-          .filter(id => id)
-
-        // Check if new nodes have been added
-
-        return currentTestIds.length > initialTestIds.length
-      },
-      initialNodeTestIds,
-      { timeout: 10000, polling: 500 }
-    )
-
-    // 等待一点时间确保节点完全渲染
-    await this.page.waitForTimeout(1000)
-
-    // 获取最终的节点test-id列表
-    const finalNodeTestIds = await this.page.evaluate(getNodeTestIds)
-
-    // 找出新增的节点
-    const newTestIds = finalNodeTestIds.filter(testId => !initialNodeTestIds.includes(testId))
-
-    if (newTestIds.length > 0) {
-      // 优先返回父节点的子节点
-      const childNode = newTestIds.find(testId => testId && testId.startsWith(`${parentTestId}-`))
-      if (childNode) {
-        return childNode
-      }
-
-      // 如果没有找到子节点，返回第一个新节点
-      const firstNewNode = newTestIds[0]
-      if (firstNewNode) {
-        return firstNewNode
-      }
-    }
-
-    throw new Error(`未能找到${parentTestId}的新子节点`)
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.waitForNewChildNode(parentTestId)
   }
 
-  // 点击空白区域取消所有节点选中
   async clickBlankArea() {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 点击思维导图容器的空白区域
-    const mindMapContainer = this.page.locator('.react-flow')
-    await mindMapContainer.click({ position: { x: 50, y: 50 } })
-
-    await this.page.waitForTimeout(300)
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.clickBlankArea()
   }
 
-  // 获取所有节点的test-id列表
   async getAllNodeTestIds(): Promise<string[]> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    const nodeElements = await this.page
-      .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
-      .all()
-    const testIds: string[] = []
-
-    for (const element of nodeElements) {
-      const testId = await element.getAttribute('data-testid')
-      if (testId) {
-        testIds.push(testId)
-      }
-    }
-
-    return testIds
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.getAllNodeTestIds()
   }
 
-  // 验证节点是否在编辑状态
+  async doubleClickNode(testId: string): Promise<void> {
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.doubleClickNode(testId)
+  }
+
+  async editNodeContent(testId: string, newContent: string): Promise<void> {
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.editNodeContent(testId, newContent)
+  }
+
+  async createMultipleChildNodes(parentTestId: string, childrenNames: string[]): Promise<void> {
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.createMultipleChildNodes(parentTestId, childrenNames)
+  }
+
+  async clickChildNode() {
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.clickChildNode()
+  }
+
+  async clickMainNode() {
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.clickMainNode()
+  }
+
+  async doubleClickMainNode() {
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.doubleClickMainNode()
+  }
+
+  async inputText(text: string) {
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.inputText(text)
+  }
+
+  async pressEnter() {
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.pressEnter()
+  }
+
+  async clickSaveButton() {
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.clickSaveButton()
+  }
+
+  // =========================================
+  // 代理方法 - 数据库操作
+  // =========================================
+  async createMindMapFromTreeStructure(treeText: string): Promise<void> {
+    if (!this.databaseHelpers) throw new Error('DatabaseHelpers not initialized')
+    return this.databaseHelpers.createMindMapFromTreeStructure(treeText)
+  }
+
+  // =========================================
+  // 代理方法 - 验证
+  // =========================================
+  async verifyDefaultMainNode() {
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyDefaultMainNode()
+  }
+
+  async verifyMainNodeExists() {
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyMainNodeExists()
+  }
+
+  async verifyMainNodeSelected() {
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyMainNodeSelected()
+  }
+
+  async verifyMainNodeHasChild() {
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyMainNodeHasChild()
+  }
+
+  async verifyNodeConnection() {
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyNodeConnection()
+  }
+
+  async verifyNodeExitEditMode() {
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyNodeExitEditMode()
+  }
+
+  async verifyMainNodeVisualFeedback() {
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyMainNodeVisualFeedback()
+  }
+
+  async verifyNodeInEditMode() {
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyNodeInEditMode()
+  }
+
+  async verifyCanEditNodeContent() {
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyCanEditNodeContent()
+  }
+
+  async verifyChildNodeSelected() {
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyChildNodeSelected()
+  }
+
+  async verifyMainNodeNotSelected() {
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyMainNodeNotSelected()
+  }
+
+  async verifyChildNodeNotSelected() {
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyChildNodeNotSelected()
+  }
+
+  async verifySaveSuccessMessage() {
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifySaveSuccessMessage()
+  }
+
   async verifyNodeInEditingState(testId: string) {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 直接使用Locator API
-    const nodeLocator = this.page.locator(`[data-testid="${testId}"]`)
-    const inputLocator = nodeLocator.locator('input')
-
-    // 等待输入框出现
-    await inputLocator.waitFor({ timeout: 5000 })
-
-    // 验证输入框是否获得焦点
-    const isFocused = await inputLocator.evaluate(
-      (el: HTMLElement) => el === document.activeElement
-    )
-    expect(isFocused).toBe(true)
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyNodeInEditingState(testId)
   }
 
-  // 验证节点退出编辑状态
   async verifyNodeExitEditingState(testId: string) {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 等待输入框消失，确认退出编辑状态
-    await this.page.waitForFunction(
-      id => {
-        const element = document.querySelector(`[data-testid="${id}"]`)
-        if (!element) return false
-        const inputs = element.querySelectorAll('input')
-        return inputs.length === 0
-      },
-      testId,
-      { timeout: 300 }
-    )
-
-    // 等待DOM更新完成
-    await this.page.waitForTimeout(200)
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyNodeExitEditingState(testId)
   }
 
-  // 验证节点存在
   async verifyNodeExists(testId: string): Promise<void> {
-    const element = await this.findNodeByTestId(testId)
-    if (!element) {
-      throw new Error(`节点"${testId}"不存在`)
-    }
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyNodeExists(testId)
   }
 
-  // 验证节点不存在
   async verifyNodeNotExists(testId: string): Promise<void> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 等待节点消失（给删除操作一些时间）
-    try {
-      // 先等待一小段时间给删除操作处理时间
-      await this.page.waitForTimeout(500)
-
-      // 检查节点是否还存在，使用较短的超时
-      const element = await this.page.$(`[data-testid="${testId}"]`)
-      if (element !== null) {
-        throw new Error(`节点"${testId}"仍然存在，但期望它应该被删除`)
-      }
-    } catch (error) {
-      // 如果是因为节点不存在引起的错误，那就是我们期望的结果
-      if (error instanceof Error && error.message.includes('仍然存在')) {
-        throw error
-      }
-      // 其他错误可能是因为节点确实不存在了，这是正确的
-    }
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyNodeNotExists(testId)
   }
 
-  // 验证节点被选中
   async verifyNodeSelected(testId: string): Promise<void> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 使用Locator而不是ElementHandle
-    const elementLocator = this.page.locator(`[data-testid="${testId}"]`)
-
-    // 等待元素存在
-    await elementLocator.waitFor({ timeout: 300 })
-
-    // 检查多种选中状态的指示
-    const hasSelectedClass = await elementLocator.evaluate((el: Element) =>
-      el.classList.contains('selected')
-    )
-    const hasSelectedAttribute = await elementLocator.getAttribute('data-node-selected')
-    const hasRingClass = await elementLocator.locator('.ring-2.ring-primary').count()
-
-    if (!hasSelectedClass && hasSelectedAttribute !== 'true' && hasRingClass === 0) {
-      throw new Error(
-        `节点"${testId}"未被选中，检查结果: class=${hasSelectedClass}, attribute=${hasSelectedAttribute}, ringClass=${hasRingClass}`
-      )
-    }
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyNodeSelected(testId)
   }
 
-  // 验证节点未被选中
   async verifyNodeNotSelected(testId: string): Promise<void> {
-    const element = await this.findNodeByTestId(testId)
-    if (!element) throw new Error(`找不到节点"${testId}"`)
-
-    // 检查多种选中状态的指示都不存在
-    const hasSelectedClass = await element.evaluate((el: Element) =>
-      el.classList.contains('selected')
-    )
-    const hasSelectedAttribute = await element.getAttribute('data-node-selected')
-
-    // 使用page.locator来检查ring class，因为element句柄没有locator方法
-    if (!this.page) throw new Error('Page not initialized')
-    const hasRingClass = await this.page
-      .locator(`[data-testid="${testId}"] .ring-2.ring-primary`)
-      .count()
-
-    if (hasSelectedClass || hasSelectedAttribute === 'true' || hasRingClass > 0) {
-      throw new Error(`节点"${testId}"被选中了，但期望它应该未被选中`)
-    }
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyNodeNotSelected(testId)
   }
 
-  // 验证节点内容
   async verifyNodeContent(testId: string, expectedContent: string): Promise<void> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 直接使用Locator API定位到节点
-    const nodeLocator = this.page.locator(`[data-testid="${testId}"]`)
-
-    // 等待节点加载
-    await nodeLocator.waitFor({ timeout: 5000 })
-
-    // 优先检查是否有输入框（编辑模式）
-    const inputLocator = nodeLocator.locator('input')
-    const inputExists = await inputLocator.count()
-
-    let content: string | null
-    if (inputExists > 0) {
-      // 编辑模式：获取输入框的值
-      content = await inputLocator.inputValue()
-    } else {
-      // 非编辑模式：通过data-node-content属性获取内容
-      const contentDiv = nodeLocator.locator('[data-node-content]')
-      content = await contentDiv.textContent()
-    }
-
-    // 检查内容是否包含期望的文本（临时解决方案）
-    if (!content?.trim().includes(expectedContent)) {
-      throw new Error(`节点"${testId}"的内容是"${content?.trim()}"，期望包含"${expectedContent}"`)
-    }
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyNodeContent(testId, expectedContent)
   }
 
   async verifyNodeContentNot(testId: string, notExpectedContent: string): Promise<void> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 直接使用Locator API定位到节点
-    const nodeLocator = this.page.locator(`[data-testid="${testId}"]`)
-
-    // 等待节点加载
-    await nodeLocator.waitFor({ timeout: 5000 })
-
-    // 优先检查是否有输入框（编辑模式）
-    const inputLocator = nodeLocator.locator('input')
-    const inputExists = await inputLocator.count()
-
-    let content: string | null
-    if (inputExists > 0) {
-      // 编辑模式：获取输入框的值
-      content = await inputLocator.inputValue()
-    } else {
-      // 非编辑模式：通过data-node-content属性获取内容
-      const contentDiv = nodeLocator.locator('[data-node-content]')
-      content = await contentDiv.textContent()
-    }
-
-    // 检查内容是否不包含指定的文本
-    if (content?.trim().includes(notExpectedContent)) {
-      throw new Error(
-        `节点"${testId}"的内容是"${content?.trim()}"，不应该包含"${notExpectedContent}"`
-      )
-    }
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyNodeContentNot(testId, notExpectedContent)
   }
 
-  // 验证父子关系
   async verifyParentChildRelationship(childTestId: string, parentTestId: string): Promise<void> {
-    // 通过test-id结构验证父子关系
-    if (!childTestId.startsWith(`${parentTestId}-`)) {
-      throw new Error(`节点"${childTestId}"不是节点"${parentTestId}"的子节点`)
-    }
-
-    // 验证节点确实存在
-    await this.verifyNodeExists(childTestId)
-    await this.verifyNodeExists(parentTestId)
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyParentChildRelationship(childTestId, parentTestId)
   }
 
-  // 验证节点子节点数量
   async verifyNodeChildrenCount(parentTestId: string, expectedCount: number): Promise<void> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 获取所有思维导图节点的test-ids
-    const allNodeTestIds = await this.page.evaluate(() => {
-      const nodes = document.querySelectorAll(
-        '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
-      )
-      return Array.from(nodes)
-        .map(node => node.getAttribute('data-testid'))
-        .filter(id => id)
-    })
-
-    // 查找所有直接子节点（只匹配一级子节点，不包括孙节点）
-    const childPattern = new RegExp(`^${parentTestId}-\\d+$`)
-    const directChildren = allNodeTestIds.filter(testId => testId && childPattern.test(testId))
-
-    if (directChildren.length !== expectedCount) {
-      throw new Error(
-        `节点"${parentTestId}"有${directChildren.length}个子节点，期望是${expectedCount}个`
-      )
-    }
+    if (!this.verificationHelpers) throw new Error('VerificationHelpers not initialized')
+    return this.verificationHelpers.verifyNodeChildrenCount(parentTestId, expectedCount)
   }
 
-  // 双击节点进入编辑模式，处理minimap拦截问题
-  async doubleClickNode(testId: string): Promise<void> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    const element = await this.findNodeByTestId(testId)
-    if (!element) throw new Error(`找不到节点"${testId}"`)
-
-    try {
-      // 尝试双击节点
-      await element.dblclick()
-      await this.page.waitForTimeout(300)
-    } catch (error) {
-      console.log(`双击失败，尝试force选项: ${error}`)
-      // 如果仍然失败，使用force选项
-      await this.page.dblclick(`[data-testid="${testId}"]`, { force: true })
-      await this.page.waitForTimeout(300)
-    }
+  // =========================================
+  // 代理方法 - 删除验证
+  // =========================================
+  async verifyDeleteConfirmDialog(): Promise<boolean> {
+    if (!this.deleteVerification) throw new Error('DeleteVerification not initialized')
+    return this.deleteVerification.verifyDeleteConfirmDialog()
   }
 
-  // 编辑指定 test-id 节点的内容：双击进入编辑、直接操作input元素、回车确认
-  async editNodeContent(testId: string, newContent: string): Promise<void> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 双击节点进入编辑模式
-    await this.doubleClickNode(testId)
-    await this.page.waitForTimeout(500)
-
-    // 查找节点内的input元素
-    const nodeElement = await this.findNodeByTestId(testId)
-    if (!nodeElement) throw new Error(`找不到节点"${testId}"`)
-
-    // 等待input元素出现
-    const inputElement = await this.page.waitForSelector(`[data-testid="${testId}"] input`, {
-      timeout: 300,
-    })
-
-    if (!inputElement) {
-      throw new Error(`节点"${testId}"的input元素未找到`)
-    }
-
-    // 清空并填入新内容
-    await inputElement.click() // 确保input获得焦点
-    await inputElement.selectText() // 选中所有文本
-    await inputElement.fill(newContent) // 直接填入新内容
-
-    // 确认编辑
-    await this.page.keyboard.press('Enter')
-    await this.page.waitForTimeout(500)
+  async verifyDialogTitle(expectedTitle: string): Promise<boolean> {
+    if (!this.deleteVerification) throw new Error('DeleteVerification not initialized')
+    return this.deleteVerification.verifyDialogTitle(expectedTitle)
   }
 
-  // 为指定节点创建多个子节点
-  async createMultipleChildNodes(parentTestId: string, childrenNames: string[]): Promise<void> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 为每个子节点名称创建节点
-    for (let i = 0; i < childrenNames.length; i++) {
-      const childName = childrenNames[i]
-
-      // 选中父节点
-      await this.selectNodeByTestId(parentTestId)
-      await this.page.waitForTimeout(300)
-
-      // 添加子节点 - 使用Tab键快捷方式
-      await this.page.keyboard.press('Tab')
-      await this.page.waitForTimeout(1500)
-
-      // 计算预期的子节点test-id
-      const expectedChildTestId = `${parentTestId}-${i}`
-
-      // 等待子节点出现
-      await this.page.waitForSelector(`[data-testid="${expectedChildTestId}"]`, {
-        timeout: 8000,
-      })
-
-      // 编辑子节点内容
-      await this.editNodeContent(expectedChildTestId, childName)
-    }
+  async verifyDialogContent(expectedContent: string): Promise<boolean> {
+    if (!this.deleteVerification) throw new Error('DeleteVerification not initialized')
+    return this.deleteVerification.verifyDialogContent(expectedContent)
   }
 
-  // 解析树形结构文本并创建思维导图
-  async createMindMapFromTreeStructure(treeText: string): Promise<void> {
-    if (!this.page) throw new Error('Page not initialized')
-
-    // 解析树形结构
-    const nodes = this.parseTreeStructure(treeText)
-
-    // 通过直接数据库操作创建思维导图
-    const mindMapId = await this.createMindMapInDatabase(nodes)
-
-    // 导航到新创建的思维导图
-    await this.page.goto(`${this.baseUrl}/mindmaps/${mindMapId}`)
-    await this.page.waitForLoadState('networkidle')
-
-    // 等待思维导图组件加载完成
-    await this.page.waitForSelector('[data-testid="root"]')
+  async verifyDeleteProgressStatus(expectedStatus: string): Promise<boolean> {
+    if (!this.deleteVerification) throw new Error('DeleteVerification not initialized')
+    return this.deleteVerification.verifyDeleteProgressStatus(expectedStatus)
   }
 
-  // 解析树形结构文本
-  private parseTreeStructure(treeText: string): Array<{
-    testId: string
-    content: string
-    parentTestId: string | null
-    sortOrder: number
-  }> {
-    const lines = treeText
-      .trim()
-      .split('\n')
-      .filter(line => line.trim())
-    const nodes: Array<{
-      testId: string
-      content: string
-      parentTestId: string | null
-      sortOrder: number
-    }> = []
-
-    // 存储每个缩进级别的父节点
-    const parentStack: Array<{ testId: string; level: number }> = []
-
-    lines.forEach(line => {
-      // 计算缩进级别（2个空格为一级）
-      const match = line.match(/^(\s*)(.+)$/)
-      if (!match) return
-
-      const indentLevel = Math.floor(match[1].length / 2)
-      const content = match[2].trim()
-
-      // 清理父节点堆栈，保留当前级别的父节点
-      while (parentStack.length > indentLevel) {
-        parentStack.pop()
-      }
-
-      // 确定父节点和test-id
-      let parentTestId: string | null = null
-      let testId: string
-
-      if (indentLevel === 0) {
-        // 根级节点 - 检查是否已经有根节点
-        const rootLevelNodes = nodes.filter(n => n.parentTestId === null)
-        if (rootLevelNodes.length === 0) {
-          testId = 'root'
-        } else {
-          testId = `float-${rootLevelNodes.length - 1}`
-        }
-      } else {
-        // 子节点
-        const parent = parentStack[parentStack.length - 1]
-        if (!parent) throw new Error(`无法找到父节点，缩进级别: ${indentLevel}`)
-
-        parentTestId = parent.testId
-
-        // 计算同级节点的排序
-        const siblingCount = nodes.filter(n => n.parentTestId === parentTestId).length
-        testId = `${parentTestId}-${siblingCount}`
-      }
-
-      // 计算排序顺序
-      const sortOrder = nodes.filter(n => n.parentTestId === parentTestId).length
-
-      // 添加节点
-      nodes.push({
-        testId,
-        content,
-        parentTestId,
-        sortOrder,
-      })
-
-      // 将当前节点加入父节点堆栈
-      parentStack.push({ testId, level: indentLevel })
-    })
-
-    return nodes
+  async verifyDeleteApiRequest(expectedUrl: string): Promise<boolean> {
+    if (!this.deleteVerification) throw new Error('DeleteVerification not initialized')
+    return this.deleteVerification.verifyDeleteApiRequest(expectedUrl)
   }
 
-  // 在数据库中创建思维导图
-  private async createMindMapInDatabase(
-    nodes: Array<{
-      testId: string
-      content: string
-      parentTestId: string | null
-      sortOrder: number
-    }>
-  ): Promise<string> {
-    // 导入数据库服务
-    const { MindMapService } = await import('../../src/lib/database-postgres')
+  async verifyMindMapCardNotVisible(mindMapName: string): Promise<boolean> {
+    if (!this.deleteVerification) throw new Error('DeleteVerification not initialized')
+    return this.deleteVerification.verifyMindMapCardNotVisible(mindMapName)
+  }
 
-    // 生成思维导图ID
-    const mindMapId = crypto.randomUUID()
+  async verifyMindMapCardVisible(mindMapName: string): Promise<boolean> {
+    if (!this.deleteVerification) throw new Error('DeleteVerification not initialized')
+    return this.deleteVerification.verifyMindMapCardVisible(mindMapName)
+  }
 
-    // 为每个节点生成唯一ID并建立ID映射
-    const nodeIdMap = new Map<string, string>()
-    nodes.forEach(node => {
-      nodeIdMap.set(node.testId, crypto.randomUUID())
-    })
+  async verifyStatsUpdated(): Promise<boolean> {
+    if (!this.deleteVerification) throw new Error('DeleteVerification not initialized')
+    return this.deleteVerification.verifyStatsUpdated()
+  }
 
-    try {
-      // 1. 创建思维导图记录
-      const mindMapData = {
-        title: `测试思维导图 ${new Date().toLocaleString()}`,
-        user_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
-        is_public: false,
-      }
+  async verifyDeleteDialogClosed(): Promise<boolean> {
+    if (!this.deleteVerification) throw new Error('DeleteVerification not initialized')
+    return this.deleteVerification.verifyDeleteDialogClosed()
+  }
 
-      await MindMapService.createMindMap({
-        ...mindMapData,
-        id: mindMapId,
-      })
+  async verifyDeleteSuccessMessage(expectedMessage: string): Promise<boolean> {
+    if (!this.deleteVerification) throw new Error('DeleteVerification not initialized')
+    return this.deleteVerification.verifyDeleteSuccessMessage(expectedMessage)
+  }
 
-      // 2. 创建节点记录
-      const nodeInserts = nodes.map(node => ({
-        id: nodeIdMap.get(node.testId)!,
-        mind_map_id: mindMapId,
-        content: node.content,
-        parent_node_id: node.parentTestId ? nodeIdMap.get(node.parentTestId) || null : null,
-        sort_order: node.sortOrder,
-        node_type: 'mindMapNode',
-        style: {},
-        embedding: undefined,
-      }))
+  async verifyDeleteButtonVisible(): Promise<boolean> {
+    if (!this.deleteVerification) throw new Error('DeleteVerification not initialized')
+    return this.deleteVerification.verifyDeleteButtonVisible()
+  }
 
-      // 批量插入节点
-      await MindMapService.upsertNodes(nodeInserts)
+  async verifyDeleteButtonHidden(): Promise<boolean> {
+    if (!this.deleteVerification) throw new Error('DeleteVerification not initialized')
+    return this.deleteVerification.verifyDeleteButtonHidden()
+  }
 
-      // 记录创建的思维导图ID用于清理
-      this.currentMindMapId = mindMapId
-      if (!this.createdMindMapIds.includes(mindMapId)) {
-        this.createdMindMapIds.push(mindMapId)
-      }
+  async verifyNoDeleteTriggered(): Promise<boolean> {
+    if (!this.deleteVerification) throw new Error('DeleteVerification not initialized')
+    return this.deleteVerification.verifyNoDeleteTriggered()
+  }
 
-      return mindMapId
-    } catch (error) {
-      throw new Error(
-        `创建思维导图失败: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
-    }
+  async verifyErrorMessage(expectedErrorMessage: string): Promise<boolean> {
+    if (!this.deleteVerification) throw new Error('DeleteVerification not initialized')
+    return this.deleteVerification.verifyErrorMessage(expectedErrorMessage)
+  }
+
+  async verifyListRefreshedAfterError(): Promise<boolean> {
+    if (!this.deleteVerification) throw new Error('DeleteVerification not initialized')
+    return this.deleteVerification.verifyListRefreshedAfterError()
   }
 }
 
