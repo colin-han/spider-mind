@@ -146,6 +146,3 @@ When(
     await this.editNodeContent(testId, newContent)
   }
 )
-
-// 兼容性Steps：将旧的术语映射到新的test-id系统（已迁移到basic-steps.ts，这里保留备注）
-// 这些步骤在basic-steps.ts中已有统一定义，避免重复

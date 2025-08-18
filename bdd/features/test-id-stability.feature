@@ -49,13 +49,13 @@ Feature: Test-ID生成规则稳定性验证
   # @longTimeout
   Scenario: root节点的兄弟节点应该是float节点
     Given 我点击"新建思维导图"按钮
-    When 我按下Enter键
+    When 我按下"Enter"键
     Then 节点"float-0"应该存在
     And 我修改节点"float-0"的内容为"浮动节点1"
-    When 我按下Enter键
+    When 我按下"Enter"键
     Then 节点"float-1"应该存在
     And 我修改节点"float-1"的内容为"浮动节点2"
-    When 我按下Enter键
+    When 我按下"Enter"键
     Then 节点"float-2"应该存在
     And 我修改节点"float-2"的内容为"浮动节点3"
     When 我删除节点"float-0"

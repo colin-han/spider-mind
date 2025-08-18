@@ -371,7 +371,7 @@ export class VerificationHelpers {
     const elementLocator = this.page.locator(`[data-testid="${testId}"]`)
 
     // 等待元素存在
-    await elementLocator.waitFor({ timeout: 300 })
+    await elementLocator.waitFor({ timeout: 1000 })
 
     // 检查多种选中状态的指示
     const hasSelectedClass = await elementLocator.evaluate((el: Element) =>

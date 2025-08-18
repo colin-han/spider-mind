@@ -8,23 +8,6 @@ Then('我应该进入思维导图编辑页面', async function (this: BDDWorld) 
   expect(isOnEditPage).toBe(true)
 })
 
-// 兼容性：将不同表述映射到主要统一步骤
-Then('我应该自动进入思维导图编辑页面', async function (this: BDDWorld) {
-  const isOnEditPage = await this.verifyOnEditPage()
-  expect(isOnEditPage).toBe(true)
-})
-
-Then('浏览器应该自动进入思维导图编辑页面', async function (this: BDDWorld) {
-  const isOnEditPage = await this.verifyOnEditPage()
-  expect(isOnEditPage).toBe(true)
-})
-
-Then('浏览器应该进入思维导图编辑页面', async function (this: BDDWorld) {
-  const isOnEditPage = await this.verifyOnEditPage()
-  expect(isOnEditPage).toBe(true)
-  await this.page?.waitForSelector('[data-testid="root"]', { timeout: 1000 })
-})
-
 Then('我应该看到一个默认的主节点', async function (this: BDDWorld) {
   const hasDefaultNode = await this.verifyDefaultMainNode()
   expect(hasDefaultNode).toBe(true)
@@ -37,15 +20,6 @@ Then('当前思维导图应该有一个默认的主节点', async function (this
 
 // 统一的主节点选中验证 - 主要版本
 Then('主节点应该被选中', async function (this: BDDWorld) {
-  await this.verifyNodeSelected('root')
-})
-
-// 兼容性：将旧表述映射到主要统一步骤
-Then('主节点应该是选中状态', async function (this: BDDWorld) {
-  await this.verifyNodeSelected('root')
-})
-
-Then('当前思维导图的主节点应该是选中状态', async function (this: BDDWorld) {
   await this.verifyNodeSelected('root')
 })
 
@@ -231,17 +205,4 @@ Then('不应该创建任何新节点', async function (this: BDDWorld) {
   // 再次获取节点列表，应该没有变化
   const afterNodes = await this.getAllNodeTestIds()
   expect(afterNodes).toEqual(currentNodes)
-})
-
-// 兼容性Steps：将旧的术语映射到test-id基础步骤
-Then('主节点应该进入编辑模式', async function (this: BDDWorld) {
-  await this.verifyNodeInEditingState('root')
-})
-
-Then('主节点应该退出编辑模式', async function (this: BDDWorld) {
-  await this.verifyNodeExitEditingState('root')
-})
-
-Then('主节点的内容应该更新为{string}', async function (this: BDDWorld, expectedContent: string) {
-  await this.verifyNodeContent('root', expectedContent)
 })
