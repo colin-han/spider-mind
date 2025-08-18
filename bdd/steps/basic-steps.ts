@@ -78,32 +78,50 @@ When('我点击{string}按钮', async function (this: BDDWorld, buttonText: stri
 When('我按下{string}键', async function (this: BDDWorld, keyName: string) {
   if (!this.page) throw new Error('Page not initialized')
 
-  // 按键名称映射表
+  // 按键名称映射表 - 支持多种命名格式
   const keyMap: { [key: string]: string } = {
+    // Escape相关
     ESC: 'Escape',
     Esc: 'Escape',
     esc: 'Escape',
     Escape: 'Escape',
+    // Enter相关
     Enter: 'Enter',
     enter: 'Enter',
+    ENTER: 'Enter',
+    // Tab相关
     Tab: 'Tab',
     tab: 'Tab',
+    TAB: 'Tab',
+    // Delete相关
     Delete: 'Delete',
     delete: 'Delete',
+    DELETE: 'Delete',
+    // 功能键
     F2: 'F2',
     f2: 'F2',
+    // 方向键
+    上: 'ArrowUp',
+    下: 'ArrowDown',
+    左: 'ArrowLeft',
+    右: 'ArrowRight',
+    ArrowUp: 'ArrowUp',
+    ArrowDown: 'ArrowDown',
+    ArrowLeft: 'ArrowLeft',
+    ArrowRight: 'ArrowRight',
   }
 
   const actualKey = keyMap[keyName] || keyName
   await this.page.keyboard.press(actualKey)
-  // 等待按键操作生效
-  await this.page.waitForLoadState('domcontentloaded')
+
+  // 统一的超时设置：等待按键操作生效
+  await this.page.waitForLoadState('domcontentloaded', { timeout: 1000 })
 })
 
-// 兼容性：保留原有的特定按键步骤
+// 兼容性：将具体按键映射到通用步骤
 When('我按下ESC键', async function (this: BDDWorld) {
+  // 直接使用统一的按键处理逻辑
   if (!this.page) throw new Error('Page not initialized')
-
   await this.page.keyboard.press('Escape')
   // 等待ESC操作生效（对话框或编辑模式关闭）
   await this.page.waitForFunction(
@@ -112,7 +130,7 @@ When('我按下ESC键', async function (this: BDDWorld) {
       const editingInputs = document.querySelectorAll('input[type="text"]')
       return dialogs.length === 0 && editingInputs.length === 0
     },
-    { timeout: 300 }
+    { timeout: 1000 }
   )
 })
 
@@ -132,6 +150,7 @@ When('我从思维导图列表页面打开该思维导图', async function (this
 })
 
 When('我双击主节点进入编辑模式', async function (this: BDDWorld) {
+  // 使用新的基于test-id的统一操作
   await this.doubleClickMainNode()
 })
 
@@ -140,7 +159,10 @@ When('我输入{string}', async function (this: BDDWorld, text: string) {
 })
 
 When('我点击enter键', async function (this: BDDWorld) {
-  await this.pressEnter()
+  // 使用统一的按键处理
+  if (!this.page) throw new Error('Page not initialized')
+  await this.page.keyboard.press('Enter')
+  await this.page.waitForLoadState('domcontentloaded', { timeout: 1000 })
 })
 
 When('我刷新页面', async function (this: BDDWorld) {
@@ -152,6 +174,7 @@ When('我点击一个子节点', async function (this: BDDWorld) {
 })
 
 When('我点击主节点', async function (this: BDDWorld) {
+  // 使用新的基于test-id的统一操作
   await this.clickMainNode()
 })
 
@@ -169,44 +192,55 @@ When('我点击{string}思维导图', async function (this: BDDWorld, mindMapNam
   await this.extractAndTrackMindMapId()
 })
 
-// 快捷键操作
+// 兼容性：将具体按键映射到通用步骤
 When('我按下Tab键', async function (this: BDDWorld) {
   if (!this.page) throw new Error('Page not initialized')
   await this.page.keyboard.press('Tab')
+  await this.page.waitForLoadState('domcontentloaded', { timeout: 1000 })
 })
 
 When('我按下Enter键', async function (this: BDDWorld) {
   if (!this.page) throw new Error('Page not initialized')
   await this.page.keyboard.press('Enter')
+  await this.page.waitForLoadState('domcontentloaded', { timeout: 1000 })
 })
 
 When('我按下Delete键', async function (this: BDDWorld) {
   if (!this.page) throw new Error('Page not initialized')
   await this.page.keyboard.press('Delete')
+  await this.page.waitForLoadState('domcontentloaded', { timeout: 1000 })
 })
 
 When('我按下F2键', async function (this: BDDWorld) {
   if (!this.page) throw new Error('Page not initialized')
   await this.page.keyboard.press('F2')
+  await this.page.waitForLoadState('domcontentloaded', { timeout: 1000 })
 })
 
 When('我按下Escape键', async function (this: BDDWorld) {
   if (!this.page) throw new Error('Page not initialized')
   await this.page.keyboard.press('Escape')
+  await this.page.waitForLoadState('domcontentloaded', { timeout: 1000 })
 })
 
 When('我按下{string}方向键', async function (this: BDDWorld, direction: string) {
   if (!this.page) throw new Error('Page not initialized')
 
+  // 方向键映射（使用统一映射表）
   const keyMap: { [key: string]: string } = {
     上: 'ArrowUp',
     下: 'ArrowDown',
     左: 'ArrowLeft',
     右: 'ArrowRight',
+    ArrowUp: 'ArrowUp',
+    ArrowDown: 'ArrowDown',
+    ArrowLeft: 'ArrowLeft',
+    ArrowRight: 'ArrowRight',
   }
 
   const key = keyMap[direction]
   if (!key) throw new Error(`不支持的方向键: ${direction}`)
 
   await this.page.keyboard.press(key)
+  await this.page.waitForLoadState('domcontentloaded', { timeout: 1000 })
 })

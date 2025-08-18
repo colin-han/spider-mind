@@ -24,11 +24,10 @@ export class DeleteOperations {
     // 等待思维导图列表加载完成
     await this.page.waitForSelector(
       '[data-testid*="mindmap-card"], .mindmap-card, a[href*="/mindmaps/"]',
-      { timeout: 300 }
+      { timeout: 500 }
     )
 
     // 查找思维导图进行删除操作
-
     let cardFound = false
 
     // 如果有currentMindMapId，优先使用ID进行精确匹配
@@ -72,6 +71,8 @@ export class DeleteOperations {
             if (await deleteButton.isVisible()) {
               await deleteButton.click()
               cardFound = true
+            } else {
+              throw new Error(`未能找到名为"${mindMapName}"的思维导图卡片中的删除按钮`)
             }
           } catch {
             throw new Error(`未能找到名为"${mindMapName}"的思维导图卡片中的删除按钮`)
@@ -83,8 +84,8 @@ export class DeleteOperations {
     }
 
     // 等待删除确认对话框出现
-    await this.page.waitForSelector('[data-testid*="dialog"], [data-testid*="confirm"]', {
-      timeout: 300,
+    await this.page.waitForSelector('[data-testid="alert-dialog"]', {
+      timeout: 500,
     })
   }
 

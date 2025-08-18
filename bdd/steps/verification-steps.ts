@@ -8,7 +8,7 @@ Then('我应该进入思维导图编辑页面', async function (this: BDDWorld) 
   expect(isOnEditPage).toBe(true)
 })
 
-// 兼容性：将不同表述映射到统一步骤
+// 兼容性：将不同表述映射到主要统一步骤
 Then('我应该自动进入思维导图编辑页面', async function (this: BDDWorld) {
   const isOnEditPage = await this.verifyOnEditPage()
   expect(isOnEditPage).toBe(true)
@@ -40,13 +40,12 @@ Then('主节点应该被选中', async function (this: BDDWorld) {
   await this.verifyNodeSelected('root')
 })
 
-// 兼容性：将旧表述映射到新的统一表述
+// 兼容性：将旧表述映射到主要统一步骤
 Then('主节点应该是选中状态', async function (this: BDDWorld) {
   await this.verifyNodeSelected('root')
 })
 
 Then('当前思维导图的主节点应该是选中状态', async function (this: BDDWorld) {
-  // 直接验证根节点的选中状态
   await this.verifyNodeSelected('root')
 })
 
@@ -234,19 +233,13 @@ Then('不应该创建任何新节点', async function (this: BDDWorld) {
   expect(afterNodes).toEqual(currentNodes)
 })
 
-// 兼容性Steps：将旧的术语映射到新的test-id系统
-
+// 兼容性Steps：将旧的术语映射到test-id基础步骤
 Then('主节点应该进入编辑模式', async function (this: BDDWorld) {
   await this.verifyNodeInEditingState('root')
 })
 
 Then('主节点应该退出编辑模式', async function (this: BDDWorld) {
-  // 验证根节点不在编辑状态
-  const element = await this.findNodeByTestId('root')
-  if (!element) throw new Error('找不到根节点')
-
-  const inputElement = await element.$('input')
-  expect(inputElement).toBeNull()
+  await this.verifyNodeExitEditingState('root')
 })
 
 Then('主节点的内容应该更新为{string}', async function (this: BDDWorld, expectedContent: string) {

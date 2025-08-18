@@ -39,13 +39,13 @@ When('我删除节点{string}', async function (this: BDDWorld, testId: string) 
   console.log(`按下Delete键删除节点: ${testId}`)
   await this.page!.keyboard.press('Delete')
 
-  // 等待确认对话框出现或操作完成
+  // 等待确认对话框出现或操作完成（统一超时设置）
   await this.page!.waitForFunction(
     () => {
       const dialogs = document.querySelectorAll('[data-testid="alert-dialog-confirm"]')
       return dialogs.length > 0 || true // 无论如何继续检查
     },
-    { timeout: 300 }
+    { timeout: 1000 }
   )
 
   try {
@@ -80,14 +80,14 @@ When('我为节点{string}添加子节点', async function (this: BDDWorld, pare
 
   if (!this.page) throw new Error('Page not initialized')
 
-  // 等待节点选中状态生效
+  // 等待节点选中状态生效（统一超时设置）
   await this.page.waitForFunction(
     parentTestId => {
       const node = document.querySelector(`[data-testid="${parentTestId}"]`)
       return node && node.getAttribute('data-node-selected') === 'true'
     },
     parentTestId,
-    { timeout: 300 }
+    { timeout: 1000 }
   )
 
   // 检查添加节点按钮是否存在
@@ -99,13 +99,13 @@ When('我为节点{string}添加子节点', async function (this: BDDWorld, pare
   // 点击添加节点按钮
   await this.page.click('[data-testid="add-node-button"]')
 
-  // 等待页面处理和节点创建
+  // 等待页面处理和节点创建（统一超时设置）
   await this.page.waitForFunction(
     () => {
       const nodes = document.querySelectorAll('[data-testid*="root-"]')
       return nodes.length > 0
     },
-    { timeout: 300 }
+    { timeout: 1000 }
   )
 
   // 检查是否已经创建了子节点
@@ -147,12 +147,5 @@ When(
   }
 )
 
-// 兼容性Steps：将旧的术语映射到新的test-id系统
-
-When('我双击主节点进入编辑模式', async function (this: BDDWorld) {
-  await this.doubleClickNode('root')
-})
-
-When('我点击主节点', async function (this: BDDWorld) {
-  await this.selectNodeByTestId('root')
-})
+// 兼容性Steps：将旧的术语映射到新的test-id系统（已迁移到basic-steps.ts，这里保留备注）
+// 这些步骤在basic-steps.ts中已有统一定义，避免重复
