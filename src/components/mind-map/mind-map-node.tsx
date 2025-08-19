@@ -7,11 +7,13 @@ import { Input } from '@/components/ui/input'
 
 export interface MindMapNodeData {
   content: string
-  isEditing: boolean
+  isEditing?: boolean
   testId?: string // Test-ID for stable test identification
   nodeRole?: string // Node role: 'root', 'child', 'leaf', 'floating'
   nodeLevel?: number // Node level in the hierarchy (0 for root/floating)
   isFloating?: boolean // Whether this is a floating node
+  style?: Record<string, unknown> // Node style from database
+  nodeData?: Record<string, unknown> // Complete node data for backend operations
   updateContent?: (nodeId: string, content: string) => void
   toggleEdit?: (nodeId: string, isEditing: boolean) => void
 }

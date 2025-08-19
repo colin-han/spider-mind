@@ -38,23 +38,27 @@ When('用户删除节点{string}', async function (this: BDDWorld, testId: strin
 
   await this.page!.keyboard.press('Delete')
 
-  // 等待确认对话框出现或操作完成（统一超时设置）
-  await this.page!.waitForFunction(
-    () => {
-      const dialogs = document.querySelectorAll('[data-testid="alert-dialog-confirm"]')
-      return dialogs.length > 0 || true // 无论如何继续检查
-    },
-    { timeout: 1000 }
-  )
-
+  // 等待确认对话框出现
   try {
-    const button = this.page!.locator('[data-testid="alert-dialog-confirm"]')
-    if (await button.isVisible()) {
-      await button.click()
+    await this.page!.waitForSelector('[data-testid="alert-dialog-confirm"]', { timeout: 5000 })
+  } catch (_error) {
+    // 可能是根节点保护，检查是否有保护提示
+    const protectionMessage = await this.page!.locator('text="根节点不能被删除"').count()
+    if (protectionMessage > 0) {
+      throw new Error('试图删除受保护的根节点')
     }
-  } catch (_e) {
-    throw new Error('未能找到确认删除按钮')
+    throw new Error('删除确认对话框未出现')
   }
+
+  // 点击确认删除按钮
+  const button = this.page!.locator('[data-testid="alert-dialog-confirm"]')
+  await button.click()
+
+  // 等待对话框消失
+  await this.page!.waitForSelector('[data-testid="alert-dialog-confirm"]', {
+    state: 'detached',
+    timeout: 3000,
+  })
 })
 
 // =========================

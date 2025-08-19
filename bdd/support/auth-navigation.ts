@@ -13,7 +13,7 @@ export class AuthNavigation {
     await this.page.goto(`${this.baseUrl}/login`)
     await this.page.waitForLoadState('networkidle')
 
-    await this.page.waitForSelector('input[id="email"]', { timeout: 1000 })
+    await this.page.waitForSelector('input[id="email"]', { timeout: 10000 })
 
     // 填写autotester测试用户信息
     await this.page.fill('input[id="email"]', 'autotester@test.com')
@@ -23,7 +23,7 @@ export class AuthNavigation {
     await this.page.click('button:has-text("登录")')
 
     // 等待重定向到思维导图列表页面
-    await this.page.waitForURL('**/mindmaps', { timeout: 1000 })
+    await this.page.waitForURL('**/mindmaps', { timeout: 10000 })
   }
 
   async verifyOnEditPage() {

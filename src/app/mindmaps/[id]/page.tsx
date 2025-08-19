@@ -10,18 +10,7 @@ import { UserMenu } from '@/components/auth/user-menu'
 import { useAuth } from '@/contexts/auth-context'
 import { ArrowLeft, Save, Share, Plus, Trash2, Search, Download, Upload } from 'lucide-react'
 import { MindMap, type MindMapRef } from '@/components/mind-map/mind-map'
-import type { Node, Edge } from '@xyflow/react'
-
-interface MindMapData {
-  id: string
-  title: string
-  content: {
-    nodes: unknown[]
-    edges: unknown[]
-  }
-  created_at: string
-  updated_at: string
-}
+import type { MindMapWithNodes, ApiResponse } from '@/lib/types/mindmap-data'
 
 function MindMapDetailPage() {
   const params = useParams()
@@ -29,7 +18,7 @@ function MindMapDetailPage() {
   const mindMapId = params.id as string
   const {} = useAuth()
 
-  const [mindMapData, setMindMapData] = useState<MindMapData | null>(null)
+  const [mindMapData, setMindMapData] = useState<MindMapWithNodes | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [title, setTitle] = useState('')
@@ -42,11 +31,11 @@ function MindMapDetailPage() {
     const loadMindMap = async () => {
       try {
         const response = await fetch(`/api/mindmaps/${mindMapId}/full`)
-        const result = await response.json()
+        const result: ApiResponse<MindMapWithNodes> = await response.json()
 
-        if (result.success) {
+        if (result.success && result.data) {
           setMindMapData(result.data)
-          setTitle(result.data.title)
+          setTitle(result.data.mindmap.title)
         } else {
           // 思维导图不存在，重定向到列表页
           router.push('/mindmaps')
@@ -70,36 +59,31 @@ function MindMapDetailPage() {
 
     setSaving(true)
     try {
-      // 如果没有传入新内容，尝试从MindMap组件获取当前状态
-      let contentToSave = newContent
-      if (!contentToSave && mindMapRef.current) {
-        // TODO: 需要在MindMap组件中实现getCurrentData方法
-        contentToSave = mindMapData.content // 暂时使用现有数据
-      }
-
-      const response = await fetch(`/api/mindmaps/${mindMapData.id}`, {
+      const response = await fetch(`/api/mindmaps/${mindMapData.mindmap.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           title,
-          content: contentToSave || mindMapData.content,
+          content: newContent, // 传统ReactFlow格式兼容
         }),
       })
 
-      const result = await response.json()
+      const result: ApiResponse = await response.json()
       if (result.success) {
         setLastSaved(new Date())
 
-        // 如果有新内容，更新本地状态
-        if (contentToSave) {
-          setMindMapData(prev => (prev ? { ...prev, content: contentToSave } : null))
-        }
-
-        // 如果标题改变了，更新
-        if (title !== mindMapData.title) {
-          setMindMapData(prev => (prev ? { ...prev, title } : null))
+        // 更新本地状态
+        if (title !== mindMapData.mindmap.title) {
+          setMindMapData(prev =>
+            prev
+              ? {
+                  ...prev,
+                  mindmap: { ...prev.mindmap, title },
+                }
+              : null
+          )
         }
       }
     } catch (error) {
@@ -111,14 +95,13 @@ function MindMapDetailPage() {
 
   // 处理思维导图内容变化
   const handleMindMapChange = async (newContent: { nodes: unknown[]; edges: unknown[] }) => {
-    // 先更新本地状态，再保存
-    setMindMapData(prev => (prev ? { ...prev, content: newContent } : null))
+    // 保存ReactFlow格式数据
     await saveMindMap(newContent)
   }
 
   // 处理标题变化
   const handleTitleChange = async () => {
-    if (title !== mindMapData?.title) {
+    if (title !== mindMapData?.mindmap.title) {
       await saveMindMap()
     }
   }
@@ -251,8 +234,7 @@ function MindMapDetailPage() {
       {/* 思维导图编辑器 */}
       <div className="flex-1 relative">
         <MindMap
-          initialNodes={mindMapData.content.nodes as Node[]}
-          initialEdges={mindMapData.content.edges as Edge[]}
+          mindMapData={mindMapData}
           onChange={handleMindMapChange}
           onSelectionChange={handleSelectionChange}
           ref={mindMapRef}

@@ -25,7 +25,8 @@ import {
   calculateNodeLevel,
   type LayoutNode,
 } from '@/lib/auto-layout'
-// 移除TestIdGenerator导入
+import { mindMapTransformer } from '@/lib/services/mindmap-transformer'
+import type { MindMapWithNodes } from '@/lib/types/mindmap-data'
 // 移除数据库直接访问，组件应该通过API调用进行数据操作
 
 const nodeTypes = {
@@ -43,15 +44,20 @@ export interface MindMapRef {
 }
 
 export interface MindMapProps {
+  // 向后兼容的ReactFlow格式
   initialNodes?: Node[]
   initialEdges?: Edge[]
   initialData?: {
     nodes: Node[]
     edges: Edge[]
   }
+  // 新的标准数据模型格式
+  mindMapData?: MindMapWithNodes
+  // 回调函数
   onChange?: (data: { nodes: Node[]; edges: Edge[] }) => void
   onSave?: (data: { nodes: Node[]; edges: Edge[] }) => void
   onSelectionChange?: (selectedNodes: string[]) => void
+  // 配置选项
   showToolbar?: boolean
   className?: string
 }
@@ -59,9 +65,10 @@ export interface MindMapProps {
 const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
   (
     {
-      initialNodes: propInitialNodes,
-      initialEdges: propInitialEdges,
-      initialData,
+      initialNodes: _propInitialNodes,
+      initialEdges: _propInitialEdges,
+      initialData: _initialData,
+      mindMapData,
       onChange,
       onSave,
       onSelectionChange,
@@ -70,18 +77,23 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
     },
     ref
   ) => {
-    const finalInitialNodes = propInitialNodes || initialData?.nodes || initialNodes
-    const finalInitialEdges = propInitialEdges || initialData?.edges || initialEdges
-
-    const [nodes, setNodes, onNodesChange] = useNodesState(finalInitialNodes)
-    const [edges, setEdges, onEdgesChange] = useEdgesState(finalInitialEdges)
+    // 使用初始数据或空数组初始化
+    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
+    const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
     const [selectedNodes, setSelectedNodes] = useState<string[]>([])
     const [selectedEdges, setSelectedEdges] = useState<string[]>([])
     const [layoutNodes, setLayoutNodes] = useState<LayoutNode[]>([])
-    // 移除testIdGenerator状态
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
     const [isInEditMode, setIsInEditMode] = useState(false)
-    // 移除未使用的mindMapId状态
+
+    // 监听mindMapData变化，更新ReactFlow数据
+    useEffect(() => {
+      if (mindMapData) {
+        const { nodes: newNodes, edges: newEdges } = mindMapTransformer.toReactFlow(mindMapData)
+        setNodes(newNodes)
+        setEdges(newEdges)
+      }
+    }, [mindMapData, setNodes, setEdges])
 
     const onSelectionChangeRef = useRef(onSelectionChange)
     onSelectionChangeRef.current = onSelectionChange
@@ -598,34 +610,25 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
       [addNode, deleteSelected, handleSave]
     )
 
-    // 初始化布局节点
+    // 从mindMapData初始化布局节点数据
     useEffect(() => {
-      // 如果有初始数据（从数据库加载）
-      if (finalInitialNodes.length > 0 && layoutNodes.length === 0) {
-        const initialLayoutNodes: LayoutNode[] = finalInitialNodes.map(node => {
-          const nodeData = node.data as Record<string, unknown>
-          const layoutNode = {
-            id: node.id,
-            parent_node_id: (nodeData?.parent_node_id as string) || null,
-            sort_order: (nodeData?.sort_order as number) || 0,
-            content: String(nodeData?.content || ''),
-          }
+      if (mindMapData && layoutNodes.length === 0) {
+        // 从标准数据模型创建布局节点
+        const initialLayoutNodes: LayoutNode[] = mindMapData.nodes.map(node => ({
+          id: node.id,
+          parent_node_id: node.parent_node_id,
+          sort_order: node.sort_order,
+          content: node.content,
+        }))
 
-          // test-id现在在API层动态生成，不需要在此注册
-
-          return layoutNode
-        })
         setLayoutNodes(initialLayoutNodes)
-
-        // 应用自动布局
         applyAutoLayout(initialLayoutNodes)
 
-        // 自动选中主节点（根节点）
+        // 自动选中根节点
         const mainNode = initialLayoutNodes.find(node => node.parent_node_id === null)
         if (mainNode) {
           setTimeout(() => {
             setSelectedNodes([mainNode.id])
-            // 确保ReactFlow也知道这个选择状态
             setNodes(prevNodes =>
               prevNodes.map(node => ({
                 ...node,
@@ -635,8 +638,8 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           }, 100)
         }
       }
-      // 如果没有初始数据，创建默认根节点
-      else if (layoutNodes.length === 0 && finalInitialNodes.length === 0) {
+      // 如果没有数据，创建默认根节点
+      else if (!mindMapData && layoutNodes.length === 0) {
         const rootNodeId = crypto.randomUUID()
         const rootNode: LayoutNode = {
           id: rootNodeId,
@@ -645,15 +648,12 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           content: '中心主题',
         }
 
-        // test-id现在在API层动态生成，不需要在此处生成
-
         setLayoutNodes([rootNode])
         applyAutoLayout([rootNode])
 
         // 自动选中新创建的主节点
         setTimeout(() => {
           setSelectedNodes([rootNode.id])
-          // 确保ReactFlow也知道这个选择状态
           setNodes(prevNodes =>
             prevNodes.map(node => ({
               ...node,
@@ -662,7 +662,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           )
         }, 100)
       }
-    }, [finalInitialNodes, layoutNodes.length, applyAutoLayout, setNodes])
+    }, [mindMapData, layoutNodes.length, applyAutoLayout, setNodes])
 
     // 监听节点内容更新事件
     useEffect(() => {
