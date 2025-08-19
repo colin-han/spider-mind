@@ -134,17 +134,14 @@ function MindMapDetailPage() {
 
   const handleSearch = () => {
     // TODO: 实现搜索功能
-    console.log('Search functionality to be implemented')
   }
 
   const handleExport = () => {
     // TODO: 实现导出功能
-    console.log('Export functionality to be implemented')
   }
 
   const handleImport = () => {
     // TODO: 实现导入功能
-    console.log('Import functionality to be implemented')
   }
 
   const handleSelectionChange = (nodes: string[]) => {

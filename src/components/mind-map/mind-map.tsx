@@ -185,7 +185,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         }
 
         // test-id现在在API层动态生成，无需在此处生成
-        console.log(`创建新节点: UUID=${newNodeId}`)
 
         // 更新布局节点列表
         const updatedLayoutNodes = [...layoutNodes, newLayoutNode]
@@ -237,7 +236,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         }
 
         // test-id现在在API层动态生成，无需在此处生成
-        console.log(`创建同级节点: UUID=${newNodeId}`)
 
         // 更新布局节点列表
         const updatedLayoutNodes = [...layoutNodes, newLayoutNode]
@@ -292,9 +290,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         const parentNodeId = nodesToDelete[0]?.parent_node_id
 
         // 不再需要从TestIdGenerator中移除节点，test-id现在是动态生成的
-        selectedNodes.forEach(nodeId => {
-          console.log(`删除节点: UUID=${nodeId}`)
-        })
 
         // 递归删除子节点
         const deleteNodeAndChildren = (nodeId: string): string[] => {
@@ -651,7 +646,6 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         }
 
         // test-id现在在API层动态生成，不需要在此处生成
-        console.log(`创建根节点: UUID=${rootNodeId}`)
 
         setLayoutNodes([rootNode])
         applyAutoLayout([rootNode])

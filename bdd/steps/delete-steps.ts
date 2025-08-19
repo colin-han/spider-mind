@@ -4,13 +4,13 @@ import { BDDWorld } from '../support/world'
 
 // When步骤 - 删除操作
 When(
-  '我点击{string}思维导图卡片上的删除按钮',
+  '用户点击{string}思维导图卡片上的删除按钮',
   async function (this: BDDWorld, mindMapName: string) {
     await this.clickDeleteButtonOnMindMapCard(mindMapName)
   }
 )
 
-When('我点击确认对话框中的{string}按钮', async function (this: BDDWorld, buttonText: string) {
+When('用户点击确认对话框中的{string}按钮', async function (this: BDDWorld, buttonText: string) {
   if (!this.page) throw new Error('Page not initialized')
 
   if (buttonText === '确认') {
@@ -20,15 +20,15 @@ When('我点击确认对话框中的{string}按钮', async function (this: BDDWo
   }
 })
 
-When('我鼠标悬停在思维导图卡片上', async function (this: BDDWorld) {
+When('用户鼠标悬停在思维导图卡片上', async function (this: BDDWorld) {
   await this.hoverOnMindMapCard()
 })
 
-When('我鼠标移出思维导图卡片', async function (this: BDDWorld) {
+When('用户鼠标移出思维导图卡片', async function (this: BDDWorld) {
   await this.moveMouseAwayFromMindMapCard()
 })
 
-When('我点击思维导图卡片内容区域（非删除按钮）', async function (this: BDDWorld) {
+When('用户点击思维导图卡片内容区域（非删除按钮）', async function (this: BDDWorld) {
   await this.clickMindMapCardContent()
 })
 

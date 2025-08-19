@@ -136,7 +136,6 @@ export default function MindMapsListPage() {
           setDeleteDialog({ open: false, mindMap: null })
         })
       } else {
-        console.error('删除失败:', result.message)
         setDeleteError(`删除失败: ${result.message}`)
         // 关闭对话框，显示错误提示
         setDeleteDialog({ open: false, mindMap: null })

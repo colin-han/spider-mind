@@ -30,23 +30,23 @@ Feature: 思维导图键盘快捷键操作
   """
 
   Background:
-    Given 我是一个已登录的用户
-    And 我点击"新建思维导图"按钮
-    Then 我应该进入思维导图编辑页面
+    Given 用户已经登录
+    And 用户点击"新建思维导图"按钮
+    Then 用户应该进入思维导图编辑页面
 
   # Tab键 - 添加子节点测试
   Scenario: Tab键为选中节点添加子节点
     Given 节点"root"应该被选中
-    When 我按下"Tab"键
+    When 用户按下"Tab"键
     Then 节点"root"应该有1个子节点
     And 节点"root-0"应该存在
     And 节点"root-0"应该是节点"root"的子节点
     And 节点"root-0"应该被选中
 
   Scenario: Tab键为子节点添加子节点创建孙节点
-    Given 我为节点"root"添加子节点
+    Given 用户为节点"root"添加子节点
     And 节点"root-0"应该被选中
-    When 我按下"Tab"键
+    When 用户按下"Tab"键
     Then 节点"root-0"应该有1个子节点
     And 节点"root-0-0"应该存在
     And 节点"root-0-0"应该是节点"root-0"的子节点
@@ -54,9 +54,9 @@ Feature: 思维导图键盘快捷键操作
 
   Scenario: 连续使用Tab键创建多层子节点
     Given 节点"root"应该被选中
-    When 我按下"Tab"键
+    When 用户按下"Tab"键
     Then 节点"root-0"应该被选中
-    When 我按下"Tab"键
+    When 用户按下"Tab"键
     Then 节点"root-0-0"应该被选中
     And 节点"root"应该有1个子节点
     And 节点"root-0"应该有1个子节点
@@ -64,15 +64,15 @@ Feature: 思维导图键盘快捷键操作
   # Enter键 - 添加同级节点测试
   Scenario: Enter键为根节点添加同级节点
     Given 节点"root"应该被选中
-    When 我按下"Enter"键
+    When 用户按下"Enter"键
     Then 节点"float-0"应该存在
     And 节点"float-0"应该被选中
     And 节点"root"应该不被选中
 
   Scenario: Enter键为子节点添加同级节点
-    Given 我为节点"root"添加子节点
+    Given 用户为节点"root"添加子节点
     And 节点"root-0"应该被选中
-    When 我按下"Enter"键
+    When 用户按下"Enter"键
     Then 节点"root-1"应该存在
     And 节点"root-1"应该是节点"root"的子节点
     And 节点"root-1"应该被选中
@@ -80,53 +80,53 @@ Feature: 思维导图键盘快捷键操作
 
   Scenario: 连续使用Enter键创建多个同级节点
     Given 节点"root"应该被选中
-    When 我按下"Enter"键
+    When 用户按下"Enter"键
     Then 节点"float-0"应该被选中
-    When 我按下"Enter"键
+    When 用户按下"Enter"键
     Then 节点"float-1"应该存在
     And 节点"float-1"应该被选中
 
   # Delete键 - 删除节点测试
   Scenario: Delete键尝试删除根节点应该被阻止
     Given 节点"root"应该被选中
-    When 我按下"Delete"键
+    When 用户按下"Delete"键
     Then 应该显示提示信息"根节点不能被删除"
     And 节点"root"应该存在
     And 节点"root"应该被选中
 
   Scenario: Delete键删除子节点需要确认
-    Given 我为节点"root"添加子节点
+    Given 用户为节点"root"添加子节点
     And 节点"root-0"应该被选中
-    When 我按下"Delete"键
+    When 用户按下"Delete"键
     Then 系统显示删除确认对话框
     And 对话框内容包含"确定要删除这个节点吗？"
 
   Scenario: 确认删除节点后焦点移到父节点
-    Given 我为节点"root"添加子节点
+    Given 用户为节点"root"添加子节点
     And 节点"root-0"应该被选中
-    When 我按下"Delete"键
-    And 我按下"Enter"键
+    When 用户按下"Delete"键
+    And 用户按下"Enter"键
     Then 节点"root-0"应该不存在
     And 节点"root"应该被选中
     And 节点"root"应该有0个子节点
 
   Scenario: 取消删除操作保持原状态
-    Given 我为节点"root"添加子节点
+    Given 用户为节点"root"添加子节点
     And 节点"root-0"应该被选中
-    When 我按下"Delete"键
-    And 我按下"Escape"键
+    When 用户按下"Delete"键
+    And 用户按下"Escape"键
     Then 删除确认对话框关闭
     And 节点"root-0"应该存在
     And 节点"root-0"应该被选中
 
   Scenario: 删除有子节点的节点
-    Given 我为节点"root"添加子节点
-    And 我选中节点"root-0"
-    And 我为节点"root-0"添加子节点
-    And 我按下"左"键
+    Given 用户为节点"root"添加子节点
+    And 用户选中节点"root-0"
+    And 用户为节点"root-0"添加子节点
+    And 用户按下"左"键
     And 节点"root-0"应该被选中
-    When 我按下"Delete"键
-    And 我按下"Enter"键
+    When 用户按下"Delete"键
+    And 用户按下"Enter"键
     Then 节点"root-0"应该不存在
     And 节点"root-0-0"应该不存在
     And 节点"root"应该被选中
@@ -134,138 +134,138 @@ Feature: 思维导图键盘快捷键操作
   # F2键 - 进入编辑模式测试
   Scenario: F2键进入节点编辑模式
     Given 节点"root"应该被选中
-    When 我按下"F2"键
+    When 用户按下"F2"键
     Then 节点"root"应该处于编辑状态
 
   Scenario: F2键在子节点上进入编辑模式
-    Given 我为节点"root"添加子节点
+    Given 用户为节点"root"添加子节点
     And 节点"root-0"应该被选中
-    When 我按下"F2"键
+    When 用户按下"F2"键
     Then 节点"root-0"应该处于编辑状态
 
   # Escape键 - 退出编辑模式测试
   Scenario: Escape键退出编辑模式保持选中状态
     Given 节点"root"应该被选中
-    When 我按下"F2"键
+    When 用户按下"F2"键
     Then 节点"root"应该处于编辑状态
-    When 我按下"Escape"键
+    When 用户按下"Escape"键
     Then 节点"root"应该不处于编辑状态
     And 节点"root"应该被选中
 
   Scenario: 编辑模式下输入内容后Escape键不保存并退出
     Given 节点"root"应该被选中
-    When 我按下"F2"键
-    And 我输入"编辑后的根节点内容"
-    And 我按下"Escape"键
+    When 用户按下"F2"键
+    And 用户输入"编辑后的根节点内容"
+    And 用户按下"Escape"键
     Then 节点"root"应该不处于编辑状态
     And 节点"root"的内容应该不是"编辑后的根节点内容"
     And 节点"root"应该被选中
 
   # 方向键导航测试
   Scenario: 右方向键从父节点导航到子节点
-    Given 我为节点"root"添加子节点
-    And 我选中节点"root"
-    When 我按下"右"键
+    Given 用户为节点"root"添加子节点
+    And 用户选中节点"root"
+    When 用户按下"右"键
     Then 节点"root-0"应该被选中
     And 节点"root"应该不被选中
 
   Scenario: 左方向键从子节点导航到父节点
-    Given 我为节点"root"添加子节点
-    And 我选中节点"root-0"
-    When 我按下"左"键
+    Given 用户为节点"root"添加子节点
+    And 用户选中节点"root-0"
+    When 用户按下"左"键
     Then 节点"root"应该被选中
     And 节点"root-0"应该不被选中
 
   Scenario: 下方向键在同级节点间向下导航
-    Given 我为节点"root"添加子节点
-    And 我选中节点"root-0"
-    And 我按下"Enter"键
+    Given 用户为节点"root"添加子节点
+    And 用户选中节点"root-0"
+    And 用户按下"Enter"键
     And 节点"root-1"应该被选中
-    When 我按下"上"键
+    When 用户按下"上"键
     Then 节点"root-0"应该被选中
     And 节点"root-1"应该不被选中
 
   Scenario: 上方向键在同级节点间向上导航
-    Given 我为节点"root"添加子节点
-    And 我选中节点"root-0"
-    And 我按下"Enter"键
-    And 我选中节点"root-0"
-    When 我按下"下"键
+    Given 用户为节点"root"添加子节点
+    And 用户选中节点"root-0"
+    And 用户按下"Enter"键
+    And 用户选中节点"root-0"
+    When 用户按下"下"键
     Then 节点"root-1"应该被选中
     And 节点"root-0"应该不被选中
 
   Scenario: 到达边界时方向键导航无效
     Given 节点"root"应该被选中
-    When 我按下"左"键
+    When 用户按下"左"键
     Then 节点"root"应该被选中
-    When 我按下"上"键
+    When 用户按下"上"键
     Then 节点"root"应该被选中
 
   Scenario: 右方向键在叶节点时导航无效
-    Given 我为节点"root"添加子节点
+    Given 用户为节点"root"添加子节点
     And 节点"root-0"应该被选中
-    When 我按下"右"键
+    When 用户按下"右"键
     Then 节点"root-0"应该被选中
 
   # 编辑模式下快捷键行为测试
   Scenario: 编辑模式下Tab键应该退出编辑模式
     Given 节点"root"应该被选中
-    When 我按下"F2"键
+    When 用户按下"F2"键
     Then 节点"root"应该处于编辑状态
-    When 我按下"Tab"键
+    When 用户按下"Tab"键
     Then 节点"root"应该不处于编辑状态
 
   Scenario: 编辑模式下方向键不导航节点
-    Given 我为节点"root"添加子节点
-    And 我选中节点"root"
-    When 我按下"F2"键
+    Given 用户为节点"root"添加子节点
+    And 用户选中节点"root"
+    When 用户按下"F2"键
     Then 节点"root"应该处于编辑状态
-    When 我按下"右"键
+    When 用户按下"右"键
     Then 节点"root"应该处于编辑状态
     And 节点"root-0"应该不被选中
 
   Scenario: 编辑模式下Delete键不删除节点
-    Given 我为节点"root"添加子节点
+    Given 用户为节点"root"添加子节点
     And 节点"root-0"应该被选中
-    When 我按下"F2"键
+    When 用户按下"F2"键
     Then 节点"root-0"应该处于编辑状态
-    When 我按下"Delete"键
+    When 用户按下"Delete"键
     Then 节点"root-0"应该存在
     And 节点"root-0"应该处于编辑状态
 
   # 复杂场景测试
   Scenario: 复合操作创建复杂思维导图结构
-    Given 我选中节点"root"
-    When 我按下"Tab"键
+    Given 用户选中节点"root"
+    When 用户按下"Tab"键
     Then 节点"root-0"应该被选中
-    When 我按下"Enter"键
+    When 用户按下"Enter"键
     Then 节点"root-1"应该被选中
-    When 我按下"Tab"键
+    When 用户按下"Tab"键
     Then 节点"root-1-0"应该被选中
-    When 我按下"左"键
+    When 用户按下"左"键
     Then 节点"root-1"应该被选中
-    When 我按下"上"键
+    When 用户按下"上"键
     Then 节点"root-0"应该被选中
 
   Scenario: 快速编辑多个节点内容
-    Given 我选中节点"root"
-    When 我按下"F2"键
-    And 我输入"主题"
-    And 我按下"Enter"键
+    Given 用户选中节点"root"
+    When 用户按下"F2"键
+    And 用户输入"主题"
+    And 用户按下"Enter"键
     Then 节点"root"的内容应该是"主题"
-    When 我按下"Tab"键
-    And 我按下"F2"键
-    And 我输入"子主题1"
-    And 我按下"Enter"键
+    When 用户按下"Tab"键
+    And 用户按下"F2"键
+    And 用户输入"子主题1"
+    And 用户按下"Enter"键
     Then 节点"root-0"的内容应该是"子主题1"
 
   Scenario: 无选中节点时快捷键无效
-    Given 我点击思维导图的空白区域取消所有节点选中
-    When 我按下"Tab"键
+    Given 用户点击思维导图的空白区域取消所有节点选中
+    When 用户按下"Tab"键
     Then 不应该创建任何新节点
-    When 我按下"Enter"键
+    When 用户按下"Enter"键
     Then 不应该创建任何新节点
-    When 我按下"Delete"键
+    When 用户按下"Delete"键
     Then 不应该显示删除确认对话框
 
 # === 状态追踪 ===

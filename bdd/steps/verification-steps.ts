@@ -3,12 +3,12 @@ import { expect } from '@playwright/test'
 import { BDDWorld } from '../support/world'
 
 // 统一的编辑页面验证 - 主要版本
-Then('我应该进入思维导图编辑页面', async function (this: BDDWorld) {
+Then('用户应该进入思维导图编辑页面', async function (this: BDDWorld) {
   const isOnEditPage = await this.verifyOnEditPage()
   expect(isOnEditPage).toBe(true)
 })
 
-Then('我应该看到一个默认的主节点', async function (this: BDDWorld) {
+Then('用户应该看到一个默认的主节点', async function (this: BDDWorld) {
   const hasDefaultNode = await this.verifyDefaultMainNode()
   expect(hasDefaultNode).toBe(true)
 })
@@ -33,7 +33,7 @@ Then('主节点应该进入编辑模式', async function (this: BDDWorld) {
   expect(inEditMode).toBe(true)
 })
 
-Then('我应该能够正常编辑节点内容', async function (this: BDDWorld) {
+Then('用户应该能够正常编辑节点内容', async function (this: BDDWorld) {
   const canEdit = await this.verifyCanEditNodeContent()
   expect(canEdit).toBe(true)
 })

@@ -36,49 +36,20 @@ export async function query<T = unknown>(text: string, params?: unknown[]): Prom
   const queryId = `q-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`
   const startTime = Date.now()
 
-  console.log(`[${queryId}] Query started: ${text} | Params: ${JSON.stringify(params)}`)
-  console.log(
-    `[${queryId}] Pool stats - Total: ${pool.totalCount}, Idle: ${pool.idleCount}, Waiting: ${pool.waitingCount}`
-  )
-
   let client
   try {
-    const connectStart = Date.now()
     client = await pool.connect()
-    const connectTime = Date.now() - connectStart
-    console.log(`[${queryId}] Pool connection acquired in ${connectTime}ms`)
 
-    if (connectTime > 500) {
-      console.warn(
-        `[${queryId}] WARNING: Connection acquisition took ${connectTime}ms - potential pool exhaustion`
-      )
-    }
-
-    const queryStart = Date.now()
     const result = await client.query(text, params)
-    const queryTime = Date.now() - queryStart
-
-    console.log(
-      `[${queryId}] Query executed in ${queryTime}ms, returned ${result.rows.length} rows`
-    )
-
-    if (queryTime > 1000) {
-      console.warn(`[${queryId}] WARNING: Query took ${queryTime}ms - potential performance issue`)
-    }
 
     return result.rows
   } catch (error) {
     const totalTime = Date.now() - startTime
     console.error(`[${queryId}] Query failed after ${totalTime}ms:`, error)
-    console.error(
-      `[${queryId}] Pool stats on error - Total: ${pool.totalCount}, Idle: ${pool.idleCount}, Waiting: ${pool.waitingCount}`
-    )
     throw error
   } finally {
     if (client) {
       client.release()
-      const totalTime = Date.now() - startTime
-      console.log(`[${queryId}] Connection released, total operation time: ${totalTime}ms`)
     }
   }
 }

@@ -32,8 +32,6 @@ export async function DELETE(request: NextRequest) {
     // 从存储中移除用户的所有思维导图
     global.mindMapsStorage = global.mindMapsStorage.filter(map => map.user_id !== userId)
 
-    console.log(`批量删除用户 ${userId} 的 ${deleteCount} 个思维导图`)
-
     return NextResponse.json({
       success: true,
       message: `成功删除 ${deleteCount} 个思维导图`,

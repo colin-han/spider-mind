@@ -152,8 +152,7 @@ export class NodeOperations {
       // 尝试双击节点
       await element.dblclick()
       await this.page.waitForTimeout(300)
-    } catch (error) {
-      console.log(`双击失败，尝试force选项: ${error}`)
+    } catch (_error) {
       // 如果仍然失败，使用force选项
       await this.page.dblclick(`[data-testid="${testId}"]`, { force: true })
       await this.page.waitForTimeout(300)

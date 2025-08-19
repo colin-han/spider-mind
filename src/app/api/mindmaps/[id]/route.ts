@@ -85,27 +85,12 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const startTime = Date.now()
-  const requestId = `del-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-
-  console.log(
-    `[${requestId}] DELETE request started for mindmap ID: ${JSON.stringify(await params)}`
-  )
-
   try {
     const { id } = await params
-    console.log(`[${requestId}] Processing delete for mindmap ID: ${id}`)
-
     // 检查思维导图是否存在
-    console.log(`[${requestId}] Checking if mindmap exists...`)
-    const checkStartTime = Date.now()
     const existingMindMap = await MindMapService.getMindMap(id)
-    console.log(
-      `[${requestId}] getMindMap completed in ${Date.now() - checkStartTime}ms, found: ${!!existingMindMap}`
-    )
 
     if (!existingMindMap) {
-      console.log(`[${requestId}] Mindmap not found, returning 404`)
       return NextResponse.json(
         {
           success: false,
@@ -116,26 +101,14 @@ export async function DELETE(
     }
 
     // 删除思维导图（级联删除节点）
-    console.log(`[${requestId}] Starting delete operation...`)
-    const deleteStartTime = Date.now()
     await MindMapService.deleteMindMap(id)
-    console.log(`[${requestId}] deleteMindMap completed in ${Date.now() - deleteStartTime}ms`)
-
-    const totalTime = Date.now() - startTime
-    console.log(`[${requestId}] Delete operation successful, total time: ${totalTime}ms`)
 
     return NextResponse.json({
       success: true,
       message: '思维导图删除成功',
     })
   } catch (error) {
-    const totalTime = Date.now() - startTime
-    console.error(`[${requestId}] Delete operation failed after ${totalTime}ms:`, error)
-    console.error(`[${requestId}] Error details:`, {
-      name: error instanceof Error ? error.name : 'Unknown',
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : 'No stack trace',
-    })
+    console.error('Delete operation failed:', error)
 
     return NextResponse.json(
       {

@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { TopToolbar } from './top-toolbar'
-import { RightPanel } from './right-panel'
 import { BottomStatusBar } from './bottom-status-bar'
 import { MindMap } from '@/components/mind-map/mind-map'
 import { Node, Edge } from '@xyflow/react'
@@ -18,7 +17,6 @@ export function AppLayout({ children }: AppLayoutProps) {
   })
   const [selectedNodeIds] = useState<string[]>([])
   const [zoomLevel, setZoomLevel] = useState(100)
-  const [showRightPanel, setShowRightPanel] = useState(true)
   const [activeTheme, setActiveTheme] = useState('default')
   const [nodeCount, setNodeCount] = useState(0)
   const [edgeCount, setEdgeCount] = useState(0)
@@ -27,7 +25,6 @@ export function AppLayout({ children }: AppLayoutProps) {
     setMindMapData(data)
     setNodeCount(data.nodes.length)
     setEdgeCount(data.edges.length)
-    console.log('思维导图数据已更新:', data)
   }
 
   const handleZoomChange = (level: number) => {
@@ -38,19 +35,13 @@ export function AppLayout({ children }: AppLayoutProps) {
     setActiveTheme(theme)
   }
 
-  const toggleRightPanel = () => {
-    setShowRightPanel(!showRightPanel)
-  }
-
   // 导出功能
-  const handleExport = (format: 'png' | 'svg' | 'pdf' | 'json') => {
-    console.log('导出格式:', format, '数据:', mindMapData)
+  const handleExport = (_format: 'png' | 'svg' | 'pdf' | 'json') => {
     // TODO: 实现实际导出逻辑
   }
 
   // 导入功能
-  const handleImport = (file: File) => {
-    console.log('导入文件:', file.name)
+  const handleImport = (_file: File) => {
     // TODO: 实现实际导入逻辑
   }
 
@@ -61,8 +52,8 @@ export function AppLayout({ children }: AppLayoutProps) {
         onSave={() => handleMindMapSave(mindMapData)}
         onExport={handleExport}
         onImport={handleImport}
-        onToggleRightPanel={toggleRightPanel}
-        showRightPanel={showRightPanel}
+        onToggleRightPanel={() => {}}
+        showRightPanel={false}
         hasSelection={selectedNodeIds.length > 0}
       />
 
@@ -78,17 +69,6 @@ export function AppLayout({ children }: AppLayoutProps) {
             />
           )}
         </div>
-
-        {/* 右侧面板 */}
-        {showRightPanel && (
-          <div className="w-80 bg-white border-l border-gray-200 flex-shrink-0">
-            <RightPanel
-              selectedNodeIds={selectedNodeIds}
-              activeTheme={activeTheme}
-              onThemeChange={handleThemeChange}
-            />
-          </div>
-        )}
       </div>
 
       {/* 底部状态栏 */}
