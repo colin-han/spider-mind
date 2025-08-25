@@ -16,6 +16,7 @@ interface AuthContextType {
   isAuthenticated: boolean
   signIn: (email: string, password: string) => Promise<boolean>
   signOut: () => void
+  setTestUser: (user: User) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -40,6 +41,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        // 检查URL中的测试认证参数（仅在非生产环境）
+        if (process.env.NEXT_PUBLIC_NODE_ENV !== 'production' && typeof window !== 'undefined') {
+          console.log('[TEST AUTH] Checking URL params, NEXT_PUBLIC_NODE_ENV:', process.env.NEXT_PUBLIC_NODE_ENV)
+          const urlParams = new URLSearchParams(window.location.search)
+          const testAuth = urlParams.get('test_auth')
+          const testToken = urlParams.get('test_token')
+          
+          if (testAuth && testToken === 'test-auth-secret-2025') {
+            console.log('[TEST AUTH] Found test auth params, testAuth:', testAuth)
+            try {
+              const response = await fetch(`/api/test/auth?user=${testAuth}&token=${testToken}`)
+              const data = await response.json()
+              console.log('[TEST AUTH] API response:', data)
+              
+              if (data.success && data.user) {
+                console.log('[TEST AUTH] Setting user:', data.user.email)
+                setUser(data.user)
+                localStorage.setItem('spider-mind-user', JSON.stringify(data.user))
+                
+                // 清理URL参数
+                const newUrl = new URL(window.location.href)
+                newUrl.searchParams.delete('test_auth')
+                newUrl.searchParams.delete('test_token')
+                window.history.replaceState({}, '', newUrl.toString())
+                
+                setIsLoading(false)
+                return
+              }
+            } catch (error) {
+              console.error('[TEST AUTH] Failed:', error)
+            }
+          }
+        }
+        
+        // 正常的用户状态检查
         const savedUser = localStorage.getItem('spider-mind-user')
         if (savedUser) {
           setUser(JSON.parse(savedUser))
@@ -105,12 +141,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.removeItem('spider-mind-user')
   }
 
+  const setTestUser = (testUser: User) => {
+    setUser(testUser)
+    localStorage.setItem('spider-mind-user', JSON.stringify(testUser))
+  }
+
   const value = {
     user,
     isLoading,
     isAuthenticated: !!user,
     signIn,
     signOut,
+    setTestUser,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

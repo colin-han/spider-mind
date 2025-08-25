@@ -1,8 +1,10 @@
 import { Page } from '@playwright/test'
+import { SmartWait } from './smart-wait'
 
 export class DeleteOperations {
   private currentMindMapId: string | undefined
   private deleteRequests: string[]
+  private smartWait: SmartWait
 
   constructor(
     private page: Page,
@@ -11,6 +13,7 @@ export class DeleteOperations {
   ) {
     this.currentMindMapId = currentMindMapId
     this.deleteRequests = deleteRequests
+    this.smartWait = new SmartWait(page)
   }
 
   // =========================
@@ -22,9 +25,12 @@ export class DeleteOperations {
     if (!this.page) throw new Error('Page not initialized')
 
     // 等待思维导图列表加载完成
-    await this.page.waitForSelector(
-      '[data-testid*="mindmap-card"], .mindmap-card, a[href*="/mindmaps/"]',
-      { timeout: 500 }
+    await this.page.waitForFunction(
+      () => {
+        const cards = document.querySelectorAll('[data-testid*="mindmap-card"], .mindmap-card, a[href*="/mindmaps/"]')
+        return cards.length > 0
+      },
+      { timeout: 3000 }
     )
 
     // 查找思维导图进行删除操作
@@ -38,7 +44,7 @@ export class DeleteOperations {
           // 悬停在卡片上以显示删除按钮
           await cardByHref.hover()
           // 等待删除按钮显示
-          await this.page.waitForSelector('[data-testid="delete-button"]', { timeout: 300 })
+          await this.smartWait.waitForElementVisible('delete-button', { timeout: 2000 })
 
           // 查找删除按钮
           const deleteButton = this.page.locator(
@@ -64,7 +70,7 @@ export class DeleteOperations {
           // 悬停在卡片上以显示删除按钮
           await card.hover()
           // 等待删除按钮显示
-          await this.page.waitForSelector('[data-testid="delete-button"]', { timeout: 300 })
+          await this.smartWait.waitForElementVisible('delete-button', { timeout: 2000 })
 
           try {
             const deleteButton = card.locator('[data-testid="delete-button"]').first()
@@ -84,9 +90,7 @@ export class DeleteOperations {
     }
 
     // 等待删除确认对话框出现
-    await this.page.waitForSelector('[data-testid="alert-dialog"]', {
-      timeout: 500,
-    })
+    await this.smartWait.waitForElementVisible('alert-dialog', { timeout: 3000 })
   }
 
   // 点击确认删除按钮
@@ -127,8 +131,8 @@ export class DeleteOperations {
       throw new Error('未能找到确认删除按钮')
     }
 
-    // 稍微等待以确保状态更新
-    await this.page.waitForTimeout(100)
+    // 等待删除操作开始（简单等待一下让操作生效）
+    await this.page.waitForLoadState('domcontentloaded', { timeout: 1000 })
   }
 
   // 点击取消删除按钮
@@ -165,14 +169,13 @@ export class DeleteOperations {
     }
 
     // 等待取消操作完成（对话框消失）
-    await this.page.waitForFunction(
-      () => {
-        const dialogs = document.querySelectorAll(
-          '[data-testid*="dialog"], [data-testid*="confirm"]'
-        )
+    await this.smartWait.waitForCondition(
+      async () => {
+        const dialogs = await this.page.$$('[data-testid*="dialog"], [data-testid*="confirm"]')
         return dialogs.length === 0
       },
-      { timeout: 300 }
+      '取消删除对话框消失',
+      { timeout: 2000 }
     )
   }
 
@@ -192,7 +195,15 @@ export class DeleteOperations {
         const card = this.page.locator(selector).first()
         if (await card.isVisible()) {
           await card.hover()
-          await this.page.waitForTimeout(500)
+          // 等待悬停效果生效（删除按钮出现）
+          await this.smartWait.waitForCondition(
+            async () => {
+              const deleteButton = await this.page.$('[data-testid="delete-button"]')
+              return deleteButton !== null
+            },
+            '悬停效果生效（删除按钮出现）',
+            { timeout: 2000, logLevel: 'DEBUG' }
+          )
           return
         }
       } catch {
@@ -209,7 +220,16 @@ export class DeleteOperations {
 
     // 将鼠标移动到页面的一个空白区域
     await this.page.mouse.move(50, 50)
-    await this.page.waitForTimeout(500)
+    
+    // 等待删除按钮隐藏
+    await this.smartWait.waitForCondition(
+      async () => {
+        const deleteButton = await this.page.$('[data-testid="delete-button"]')
+        return deleteButton === null
+      },
+      '删除按钮隐藏',
+      { timeout: 2000, logLevel: 'DEBUG' }
+    )
   }
 
   // 点击思维导图卡片内容区域（非删除按钮）
@@ -232,7 +252,7 @@ export class DeleteOperations {
         if (await cardContent.isVisible()) {
           await cardContent.click()
           // 等待页面跳转
-          await this.page.waitForURL('**/mindmaps/**', { timeout: 10000 })
+          await this.smartWait.waitForNavigation('**/mindmaps/**', { timeout: 10000 })
           return
         }
       } catch {

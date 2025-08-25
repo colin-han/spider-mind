@@ -1,8 +1,10 @@
 import { Page } from '@playwright/test'
+import { SmartWait } from './smart-wait'
 
 export class MindMapOperations {
   private currentMindMapId: string | undefined
   private createdMindMapIds: string[]
+  private smartWait: SmartWait
 
   constructor(
     private page: Page,
@@ -12,23 +14,26 @@ export class MindMapOperations {
   ) {
     this.currentMindMapId = currentMindMapId
     this.createdMindMapIds = createdMindMapIds
+    this.smartWait = new SmartWait(page)
   }
 
   // 思维导图操作方法
   async clickNewMindMapButtonOnly() {
     if (!this.page) throw new Error('Page not initialized')
 
-    await this.page.waitForSelector('[data-testid="create-mindmap-button"]', { timeout: 10000 })
+    // 等待创建按钮可交互
+    await this.smartWait.waitForElementInteractable('create-mindmap-button', { timeout: 8000 })
 
     await this.page.click('[data-testid="create-mindmap-button"]')
 
-    await this.page.waitForURL('**/mindmaps/**', { timeout: 15000 })
+    // 等待页面导航到思维导图编辑页面
+    await this.smartWait.waitForNavigation('**/mindmaps/**', { timeout: 12000 })
 
     // 提取并跟踪新创建的思维导图ID
     await this.extractAndTrackMindMapId()
 
     // 等待思维导图组件和根节点加载完成
-    await this.page.waitForSelector('[data-testid="root"]', { timeout: 10000 })
+    await this.smartWait.waitForElementVisible('root', { timeout: 8000 })
 
     // 等待思维导图组件完全加载（通过检查节点可交互性）
     await this.page.waitForFunction(
@@ -47,7 +52,7 @@ export class MindMapOperations {
     await this.page.click('a[href*="/mindmaps/"]:first-child')
 
     // 等待跳转到编辑页面
-    await this.page.waitForURL('**/mindmaps/**')
+    await this.smartWait.waitForNavigation('**/mindmaps/**', { timeout: 10000 })
 
     // 提取并跟踪思维导图ID
     await this.extractAndTrackMindMapId()
@@ -108,16 +113,28 @@ export class MindMapOperations {
     }
 
     // 等待思维导图卡片加载
-    await this.page?.waitForSelector('a[href*="/mindmaps/"]', { timeout: 10000 })
+    await this.smartWait.waitForCondition(
+      async () => {
+        const cards = await this.page?.$$('a[href*="/mindmaps/"]')
+        return (cards?.length || 0) > 0
+      },
+      '思维导图卡片加载完成',
+      { timeout: 8000 }
+    )
 
     await this.clickFirstMindMapCard()
     // 等待思维导图组件加载完成（页面跳转已经在clickFirstMindMapCard中处理）
-    await this.page?.waitForSelector(
-      '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]',
-      { timeout: 15000 }
+    await this.smartWait.waitForCondition(
+      async () => {
+        const nodes = await this.page?.$$('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
+        return (nodes?.length || 0) > 0
+      },
+      '思维导图节点加载完成',
+      { timeout: 12000 }
     )
+    
     // 等待React组件完全初始化（检查根节点加载）
-    await this.page?.waitForSelector('[data-testid="root"]', { timeout: 300 })
+    await this.smartWait.waitForElementVisible('root', { timeout: 2000 })
   }
 
   // 从列表中打开思维导图
@@ -131,8 +148,8 @@ export class MindMapOperations {
 
     // 复用现有方法
     await this.openExistingMindMap()
-    // 等待加载完成后添加子节点
-    await this.page.waitForTimeout(2000)
+    // 等待思维导图完全稳定后添加子节点
+    await this.smartWait.waitForNetworkIdle({ timeout: 3000 })
     await this.clickAddChildNode()
   }
 
@@ -142,12 +159,13 @@ export class MindMapOperations {
     await this.page.click('button:has-text("添加节点")')
 
     // 等待新节点出现在DOM中
-    await this.page.waitForFunction(
-      () => {
-        const nodes = document.querySelectorAll('[data-testid*="root-"]')
+    await this.smartWait.waitForCondition(
+      async () => {
+        const nodes = await this.page.$$('[data-testid*="root-"]')
         return nodes.length > 0
       },
-      { timeout: 300 }
+      '新子节点出现',
+      { timeout: 2000 }
     )
   }
 

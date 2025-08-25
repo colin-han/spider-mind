@@ -12,6 +12,11 @@
 
 # testing
 /coverage
+/test-results
+/test-results/**
+*.png
+*.zip
+cucumber-report.*
 
 # next.js
 /.next/

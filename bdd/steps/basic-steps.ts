@@ -7,7 +7,7 @@ When('等待{int}秒', { timeout: 60 * 1000 }, async function (this: BDDWorld, s
 
 // Given步骤
 Given('用户已经登录', async function (this: BDDWorld) {
-  await this.loginAsTestUser()
+  await this.setupTestAuth()
 })
 
 Given('用户在思维导图管理页面', async function (this: BDDWorld) {

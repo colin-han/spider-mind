@@ -8,6 +8,8 @@ import { NodeOperations } from './node-operations'
 import { DatabaseHelpers } from './database-helpers'
 import { VerificationHelpers } from './verification-helpers'
 import { DeleteVerification } from './delete-verification'
+import { TestAuthHelper } from './test-auth-helper'
+import { performanceMonitor } from './performance-monitor'
 
 export class BDDWorld {
   public currentMindMapId: string | undefined
@@ -16,6 +18,7 @@ export class BDDWorld {
 
   private browserManager: BrowserManager
   private authNavigation: AuthNavigation | undefined
+  private testAuthHelper: TestAuthHelper | undefined
   private mindMapOperations: MindMapOperations | undefined
   private deleteOperations: DeleteOperations | undefined
   private nodeOperations: NodeOperations | undefined
@@ -45,6 +48,7 @@ export class BDDWorld {
     // 初始化其他模块
     if (this.page) {
       this.authNavigation = new AuthNavigation(this.page, this.baseUrl)
+      this.testAuthHelper = new TestAuthHelper(this.page, this.baseUrl)
       this.mindMapOperations = new MindMapOperations(
         this.page,
         this.baseUrl,
@@ -105,6 +109,11 @@ export class BDDWorld {
   async loginAsTestUser() {
     if (!this.authNavigation) throw new Error('AuthNavigation not initialized')
     return this.authNavigation.loginAsTestUser()
+  }
+
+  async setupTestAuth(userEmail: string = 'autotester@test.com') {
+    if (!this.testAuthHelper) throw new Error('TestAuthHelper not initialized')
+    return this.testAuthHelper.setupTestAuth(userEmail)
   }
 
   async verifyOnEditPage() {
@@ -494,8 +503,14 @@ export class BDDWorld {
 setWorldConstructor(BDDWorld)
 
 // Hooks
-Before(async function (this: BDDWorld) {
+Before(async function (this: BDDWorld, scenario) {
+  // 开始性能监控
+  performanceMonitor.startScenario(scenario.pickle.name)
+  performanceMonitor.startTimer('browser-setup', { type: 'setup' })
+  
   await this.setupBrowser()
+  
+  performanceMonitor.endTimer('browser-setup')
 })
 
 Before({ tags: '@longTimeout' }, function () {
@@ -503,6 +518,8 @@ Before({ tags: '@longTimeout' }, function () {
 })
 
 After(async function (this: BDDWorld, scenario) {
+  performanceMonitor.startTimer('cleanup', { type: 'teardown' })
+  
   await this.captureScreenshotOnFailure(scenario)
 
   // 清理测试创建的思维导图
@@ -510,4 +527,14 @@ After(async function (this: BDDWorld, scenario) {
 
   // 清理浏览器资源
   await this.cleanup()
+  
+  performanceMonitor.endTimer('cleanup')
+  
+  // 结束场景性能监控
+  performanceMonitor.endScenario()
+  
+  // 如果是最后一个场景，生成总体报告
+  if (process.env.NODE_ENV !== 'test') {
+    // 在测试结束时可以通过环境变量或其他方式触发报告生成
+  }
 })

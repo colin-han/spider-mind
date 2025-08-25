@@ -1,7 +1,12 @@
 import { Page, ElementHandle } from '@playwright/test'
+import { SmartWait } from './smart-wait'
 
 export class NodeOperations {
-  constructor(private page: Page) {}
+  private smartWait: SmartWait
+
+  constructor(private page: Page) {
+    this.smartWait = new SmartWait(page)
+  }
 
   // =========================
   // Test-ID 相关操作方法
@@ -14,8 +19,8 @@ export class NodeOperations {
     if (!this.page) throw new Error('Page not initialized')
 
     try {
-      // 直接使用语义化test-id查找节点组件
-      await this.page.waitForSelector(`[data-testid="${testId}"]`, { timeout: 10000 })
+      // 使用SmartWait的智能等待
+      await this.smartWait.waitForElementVisible(testId, { timeout: 8000 })
       return await this.page.$(`[data-testid="${testId}"]`)
     } catch {
       return null
@@ -43,11 +48,25 @@ export class NodeOperations {
    * 统一的节点选择方法
    */
   async selectNodeByTestId(testId: string): Promise<void> {
-    const element = await this.findNodeByTestId(testId)
+    // 确保元素可交互
+    await this.smartWait.waitForElementInteractable(testId, { timeout: 5000 })
+    
+    const element = await this.page.$(`[data-testid="${testId}"]`)
     if (!element) throw new Error(`找不到test-id为"${testId}"的节点`)
 
     await element.click()
-    await this.page?.waitForTimeout(100)
+    
+    // 等待选中状态生效
+    await this.page.waitForFunction(
+      (testId) => {
+        const selectedElement = document.querySelector('[data-node-selected="true"]')
+        if (!selectedElement) return false
+        const selectedTestId = selectedElement.getAttribute('data-testid')
+        return selectedTestId === testId
+      },
+      testId,
+      { timeout: 2000 }
+    )
   }
 
   // 等待新子节点出现并返回其test-id
@@ -66,27 +85,11 @@ export class NodeOperations {
 
     const initialNodeTestIds = await this.page.evaluate(getNodeTestIds)
 
-    // 等待出现新的节点test-id
-    await this.page.waitForFunction(
-      initialTestIds => {
-        const currentTestIds = Array.from(
-          document.querySelectorAll(
-            '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
-          )
-        )
-          .map(node => node.getAttribute('data-testid'))
-          .filter(id => id)
-
-        // Check if new nodes have been added
-
-        return currentTestIds.length > initialTestIds.length
-      },
-      initialNodeTestIds,
-      { timeout: 10000, polling: 500 }
+    // 使用SmartWait等待节点数量变化
+    await this.smartWait.waitForNodeCountChange(
+      initialNodeTestIds.length + 1,
+      { timeout: 8000 }
     )
-
-    // 等待一点时间确保节点完全渲染
-    await this.page.waitForTimeout(1000)
 
     // 获取最终的节点test-id列表
     const finalNodeTestIds = await this.page.evaluate(getNodeTestIds)
@@ -119,7 +122,15 @@ export class NodeOperations {
     const mindMapContainer = this.page.locator('.react-flow')
     await mindMapContainer.click({ position: { x: 50, y: 50 } })
 
-    await this.page.waitForTimeout(300)
+    // 等待所有节点取消选中状态
+    await this.page.waitForFunction(
+      () => {
+        const selectedElements = document.querySelectorAll('[data-node-selected="true"]')
+        return selectedElements.length === 0
+      },
+      undefined,
+      { timeout: 2000 }
+    )
   }
 
   // 获取所有节点的test-id列表
@@ -145,18 +156,29 @@ export class NodeOperations {
   async doubleClickNode(testId: string): Promise<void> {
     if (!this.page) throw new Error('Page not initialized')
 
-    const element = await this.findNodeByTestId(testId)
+    // 确保元素可交互
+    await this.smartWait.waitForElementInteractable(testId, { timeout: 5000 })
+    
+    const element = await this.page.$(`[data-testid="${testId}"]`)
     if (!element) throw new Error(`找不到节点"${testId}"`)
 
     try {
       // 尝试双击节点
       await element.dblclick()
-      await this.page.waitForTimeout(300)
     } catch (_error) {
       // 如果仍然失败，使用force选项
       await this.page.dblclick(`[data-testid="${testId}"]`, { force: true })
-      await this.page.waitForTimeout(300)
     }
+    
+    // 等待编辑模式激活（输入框出现）
+    await this.page.waitForFunction(
+      (testId) => {
+        const inputElement = document.querySelector(`[data-testid="${testId}"] input`)
+        return inputElement !== null
+      },
+      testId,
+      { timeout: 2000 }
+    )
   }
 
   // 编辑指定 test-id 节点的内容：双击进入编辑、直接操作input元素、回车确认
@@ -165,17 +187,18 @@ export class NodeOperations {
 
     // 双击节点进入编辑模式
     await this.doubleClickNode(testId)
-    await this.page.waitForTimeout(500)
 
-    // 查找节点内的input元素
-    const nodeElement = await this.findNodeByTestId(testId)
-    if (!nodeElement) throw new Error(`找不到节点"${testId}"`)
+    // 等待input元素出现并可交互
+    await this.page.waitForFunction(
+      (testId) => {
+        const inputElement = document.querySelector(`[data-testid="${testId}"] input`)
+        return inputElement !== null
+      },
+      testId,
+      { timeout: 2000 }
+    )
 
-    // 等待input元素出现
-    const inputElement = await this.page.waitForSelector(`[data-testid="${testId}"] input`, {
-      timeout: 300,
-    })
-
+    const inputElement = await this.page.$(`[data-testid="${testId}"] input`)
     if (!inputElement) {
       throw new Error(`节点"${testId}"的input元素未找到`)
     }
@@ -187,7 +210,16 @@ export class NodeOperations {
 
     // 确认编辑
     await this.page.keyboard.press('Enter')
-    await this.page.waitForTimeout(500)
+    
+    // 等待编辑完成（input消失，显示普通文本）
+    await this.page.waitForFunction(
+      (testId) => {
+        const inputElement = document.querySelector(`[data-testid="${testId}"] input`)
+        return inputElement === null
+      },
+      testId,
+      { timeout: 3000 }
+    )
   }
 
   // 为指定节点创建多个子节点
@@ -200,19 +232,15 @@ export class NodeOperations {
 
       // 选中父节点
       await this.selectNodeByTestId(parentTestId)
-      await this.page.waitForTimeout(300)
 
       // 添加子节点 - 使用Tab键快捷方式
       await this.page.keyboard.press('Tab')
-      await this.page.waitForTimeout(1500)
 
       // 计算预期的子节点test-id
       const expectedChildTestId = `${parentTestId}-${i}`
 
       // 等待子节点出现
-      await this.page.waitForSelector(`[data-testid="${expectedChildTestId}"]`, {
-        timeout: 8000,
-      })
+      await this.smartWait.waitForElementVisible(expectedChildTestId, { timeout: 6000 })
 
       // 编辑子节点内容
       await this.editNodeContent(expectedChildTestId, childName)
@@ -228,13 +256,15 @@ export class NodeOperations {
       .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
       .nth(1)
     await childNode.click()
+    
     // 等待节点选中状态更新
     await this.page.waitForFunction(
       () => {
         const selectedNodes = document.querySelectorAll('[data-node-selected="true"]')
         return selectedNodes.length > 0
       },
-      { timeout: 300 }
+      undefined,
+      { timeout: 2000 }
     )
   }
 
@@ -245,13 +275,17 @@ export class NodeOperations {
     // 点击主节点（根节点）
     const mainNode = this.page.locator('[data-testid="root"]')
     await mainNode.click()
+    
     // 等待主节点选中状态更新
     await this.page.waitForFunction(
       () => {
         const rootNode = document.querySelector('[data-testid="root"]')
-        return rootNode && rootNode.getAttribute('data-node-selected') === 'true'
+        if (!rootNode) return false
+        const selected = rootNode.getAttribute('data-node-selected')
+        return selected === 'true'
       },
-      { timeout: 300 }
+      undefined,
+      { timeout: 2000 }
     )
   }
 
@@ -264,7 +298,14 @@ export class NodeOperations {
     await mainNode.dblclick()
 
     // 等待编辑模式激活（输入框出现）
-    await this.page.waitForSelector('input[type="text"]', { timeout: 300 })
+    await this.page.waitForFunction(
+      () => {
+        const inputElement = document.querySelector('input[type="text"]')
+        return inputElement !== null
+      },
+      undefined,
+      { timeout: 2000 }
+    )
   }
 
   async inputText(text: string) {
@@ -316,7 +357,8 @@ export class NodeOperations {
         const editingNodes = document.querySelectorAll('input[type="text"]')
         return editingNodes.length === 0
       },
-      { timeout: 300 }
+      undefined,
+      { timeout: 2000 }
     )
   }
 }
