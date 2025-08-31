@@ -20,7 +20,7 @@ export class AuthNavigation {
     await this.page.fill('input[id="password"]', 'password123')
 
     // 点击登录按钮
-    await this.page.click('button:has-text("登录")')
+    await this.page.click('button[data-testid="login-button"]')
 
     // 等待重定向到思维导图列表页面
     await this.page.waitForURL('**/mindmaps', { timeout: 10000 })
@@ -34,6 +34,7 @@ export class AuthNavigation {
 
   async verifyOnListPage() {
     if (!this.page) throw new Error('Page not initialized')
+    await this.page.waitForLoadState('networkidle')
     return this.page.url().endsWith('/mindmaps')
   }
 

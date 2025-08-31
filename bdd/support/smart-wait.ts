@@ -29,12 +29,12 @@ export class SmartWait {
   /**
    * 等待元素存在且可见
    */
-  async waitForElementVisible(testId: string, options: WaitOptions = {}): Promise<void> {
+  async waitForNodeVisible(testId: string, options: WaitOptions = {}): Promise<void> {
     const { timeout = 5000, logLevel = 'INFO' } = options
     const selector = `[data-testid="${testId}"]`
     const startTime = Date.now()
 
-    this.log(logLevel, `等待元素可见: ${testId}`, { selector, timeout })
+    this.log(logLevel, `等待节点可见: ${testId}`, { selector, timeout })
 
     try {
       await this.page.waitForSelector(selector, {
@@ -43,10 +43,10 @@ export class SmartWait {
       })
 
       const duration = Date.now() - startTime
-      this.log(logLevel, `元素已可见: ${testId} (${duration}ms)`)
+      this.log(logLevel, `节点已可见: ${testId} (${duration}ms)`)
     } catch (error) {
       const duration = Date.now() - startTime
-      const errorMessage = `等待元素可见超时: ${testId} (${duration}ms)`
+      const errorMessage = `等待节点可见超时: ${testId} (${duration}ms)`
 
       this.log('ERROR', errorMessage, {
         selector,
@@ -63,23 +63,23 @@ export class SmartWait {
         pageTitle: await this.page.title(),
       })
 
-      throw new Error(`${errorMessage} - 请检查元素是否存在或页面是否正确加载`)
+      throw new Error(`${errorMessage} - 请检查节点是否存在或页面是否正确加载`)
     }
   }
 
   /**
-   * 等待元素可交互（可见且未被禁用）
+   * 等待节点可交互（可见且未被禁用）
    */
-  async waitForElementInteractable(testId: string, options: WaitOptions = {}): Promise<void> {
+  async waitForNodeInteractable(testId: string, options: WaitOptions = {}): Promise<void> {
     const { timeout = 5000, logLevel = 'INFO' } = options
     const selector = `[data-testid="${testId}"]`
     const startTime = Date.now()
 
-    this.log(logLevel, `等待元素可交互: ${testId}`, { selector, timeout })
+    this.log(logLevel, `等待节点可交互: ${testId}`, { selector, timeout })
 
     try {
-      // 首先等待元素可见
-      await this.waitForElementVisible(testId, { timeout, logLevel: 'DEBUG' })
+      // 首先等待节点可见
+      await this.waitForNodeVisible(testId, { timeout, logLevel: 'DEBUG' })
 
       // 然后等待元素可交互
       await this.page.waitForFunction(
@@ -97,10 +97,10 @@ export class SmartWait {
       )
 
       const duration = Date.now() - startTime
-      this.log(logLevel, `元素可交互: ${testId} (${duration}ms)`)
+      this.log(logLevel, `节点可交互: ${testId} (${duration}ms)`)
     } catch (error) {
       const duration = Date.now() - startTime
-      const errorMessage = `等待元素可交互超时: ${testId} (${duration}ms)`
+      const errorMessage = `等待节点可交互超时: ${testId} (${duration}ms)`
 
       // 收集诊断信息
       const elementInfo = await this.page.evaluate(sel => {

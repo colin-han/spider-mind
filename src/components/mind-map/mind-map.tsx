@@ -694,6 +694,8 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           nodeTypes={nodeTypes}
           fitView
           className="bg-background"
+          nodesFocusable={!showDeleteDialog}
+          edgesFocusable={!showDeleteDialog}
         >
           <Controls />
           <MiniMap />

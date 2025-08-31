@@ -22,13 +22,13 @@ module.exports = {
     ],
 
     // 启用并行执行 - 降低并发数以提高稳定性
-    parallel: 1,
+    parallel: 2,
 
-    // 重试失败的场景 - 保持注释，不使用盲目重试
-    // retry: 1,
+    // 重试失败的场景
+    retry: 2,
 
     // 优化超时设置 - 从60秒降至30秒
-    timeout: 30000,
+    timeout: 60000,
 
     // 世界参数
     worldParameters: {

@@ -27,7 +27,9 @@ export class DeleteOperations {
     // 等待思维导图列表加载完成
     await this.page.waitForFunction(
       () => {
-        const cards = document.querySelectorAll('[data-testid*="mindmap-card"], .mindmap-card, a[href*="/mindmaps/"]')
+        const cards = document.querySelectorAll(
+          '[data-testid*="mindmap-card"], .mindmap-card, a[href*="/mindmaps/"]'
+        )
         return cards.length > 0
       },
       { timeout: 3000 }
@@ -44,7 +46,7 @@ export class DeleteOperations {
           // 悬停在卡片上以显示删除按钮
           await cardByHref.hover()
           // 等待删除按钮显示
-          await this.smartWait.waitForElementVisible('delete-button', { timeout: 2000 })
+          await this.smartWait.waitForNodeVisible('delete-button', { timeout: 2000 })
 
           // 查找删除按钮
           const deleteButton = this.page.locator(
@@ -70,7 +72,7 @@ export class DeleteOperations {
           // 悬停在卡片上以显示删除按钮
           await card.hover()
           // 等待删除按钮显示
-          await this.smartWait.waitForElementVisible('delete-button', { timeout: 2000 })
+          await this.smartWait.waitForNodeVisible('delete-button', { timeout: 2000 })
 
           try {
             const deleteButton = card.locator('[data-testid="delete-button"]').first()
@@ -90,7 +92,7 @@ export class DeleteOperations {
     }
 
     // 等待删除确认对话框出现
-    await this.smartWait.waitForElementVisible('alert-dialog', { timeout: 3000 })
+    await this.smartWait.waitForNodeVisible('alert-dialog', { timeout: 3000 })
   }
 
   // 点击确认删除按钮
@@ -183,12 +185,8 @@ export class DeleteOperations {
   async hoverOnMindMapCard() {
     if (!this.page) throw new Error('Page not initialized')
 
-    // 找到第一个思维导图卡片并悬停
-    const cardSelectors = [
-      '[data-testid*="mindmap-card"]',
-      '.mindmap-card',
-      'a[href*="/mindmaps/"]',
-    ]
+    // 找到第一个思维导图卡片并悬停（需要hover在group容器上才能触发group-hover效果）
+    const cardSelectors = ['[data-testid*="mindmap-card-"]', '.spm-mindmap-card', '.group']
 
     for (const selector of cardSelectors) {
       try {
@@ -198,8 +196,14 @@ export class DeleteOperations {
           // 等待悬停效果生效（删除按钮出现）
           await this.smartWait.waitForCondition(
             async () => {
-              const deleteButton = await this.page.$('[data-testid="delete-button"]')
-              return deleteButton !== null
+              const deleteButton = this.page.locator('[data-testid="delete-button"]')
+              if ((await deleteButton.count()) === 0) return false
+
+              // 检查opacity属性，因为按钮是通过group-hover:opacity-100显示的
+              const opacity = await deleteButton
+                .first()
+                .evaluate(el => window.getComputedStyle(el).opacity)
+              return opacity === '1'
             },
             '悬停效果生效（删除按钮出现）',
             { timeout: 2000, logLevel: 'DEBUG' }
@@ -220,12 +224,18 @@ export class DeleteOperations {
 
     // 将鼠标移动到页面的一个空白区域
     await this.page.mouse.move(50, 50)
-    
-    // 等待删除按钮隐藏
+
+    // 等待删除按钮隐藏（检查opacity属性而不是visibility）
     await this.smartWait.waitForCondition(
       async () => {
-        const deleteButton = await this.page.$('[data-testid="delete-button"]')
-        return deleteButton === null
+        const deleteButton = this.page.locator('[data-testid="delete-button"]')
+        if ((await deleteButton.count()) === 0) return true
+
+        // 检查opacity属性，因为按钮是通过opacity-0隐藏的
+        const opacity = await deleteButton
+          .first()
+          .evaluate(el => window.getComputedStyle(el).opacity)
+        return opacity === '0'
       },
       '删除按钮隐藏',
       { timeout: 2000, logLevel: 'DEBUG' }
@@ -237,29 +247,16 @@ export class DeleteOperations {
     if (!this.page) throw new Error('Page not initialized')
 
     // 找到思维导图卡片并点击其内容区域
-    const cardSelectors = [
-      'a[href*="/mindmaps/"] h3',
-      'a[href*="/mindmaps/"]',
-      '[data-testid*="mindmap-card"] h3',
-      '.mindmap-card h3',
-      '[data-testid*="mindmap-card"] .title',
-      '.mindmap-card .title',
-    ]
+    const cardSelectors = '.spm-mindmap-card'
 
-    for (const selector of cardSelectors) {
-      try {
-        const cardContent = this.page.locator(selector).first()
-        if (await cardContent.isVisible()) {
-          await cardContent.click()
-          // 等待页面跳转
-          await this.smartWait.waitForNavigation('**/mindmaps/**', { timeout: 10000 })
-          return
-        }
-      } catch {
-        // 继续尝试下一个选择器
+    try {
+      const cardContent = this.page.locator(cardSelectors).first()
+      if (await cardContent.isVisible()) {
+        await cardContent.click()
+        await this.smartWait.waitForNavigation('**/mindmaps/**', { timeout: 10000 })
       }
+    } catch {
+      throw new Error('未找到可点击的思维导图卡片内容区域')
     }
-
-    throw new Error('未找到可点击的思维导图卡片内容区域')
   }
 }

@@ -115,7 +115,6 @@ Feature: 思维导图键盘快捷键操作
     When 用户按下"Delete"键
     And 用户按下"Escape"键
     Then 删除确认对话框关闭
-    And 节点"root-0"应该存在
     And 节点"root-0"应该被选中
 
   Scenario: 删除有子节点的节点

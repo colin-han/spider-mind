@@ -22,7 +22,7 @@ export class MindMapOperations {
     if (!this.page) throw new Error('Page not initialized')
 
     // 等待创建按钮可交互
-    await this.smartWait.waitForElementInteractable('create-mindmap-button', { timeout: 8000 })
+    await this.smartWait.waitForNodeInteractable('create-mindmap-button', { timeout: 8000 })
 
     await this.page.click('[data-testid="create-mindmap-button"]')
 
@@ -33,7 +33,7 @@ export class MindMapOperations {
     await this.extractAndTrackMindMapId()
 
     // 等待思维导图组件和根节点加载完成
-    await this.smartWait.waitForElementVisible('root', { timeout: 8000 })
+    await this.smartWait.waitForNodeVisible('root', { timeout: 8000 })
 
     // 等待思维导图组件完全加载（通过检查节点可交互性）
     await this.page.waitForFunction(
@@ -126,15 +126,17 @@ export class MindMapOperations {
     // 等待思维导图组件加载完成（页面跳转已经在clickFirstMindMapCard中处理）
     await this.smartWait.waitForCondition(
       async () => {
-        const nodes = await this.page?.$$('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
+        const nodes = await this.page?.$$(
+          '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
+        )
         return (nodes?.length || 0) > 0
       },
       '思维导图节点加载完成',
       { timeout: 12000 }
     )
-    
+
     // 等待React组件完全初始化（检查根节点加载）
-    await this.smartWait.waitForElementVisible('root', { timeout: 2000 })
+    await this.smartWait.waitForNodeVisible('root', { timeout: 2000 })
   }
 
   // 从列表中打开思维导图

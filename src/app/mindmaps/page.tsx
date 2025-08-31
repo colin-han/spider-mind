@@ -221,8 +221,8 @@ export default function MindMapsListPage() {
             {filteredMindMaps.map(mindMap => (
               <div
                 key={mindMap.id}
-                data-testid="mindmap-card-${mindMap.id}"
-                className="relative group"
+                data-testid={`mindmap-card-${mindMap.id}`}
+                className="relative group spm-mindmap-card"
               >
                 <Link href={`/mindmaps/${mindMap.id}`}>
                   <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">

@@ -117,7 +117,12 @@ export default function LoginPage() {
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              className="w-full"
+              data-testid="login-button"
+              disabled={isSubmitting}
+            >
               {isSubmitting ? '登录中...' : '登录'}
             </Button>
           </form>

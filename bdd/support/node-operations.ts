@@ -20,7 +20,7 @@ export class NodeOperations {
 
     try {
       // 使用SmartWait的智能等待
-      await this.smartWait.waitForElementVisible(testId, { timeout: 8000 })
+      await this.smartWait.waitForNodeVisible(testId, { timeout: 8000 })
       return await this.page.$(`[data-testid="${testId}"]`)
     } catch {
       return null
@@ -49,7 +49,7 @@ export class NodeOperations {
    */
   async selectNodeByTestId(testId: string): Promise<void> {
     // 确保元素可交互
-    await this.smartWait.waitForElementInteractable(testId, { timeout: 5000 })
+    await this.smartWait.waitForNodeInteractable(testId, { timeout: 5000 })
 
     // 使用locator而不是elementHandle来避免DOM分离问题
     const locator = this.page.locator(`[data-testid="${testId}"]`)
@@ -153,7 +153,7 @@ export class NodeOperations {
     if (!this.page) throw new Error('Page not initialized')
 
     // 确保元素可交互
-    await this.smartWait.waitForElementInteractable(testId, { timeout: 5000 })
+    await this.smartWait.waitForNodeInteractable(testId, { timeout: 5000 })
 
     const element = await this.page.$(`[data-testid="${testId}"]`)
     if (!element) throw new Error(`找不到节点"${testId}"`)
@@ -186,6 +186,7 @@ export class NodeOperations {
 
     const startTime = Date.now()
 
+    this.smartWait.waitForNodeVisible(parentTestId, { timeout: 6000 })
     // 计算预期的子节点test-id
     const expectedChildTestId = await this.calculateNextChildTestId(parentTestId)
 
@@ -381,7 +382,7 @@ export class NodeOperations {
       const expectedChildTestId = `${parentTestId}-${i}`
 
       // 等待子节点出现
-      await this.smartWait.waitForElementVisible(expectedChildTestId, { timeout: 6000 })
+      await this.smartWait.waitForNodeVisible(expectedChildTestId, { timeout: 6000 })
 
       // 编辑子节点内容
       await this.editNodeContent(expectedChildTestId, childName)

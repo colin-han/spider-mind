@@ -31,17 +31,22 @@ export function AlertDialog({
       if (!open) return
 
       if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
+        e.stopImmediatePropagation()
         onOpenChange(false)
       } else if (e.key === 'Enter') {
         e.preventDefault()
+        e.stopPropagation()
         onConfirm()
         onOpenChange(false)
       }
     }
 
     if (open) {
-      document.addEventListener('keydown', handleKeyDown)
-      return () => document.removeEventListener('keydown', handleKeyDown)
+      // 使用capture阶段监听，确保最先处理事件
+      document.addEventListener('keydown', handleKeyDown, true)
+      return () => document.removeEventListener('keydown', handleKeyDown, true)
     }
   }, [open, onOpenChange, onConfirm])
 
