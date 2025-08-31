@@ -28,6 +28,7 @@ export class AuthNavigation {
 
   async verifyOnEditPage() {
     if (!this.page) throw new Error('Page not initialized')
+    await this.page.waitForLoadState('networkidle')
     return this.page.url().includes('/mindmaps/') && !this.page.url().endsWith('/mindmaps')
   }
 

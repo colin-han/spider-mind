@@ -235,6 +235,16 @@ export class BDDWorld {
     return this.nodeOperations.selectNodeByTestId(testId)
   }
 
+  async addChildNode(parentTestId: string): Promise<string> {
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.addChildNode(parentTestId)
+  }
+
+  async deleteNode(testId: string): Promise<void> {
+    if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
+    return this.nodeOperations.deleteNode(testId)
+  }
+
   async waitForNewChildNode(parentTestId: string): Promise<string> {
     if (!this.nodeOperations) throw new Error('NodeOperations not initialized')
     return this.nodeOperations.waitForNewChildNode(parentTestId)
@@ -507,9 +517,9 @@ Before(async function (this: BDDWorld, scenario) {
   // 开始性能监控
   performanceMonitor.startScenario(scenario.pickle.name)
   performanceMonitor.startTimer('browser-setup', { type: 'setup' })
-  
+
   await this.setupBrowser()
-  
+
   performanceMonitor.endTimer('browser-setup')
 })
 
@@ -519,7 +529,7 @@ Before({ tags: '@longTimeout' }, function () {
 
 After(async function (this: BDDWorld, scenario) {
   performanceMonitor.startTimer('cleanup', { type: 'teardown' })
-  
+
   await this.captureScreenshotOnFailure(scenario)
 
   // 清理测试创建的思维导图
@@ -527,12 +537,12 @@ After(async function (this: BDDWorld, scenario) {
 
   // 清理浏览器资源
   await this.cleanup()
-  
+
   performanceMonitor.endTimer('cleanup')
-  
+
   // 结束场景性能监控
   performanceMonitor.endScenario()
-  
+
   // 如果是最后一个场景，生成总体报告
   if (process.env.NODE_ENV !== 'test') {
     // 在测试结束时可以通过环境变量或其他方式触发报告生成

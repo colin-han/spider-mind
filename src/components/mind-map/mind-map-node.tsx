@@ -54,8 +54,11 @@ export function MindMapNode({ id, data, selected }: NodeProps) {
 
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
+      e.preventDefault()
       handleInputBlur()
     } else if (e.key === 'Escape') {
+      e.preventDefault()
+      e.stopPropagation()
       setContent(nodeData.content)
       setIsEditing(false)
     }

@@ -50,15 +50,14 @@ export class NodeOperations {
   async selectNodeByTestId(testId: string): Promise<void> {
     // 确保元素可交互
     await this.smartWait.waitForElementInteractable(testId, { timeout: 5000 })
-    
-    const element = await this.page.$(`[data-testid="${testId}"]`)
-    if (!element) throw new Error(`找不到test-id为"${testId}"的节点`)
 
-    await element.click()
-    
+    // 使用locator而不是elementHandle来避免DOM分离问题
+    const locator = this.page.locator(`[data-testid="${testId}"]`)
+    await locator.click()
+
     // 等待选中状态生效
     await this.page.waitForFunction(
-      (testId) => {
+      testId => {
         const selectedElement = document.querySelector('[data-node-selected="true"]')
         if (!selectedElement) return false
         const selectedTestId = selectedElement.getAttribute('data-testid')
@@ -86,10 +85,7 @@ export class NodeOperations {
     const initialNodeTestIds = await this.page.evaluate(getNodeTestIds)
 
     // 使用SmartWait等待节点数量变化
-    await this.smartWait.waitForNodeCountChange(
-      initialNodeTestIds.length + 1,
-      { timeout: 8000 }
-    )
+    await this.smartWait.waitForNodeCountChange(initialNodeTestIds.length + 1, { timeout: 8000 })
 
     // 获取最终的节点test-id列表
     const finalNodeTestIds = await this.page.evaluate(getNodeTestIds)
@@ -158,7 +154,7 @@ export class NodeOperations {
 
     // 确保元素可交互
     await this.smartWait.waitForElementInteractable(testId, { timeout: 5000 })
-    
+
     const element = await this.page.$(`[data-testid="${testId}"]`)
     if (!element) throw new Error(`找不到节点"${testId}"`)
 
@@ -169,16 +165,161 @@ export class NodeOperations {
       // 如果仍然失败，使用force选项
       await this.page.dblclick(`[data-testid="${testId}"]`, { force: true })
     }
-    
+
     // 等待编辑模式激活（输入框出现）
     await this.page.waitForFunction(
-      (testId) => {
+      testId => {
         const inputElement = document.querySelector(`[data-testid="${testId}"] input`)
         return inputElement !== null
       },
       testId,
       { timeout: 2000 }
     )
+  }
+
+  /**
+   * 为指定父节点添加子节点
+   * 使用Tab快捷键创建子节点，等待新节点出现并返回其test-id
+   */
+  async addChildNode(parentTestId: string): Promise<string> {
+    if (!this.page) throw new Error('Page not initialized')
+
+    const startTime = Date.now()
+
+    // 计算预期的子节点test-id
+    const expectedChildTestId = await this.calculateNextChildTestId(parentTestId)
+
+    try {
+      // 选中父节点
+      await this.selectNodeByTestId(parentTestId)
+
+      // 使用Tab快捷键添加子节点
+      await this.page.keyboard.press('Tab')
+
+      // 等待新子节点出现并验证父子关系
+      await this.smartWait.waitForSpecificNodeWithValidation(expectedChildTestId, parentTestId, {
+        timeout: 3000,
+      })
+
+      const duration = Date.now() - startTime
+      console.log(
+        `[INFO] 成功为节点"${parentTestId}"添加子节点"${expectedChildTestId}" (${duration}ms)`
+      )
+
+      return expectedChildTestId
+    } catch (error) {
+      const duration = Date.now() - startTime
+      const errorMessage = `为节点"${parentTestId}"添加子节点失败 (${duration}ms)`
+
+      console.error(`[ERROR] ${errorMessage}`, {
+        parentTestId,
+        expectedChildTestId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+
+      throw new Error(`${errorMessage}: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  /**
+   * 计算父节点的下一个子节点test-id
+   */
+  private async calculateNextChildTestId(parentTestId: string): Promise<string> {
+    // 首先验证父节点确实存在
+    const parentExists = await this.page.evaluate(parent => {
+      return !!document.querySelector(`[data-testid="${parent}"]`)
+    }, parentTestId)
+
+    if (!parentExists) {
+      throw new Error(`父节点"${parentTestId}"不存在，无法计算子节点test-id`)
+    }
+
+    const childCount = await this.page.evaluate(parent => {
+      // 查找所有该父节点的直接子节点
+      const childSelector = `[data-testid^="${parent}-"]`
+      const childNodes = document.querySelectorAll(childSelector)
+
+      // 过滤出直接子节点（避免包含孙子节点）
+      const directChildren = Array.from(childNodes).filter(node => {
+        const testId = node.getAttribute('data-testid')
+        if (!testId || !testId.startsWith(`${parent}-`)) return false
+
+        // 移除父节点前缀后，检查是否为直接子节点（只有一个数字）
+        const suffix = testId.substring(`${parent}-`.length)
+        return /^\d+$/.test(suffix)
+      })
+      return directChildren.length
+    }, parentTestId)
+
+    return `${parentTestId}-${childCount}`
+  }
+
+  /**
+   * 删除指定的节点
+   * 选中节点，按Delete键，确认删除
+   */
+  async deleteNode(testId: string): Promise<void> {
+    if (!this.page) throw new Error('Page not initialized')
+
+    const startTime = Date.now()
+
+    try {
+      // 获取删除前的节点数量
+      const initialNodeCount = await this.page.evaluate(() => {
+        return document.querySelectorAll(
+          '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
+        ).length
+      })
+
+      // 选中要删除的节点
+      await this.selectNodeByTestId(testId)
+
+      // 按Delete键触发删除
+      await this.page.keyboard.press('Delete')
+
+      // 等待删除确认对话框出现
+      try {
+        await this.page.waitForSelector('[data-testid="alert-dialog-confirm"]', { timeout: 5000 })
+      } catch (_error) {
+        // 可能是根节点保护，检查是否有保护提示
+        const protectionMessage = await this.page.locator('text="根节点不能被删除"').count()
+        if (protectionMessage > 0) {
+          throw new Error('试图删除受保护的根节点')
+        }
+        throw new Error('删除确认对话框未出现')
+      }
+
+      // 点击确认删除按钮
+      const confirmButton = this.page.locator('[data-testid="alert-dialog-confirm"]')
+      await confirmButton.click()
+
+      // 等待对话框消失
+      await this.page.waitForSelector('[data-testid="alert-dialog-confirm"]', {
+        state: 'detached',
+        timeout: 3000,
+      })
+
+      // 简化的验证：等待节点数量减少
+      await this.page.waitForFunction(
+        originalCount => {
+          const currentCount = document.querySelectorAll(
+            '[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]'
+          ).length
+          return currentCount < originalCount
+        },
+        initialNodeCount,
+        { timeout: 5000 }
+      )
+
+      const duration = Date.now() - startTime
+      console.log(`[INFO] 成功删除节点"${testId}" (${duration}ms)`)
+    } catch (error) {
+      const duration = Date.now() - startTime
+      console.error(`[ERROR] 删除节点"${testId}"失败 (${duration}ms)`, {
+        error: error instanceof Error ? error.message : String(error),
+      })
+      throw error
+    }
   }
 
   // 编辑指定 test-id 节点的内容：双击进入编辑、直接操作input元素、回车确认
@@ -190,7 +331,7 @@ export class NodeOperations {
 
     // 等待input元素出现并可交互
     await this.page.waitForFunction(
-      (testId) => {
+      testId => {
         const inputElement = document.querySelector(`[data-testid="${testId}"] input`)
         return inputElement !== null
       },
@@ -210,10 +351,10 @@ export class NodeOperations {
 
     // 确认编辑
     await this.page.keyboard.press('Enter')
-    
+
     // 等待编辑完成（input消失，显示普通文本）
     await this.page.waitForFunction(
-      (testId) => {
+      testId => {
         const inputElement = document.querySelector(`[data-testid="${testId}"] input`)
         return inputElement === null
       },
@@ -256,7 +397,7 @@ export class NodeOperations {
       .locator('[data-testid="root"], [data-testid*="root-"], [data-testid*="float-"]')
       .nth(1)
     await childNode.click()
-    
+
     // 等待节点选中状态更新
     await this.page.waitForFunction(
       () => {
@@ -275,7 +416,7 @@ export class NodeOperations {
     // 点击主节点（根节点）
     const mainNode = this.page.locator('[data-testid="root"]')
     await mainNode.click()
-    
+
     // 等待主节点选中状态更新
     await this.page.waitForFunction(
       () => {

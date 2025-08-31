@@ -1,7 +1,10 @@
 import { Page } from '@playwright/test'
 
 export class TestAuthHelper {
-  constructor(private page: Page, private baseUrl: string) {}
+  constructor(
+    private page: Page,
+    private baseUrl: string
+  ) {}
 
   async setupTestAuth(userEmail: string = 'autotester@test.com'): Promise<void> {
     if (!this.page) throw new Error('Page not initialized')
@@ -11,10 +14,10 @@ export class TestAuthHelper {
     // 构造带有测试认证参数的URL
     const testUrl = `${this.baseUrl}/mindmaps?test_auth=${encodeURIComponent(userEmail)}&test_token=test-auth-secret-2025`
     console.log(`[TEST AUTH HELPER] Navigating to: ${testUrl}`)
-    
+
     // 直接导航到目标页面，认证逻辑会在AuthProvider中自动处理
     await this.page.goto(testUrl)
-    await this.page.waitForLoadState('networkidle')
+    await this.page.waitForLoadState('domcontentloaded')
 
     console.log('[TEST AUTH HELPER] Page loaded, waiting for auth completion')
 
@@ -31,7 +34,7 @@ export class TestAuthHelper {
             console.log('[TEST AUTH] Checking localStorage, user:', user ? 'found' : 'not found')
             return user !== null
           },
-          { timeout: 3000 }
+          { timeout: 5000 }
         )
         authCompleted = true
         console.log('[TEST AUTH HELPER] Auth completed successfully')
@@ -63,9 +66,9 @@ export class TestAuthHelper {
       const userExists = await this.page.evaluate(() => {
         return localStorage.getItem('spider-mind-user') !== null
       })
-      
+
       const onCorrectPage = this.page.url().includes('/mindmaps')
-      
+
       return userExists && onCorrectPage
     } catch {
       return false

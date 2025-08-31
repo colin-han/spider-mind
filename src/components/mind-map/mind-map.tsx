@@ -205,17 +205,16 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         // 应用自动布局
         applyAutoLayout(updatedLayoutNodes)
 
-        // 自动选中新创建的节点
-        setTimeout(() => {
-          setSelectedNodes([newNodeId])
-          // 确保ReactFlow也知道这个选择状态
-          setNodes(prevNodes =>
-            prevNodes.map(node => ({
-              ...node,
-              selected: node.id === newNodeId,
-            }))
-          )
-        }, 100)
+        // 自动选中新创建的节点（同步执行以确保时序正确）
+        setSelectedNodes([newNodeId])
+
+        // 立即更新ReactFlow节点的选中状态
+        setNodes(prevNodes =>
+          prevNodes.map(node => ({
+            ...node,
+            selected: node.id === newNodeId,
+          }))
+        )
 
         // TODO: 通过API保存节点数据，而不是直接调用数据库
         // 当前由页面级的onChange处理保存逻辑
@@ -256,16 +255,16 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         // 应用自动布局
         applyAutoLayout(updatedLayoutNodes)
 
-        // 选中新创建的节点
-        setTimeout(() => {
-          setSelectedNodes([newNodeId])
-          setNodes(prevNodes =>
-            prevNodes.map(node => ({
-              ...node,
-              selected: node.id === newNodeId,
-            }))
-          )
-        }, 100)
+        // 选中新创建的节点（同步执行以确保时序正确）
+        setSelectedNodes([newNodeId])
+
+        // 立即更新ReactFlow节点的选中状态
+        setNodes(prevNodes =>
+          prevNodes.map(node => ({
+            ...node,
+            selected: node.id === newNodeId,
+          }))
+        )
       } catch (error) {
         console.error('添加同级节点失败:', error)
       }
@@ -354,15 +353,13 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
 
         // 将焦点移动到父节点
         if (parentNodeId) {
-          setTimeout(() => {
-            setSelectedNodes([parentNodeId])
-            setNodes(prevNodes =>
-              prevNodes.map(node => ({
-                ...node,
-                selected: node.id === parentNodeId,
-              }))
-            )
-          }, 100)
+          setSelectedNodes([parentNodeId])
+          setNodes(prevNodes =>
+            prevNodes.map(node => ({
+              ...node,
+              selected: node.id === parentNodeId,
+            }))
+          )
         } else {
           setSelectedNodes([])
         }
@@ -378,47 +375,39 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
       async (nodeId: string, content: string) => {
         // 不再需要更新TestIdGenerator，test-id现在是动态生成的
 
-        // 更新ReactFlow节点，同时清除编辑状态
-        setNodes(nds =>
-          nds.map(node =>
-            node.id === nodeId
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    content,
-                    isEditing: false, // 编辑完成后清除编辑状态
-                  },
-                }
-              : node
-          )
+        // 构建更新后的节点数据
+        const updatedNodes = nodes.map(node =>
+          node.id === nodeId
+            ? {
+                ...node,
+                data: {
+                  ...node.data,
+                  content,
+                  isEditing: false, // 编辑完成后清除编辑状态
+                },
+              }
+            : node
         )
 
+        // 更新ReactFlow节点
+        setNodes(updatedNodes)
+
         // 更新布局节点数据
-        const updatedLayoutNodes = layoutNodes.map(node =>
-          node.id === nodeId ? { ...node, content } : node
-        )
-        setLayoutNodes(updatedLayoutNodes)
+        setLayoutNodes(prevLayoutNodes => {
+          const updatedLayoutNodes = prevLayoutNodes.map(node =>
+            node.id === nodeId ? { ...node, content } : node
+          )
+          return updatedLayoutNodes
+        })
 
         // 通过onChange回调通知父组件数据变更，让父组件处理保存
         const updatedData = {
-          nodes: nodes.map(node =>
-            node.id === nodeId
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    content,
-                    isEditing: false, // 确保onChange回调中的数据也清除编辑状态
-                  },
-                }
-              : node
-          ),
+          nodes: updatedNodes,
           edges,
         }
         onChange?.(updatedData)
       },
-      [setNodes, layoutNodes, nodes, edges, onChange]
+      [setNodes, nodes, edges, onChange]
     )
 
     const handleSave = useCallback(async () => {
@@ -627,15 +616,13 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         // 自动选中根节点
         const mainNode = initialLayoutNodes.find(node => node.parent_node_id === null)
         if (mainNode) {
-          setTimeout(() => {
-            setSelectedNodes([mainNode.id])
-            setNodes(prevNodes =>
-              prevNodes.map(node => ({
-                ...node,
-                selected: node.id === mainNode.id,
-              }))
-            )
-          }, 100)
+          setSelectedNodes([mainNode.id])
+          setNodes(prevNodes =>
+            prevNodes.map(node => ({
+              ...node,
+              selected: node.id === mainNode.id,
+            }))
+          )
         }
       }
       // 如果没有数据，创建默认根节点
@@ -652,15 +639,13 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
         applyAutoLayout([rootNode])
 
         // 自动选中新创建的主节点
-        setTimeout(() => {
-          setSelectedNodes([rootNode.id])
-          setNodes(prevNodes =>
-            prevNodes.map(node => ({
-              ...node,
-              selected: node.id === rootNode.id,
-            }))
-          )
-        }, 100)
+        setSelectedNodes([rootNode.id])
+        setNodes(prevNodes =>
+          prevNodes.map(node => ({
+            ...node,
+            selected: node.id === rootNode.id,
+          }))
+        )
       }
     }, [mindMapData, layoutNodes.length, applyAutoLayout, setNodes])
 
@@ -705,6 +690,7 @@ const MindMapComponent = forwardRef<MindMapRef, MindMapProps>(
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onSelectionChange={onSelectionChangeCallback}
+          colorMode="dark"
           nodeTypes={nodeTypes}
           fitView
           className="bg-background"

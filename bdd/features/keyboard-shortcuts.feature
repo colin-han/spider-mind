@@ -104,8 +104,7 @@ Feature: 思维导图键盘快捷键操作
   Scenario: 确认删除节点后焦点移到父节点
     Given 用户为节点"root"添加子节点
     And 节点"root-0"应该被选中
-    When 用户按下"Delete"键
-    And 用户按下"Enter"键
+    When 用户删除节点"root-0"
     Then 节点"root-0"应该不存在
     And 节点"root"应该被选中
     And 节点"root"应该有0个子节点
@@ -123,10 +122,7 @@ Feature: 思维导图键盘快捷键操作
     Given 用户为节点"root"添加子节点
     And 用户选中节点"root-0"
     And 用户为节点"root-0"添加子节点
-    And 用户按下"左"键
-    And 节点"root-0"应该被选中
-    When 用户按下"Delete"键
-    And 用户按下"Enter"键
+    When 用户删除节点"root-0"
     Then 节点"root-0"应该不存在
     And 节点"root-0-0"应该不存在
     And 节点"root"应该被选中

@@ -3,7 +3,6 @@
  * 行为驱动开发(BDD)测试框架设置
  */
 
-
 module.exports = {
   default: {
     // 功能文件位置
@@ -19,11 +18,11 @@ module.exports = {
     format: [
       'progress-bar',
       'html:test-results/cucumber-report.html',
-      'json:test-results/cucumber-report.json'
+      'json:test-results/cucumber-report.json',
     ],
 
     // 启用并行执行 - 降低并发数以提高稳定性
-    parallel: 2,
+    parallel: 1,
 
     // 重试失败的场景 - 保持注释，不使用盲目重试
     // retry: 1,
