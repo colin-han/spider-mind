@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-const { spawn, exec } = require('child_process')
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-unused-vars */
+const { exec } = require('child_process')
 const fs = require('fs')
 const path = require('path')
 
@@ -149,51 +150,6 @@ async function startDev() {
 }
 
 /**
- * 启动生产环境
- */
-async function startProd() {
-  console.log('🚀 启动生产环境...')
-
-  // 检查依赖
-  if (!(await checkDocker())) return
-  if (!(await checkPM2())) return
-
-  // 检查构建
-  const buildPath = path.join(__dirname, '..', '.next')
-  if (!fs.existsSync(buildPath)) {
-    console.log('🔨 项目未构建，开始构建...')
-    try {
-      await execAsync('npm run build')
-      console.log('✅ 项目构建完成')
-    } catch (error) {
-      console.error('❌ 项目构建失败:', error.message)
-      return
-    }
-  }
-
-  // 启动数据库
-  if (!(await startDatabase())) {
-    console.error('❌ 数据库启动失败，无法继续')
-    return
-  }
-
-  try {
-    // 停止可能存在的进程
-    await execAsync('pm2 stop spider-mind-prod').catch(() => {})
-    await execAsync('pm2 delete spider-mind-prod').catch(() => {})
-
-    // 启动生产服务器
-    await execAsync('pm2 start ecosystem.config.js --only spider-mind-prod')
-    console.log('✅ 生产环境启动成功')
-    console.log('📊 查看状态: npm run pm2:status')
-    console.log('📝 查看日志: npm run pm2:logs')
-    console.log('🌐 应用地址: http://localhost:3000')
-  } catch (error) {
-    console.error('❌ 生产环境启动失败:', error.message)
-  }
-}
-
-/**
  * 停止所有服务
  */
 async function stopAll() {
@@ -225,7 +181,6 @@ Spider Mind PM2 服务管理器
 
 命令:
   dev     启动开发环境 (包含数据库 + Next.js开发服务器)
-  prod    启动生产环境 (包含数据库 + Next.js生产服务器)
   stop    停止所有服务
 
 其他PM2命令:
@@ -265,9 +220,7 @@ if (require.main === module) {
 
 module.exports = {
   startDev,
-  startProd,
   stopAll,
   checkDocker,
   checkPM2,
-  checkDatabase,
 }
