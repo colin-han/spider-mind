@@ -22,7 +22,7 @@ module.exports = {
     ],
 
     // 启用并行执行 - 降低并发数以提高稳定性
-    parallel: 2,
+    parallel: 1,
 
     // 重试失败的场景
     retry: 2,
